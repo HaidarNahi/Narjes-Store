@@ -1,0 +1,26 @@
+{
+ "app": "narjes_custom",
+ "bg_color": "gray",
+ "creation": "2026-06-29 22:41:10.401798",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_image": "/files/a423c21a-130f-4066-99db-9139311617aa.png",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Narjes workspace",
+ "link_to": "Narjes workspace",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-07-05 12:01:09.846565",
+ "modified_by": "Administrator",
+ "name": "Narjes workspace",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "Administrator"
+  }
+ ],
+ "sidebar": "Narjes workspace",
+ "standard": 1
+}

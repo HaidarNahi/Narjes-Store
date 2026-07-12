@@ -1,0 +1,158 @@
+/* ============================================================
+   Narjes Custom Kanban Card Styles
+   ============================================================ */
+
+/* The card container — matches the mockup white card with rounded corners */
+.so-kanban-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    border: 1px solid #e8ecf0;
+    min-height: 200px;
+    padding: 20px 20px 56px 20px; /* bottom padding for heart + badge */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    cursor: grab;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+    overflow: hidden;
+}
+.so-kanban-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.so-kanban-card:active {
+    cursor: grabbing;
+}
+
+/* Main content: left text + divider + right icons */
+.so-content-row {
+    display: flex;
+    width: 100%;
+    flex: 1;
+}
+
+/* Left side: text info stacked vertically */
+.so-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0; /* allow text truncation */
+}
+
+.so-title-row {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a202c;
+    line-height: 1.3;
+}
+.so-title-row a {
+    color: inherit;
+    text-decoration: none;
+}
+.so-title-row a:hover {
+    text-decoration: underline;
+}
+
+.so-info-row {
+    font-size: 14px;
+    color: #2d3748;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.so-time-ago {
+    color: #718096;
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* Vertical divider */
+.so-divider {
+    width: 1px;
+    background-color: #2d3748;
+    margin: 0 18px;
+    align-self: stretch;
+}
+
+/* Right side: icons stacked vertically */
+.so-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding-top: 2px;
+}
+
+.so-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: #2d3748;
+}
+.so-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Heart / Favorite button — bottom-left corner */
+.so-heart-btn {
+    position: absolute;
+    bottom: 16px;
+    left: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: #2d3748;
+    transition: transform 0.15s ease;
+}
+.so-heart-btn:hover {
+    transform: scale(1.15);
+}
+
+/* Creator badge — bottom-right corner, flush with card edge */
+.so-creator-badge {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background-color: #333333;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-top-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    letter-spacing: 0.3px;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================================
+   Widen Kanban Columns (1.5× default ~260px → 400px)
+   ============================================================ */
+.kanban-column {
+    min-width: 400px !important;
+    max-width: 400px !important;
+    width: 400px !important;
+}
+
+/* Add breathing room between columns */
+.kanban-board {
+    gap: 20px;
+}
+
+/* Remove default card styles that Frappe might inject */
+.kanban-card-wrapper .kanban-card {
+    display: none !important;
+}

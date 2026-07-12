@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "AI-INTAKE-.YYYY.-.#####",
+ "creation": "2026-07-01 08:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "raw_text",
+  "input_hash",
+  "status",
+  "error_message",
+  "section_break_match",
+  "matched_customer",
+  "match_confidence",
+  "match_method",
+  "section_break_results",
+  "created_customer",
+  "created_sales_order",
+  "section_break_ai",
+  "extracted_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "raw_text",
+   "fieldtype": "Text",
+   "label": "Raw Order Text",
+   "in_list_view": 0,
+   "reqd": 1
+  },
+  {
+   "fieldname": "input_hash",
+   "fieldtype": "Data",
+   "label": "Input Hash",
+   "read_only": 1,
+   "unique": 1,
+   "description": "SHA-256 of normalized raw_text — used for idempotency"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nNeeds Review\nConfirmed\nFailed",
+   "default": "Draft",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error / Notes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_match",
+   "fieldtype": "Section Break",
+   "label": "Customer Match"
+  },
+  {
+   "fieldname": "matched_customer",
+   "fieldtype": "Link",
+   "label": "Matched Customer",
+   "options": "Customer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "match_confidence",
+   "fieldtype": "Float",
+   "label": "Match Confidence (0–100)"
+  },
+  {
+   "fieldname": "match_method",
+   "fieldtype": "Select",
+   "label": "Match Method",
+   "options": "\nPhone\nFuzzy Name\nNone"
+  },
+  {
+   "fieldname": "section_break_results",
+   "fieldtype": "Section Break",
+   "label": "Created Records"
+  },
+  {
+   "fieldname": "created_customer",
+   "fieldtype": "Link",
+   "label": "Created Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_sales_order",
+   "fieldtype": "Link",
+   "label": "Created Sales Order",
+   "options": "Sales Order",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "section_break_ai",
+   "fieldtype": "Section Break",
+   "label": "AI Extraction Data"
+  },
+  {
+   "fieldname": "extracted_json",
+   "fieldtype": "Code",
+   "label": "Extracted JSON",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-07-01 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "AI Order Intake",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

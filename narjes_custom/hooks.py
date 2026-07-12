@@ -25,8 +25,13 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/narjes_custom/css/narjes_custom.css"
-# app_include_js = "/assets/narjes_custom/js/narjes_custom.js"
+app_include_css = [
+    "/assets/narjes_custom/css/sales_order_gallery.css",
+    "/assets/narjes_custom/css/narjes_kanban.css"
+]
+app_include_js = [
+    "/assets/narjes_custom/js/customer_quick_entry.js"
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/narjes_custom/css/narjes_custom.css"
@@ -40,11 +45,14 @@ app_license = "mit"
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
-# page_js = {"page" : "public/js/file.js"}
+page_js = {"ai-intake": "narjes_custom/page/ai_intake/ai_intake.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_js = {
+	"Sales Order" : "public/js/sales_order.js",
+	"Purchase Order" : "public/js/purchase_order.js"
+}
+doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -138,13 +146,23 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Sales Order": {
+		"before_validate": "narjes_custom.api.sales_order_before_validate",
+		"validate": "narjes_custom.api.sales_order_validate"
+	},
+	"Sales Invoice": {
+		"before_validate": "narjes_custom.api.sales_order_before_validate",
+		"validate": "narjes_custom.api.sales_order_validate"
+	},
+	"Delivery Note": {
+		"before_validate": "narjes_custom.api.sales_order_before_validate",
+		"validate": "narjes_custom.api.sales_order_validate"
+	},
+	"Purchase Order": {
+		"before_validate": "narjes_custom.api.purchase_order_before_validate"
+	}
+}
 
 # Scheduled Tasks
 # ---------------

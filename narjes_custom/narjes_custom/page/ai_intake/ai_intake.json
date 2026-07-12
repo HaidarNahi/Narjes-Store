@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2026-07-01 12:09:26.374240",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-07-01 12:09:26.374240",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "ai-intake",
+ "owner": "Administrator",
+ "page_name": "ai-intake",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Sales User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "AI Order Intake"
+}
