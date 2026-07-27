@@ -28,7 +28,8 @@ extend_bootinfo = "narjes_custom.api.extend_bootinfo"
 # include js, css files in header of desk.html
 app_include_css = [
     "/assets/narjes_custom/css/sales_order_gallery.css",
-    "/assets/narjes_custom/css/narjes_kanban.css"
+    "/assets/narjes_custom/css/narjes_kanban.css",
+    "/assets/narjes_custom/css/narjes_navbar.css"
 ]
 app_include_js = [
     "/assets/narjes_custom/js/customer_quick_entry.js"
@@ -46,9 +47,11 @@ app_include_js = [
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
+# Note: narjes-home is intentionally NOT listed here — Frappe's Page.load_assets()
+# already auto-loads narjes_home.js/.css by naming convention from the page's own
+# folder; adding it here would bundle the same script twice.
 page_js = {
-    "ai-intake": "narjes_custom/page/ai_intake/ai_intake.js",
-    "narjes-home": "narjes_custom/page/narjes_home/narjes_home.js"
+    "ai-intake": "narjes_custom/page/ai_intake/ai_intake.js"
 }
 
 # include js in doctype views

@@ -123,6 +123,39 @@ FEW_SHOT_EXAMPLES = [
             ]
         }
     },
+    {
+        "input": (
+            "طلب زبون:\n"
+            "الاسم: سارة احمد (07801112233)\n"
+            "العنوان: بغداد - الكرادة شارع الصناعة\n"
+            "الطلب: لوحة كانفاس 50x70 عدد 1 بسعر 45000 د.ع\n"
+            "خصم: 5000\n"
+            "ملاحظات اضافية: تغليف خارجي بشريطة حمراء وكتابة كارت معايدة (كل عام وانت بخير)"
+        ),
+        "output": {
+            "customer_name": "سارة احمد",
+            "phone_numbers": ["07801112233"],
+            "username": None,
+            "address": "الكرادة شارع الصناعة",
+            "governorate": "بغداد",
+            "delivery_date": None,
+            "gift": False,
+            "priority": None,
+            "discount_amount": 5000,
+            "custom_details": "تغليف خارجي بشريطة حمراء وكتابة كارت معايدة (كل عام وانت بخير)",
+            "currency": "IQD",
+            "order_items": [
+                {
+                    "description": "لوحة كانفاس 50x70",
+                    "item_code_hint": "50*70",
+                    "qty": 1,
+                    "unit_price": 45000,
+                    "notes": ""
+                }
+            ],
+            "extraction_notes": []
+        }
+    },
 ]
 
 
@@ -144,6 +177,8 @@ EXTRACTION_SCHEMA = {
         "delivery_date": {"type": "STRING", "nullable": True},
         "gift": {"type": "BOOLEAN"},
         "priority": {"type": "STRING", "nullable": True},
+        "discount_amount": {"type": "NUMBER", "nullable": True},
+        "custom_details": {"type": "STRING", "nullable": True},
         "currency": {"type": "STRING"},
         "order_items": {
             "type": "ARRAY",
@@ -172,46 +207,43 @@ EXTRACTION_SCHEMA = {
 # System prompt
 # ---------------------------------------------------------------------------
 
-def _build_system_prompt(catalog: list[dict]) -> str:
-    items_list = _build_catalog_for_prompt(catalog)
-    few_shot_text = ""
-    for i, ex in enumerate(FEW_SHOT_EXAMPLES, 1):
-        few_shot_text += (
-            f"\n\n--- Example {i} ---\n"
-            f"Input:\n{ex['input']}\n\n"
-            f"Expected JSON output:\n{json.dumps(ex['output'], ensure_ascii=False, indent=2)}"
-        )
-
-    return f"""You are an order intake assistant for a canvas printing business in Iraq.
-Your ONLY job is to extract structured order data from informal, messy customer messages.
-These messages are typically from WhatsApp and may be in Arabic, English, or mixed.
-
-RULES:
-1. Extract ONLY what is explicitly stated. Never guess or hallucinate values.
-2. For any field you cannot determine with confidence, use null (or empty array for lists).
-3. For delivery_date: if a specific date is mentioned, output it as YYYY-MM-DD. If only a day name (e.g. "Thursday") is mentioned, note it in extraction_notes and set delivery_date to null.
-4. For priority: output "High", "Medium", or "Low" only if explicitly mentioned or strongly implied (e.g. "ضروري", "urgent", "عاجل" → "High"). Otherwise null.
-5. For gift: true only if explicitly stated (e.g. "هدية", "gift").
-6. For currency: default to "IQD" unless USD ($, دولار) is clearly mentioned.
-
-ITEM MATCHING — CRITICAL RULES:
-7. For item_code_hint: you MUST match to the MOST SPECIFIC item from the catalog below.
-   - ALWAYS prefer a more specific match over a generic one.
-   - Example: if the customer says "ستاند خشب" (wooden stand), match to "Wood Stand", NOT to the generic "Stand".
-   - Example: if the customer says "ستاند حديد" or "metal stand", match to "Metal Stand", NOT to the generic "Stand".
-   - Use the generic "Stand" ONLY if the customer does not specify any type of stand.
-   - The item_code_hint value MUST be the EXACT "name" string from the catalog (case-sensitive, character-perfect). Do NOT invent item codes.
-   - If NO item in the catalog is a close match, set item_code_hint to null and add a note to extraction_notes explaining what the customer requested.
-
-AVAILABLE ITEM CATALOG:
-{items_list}
-
-8. For phone_numbers: extract ALL phone numbers mentioned, include country code if present, do not normalize.
-9. Add extraction_notes for EVERY field you were uncertain about.
-
-FEW-SHOT EXAMPLES:{few_shot_text}
-
-Now extract the order data from the user's message and return ONLY valid JSON matching the schema."""
+def _build_system_prompt(catalog: list[dict], settings) -> str:
+    base_prompt = settings.system_prompt_base or "You are an order intake assistant."
+    rules = settings.extraction_rules or ""
+    
+    prompt = f"{base_prompt}\n\nRULES:\n{rules}"
+    
+    # Dynamically inject Governorate options so the AI doesn't invent invalid ones
+    try:
+        meta = frappe.get_meta("Customer")
+        gov_field = meta.get_field("governorate")
+        if gov_field and gov_field.options:
+            valid_options = [opt for opt in gov_field.options.split("\n") if opt.strip()]
+            prompt += (
+                f"\n\nVALID GOVERNORATE OPTIONS (You MUST pick one of these exactly, or return null):\n"
+                f"{', '.join(valid_options)}"
+            )
+    except Exception:
+        pass
+    
+    if settings.append_catalog:
+        items_list = _build_catalog_for_prompt(catalog)
+        prompt += f"\n\nAVAILABLE ITEM CATALOG:\n{items_list}"
+        
+    if settings.append_examples:
+        few_shot_text = ""
+        for i, ex in enumerate(FEW_SHOT_EXAMPLES, 1):
+            few_shot_text += (
+                f"\n\n--- Example {i} ---\n"
+                f"Input:\n{ex['input']}\n\n"
+                f"Expected JSON output:\n{json.dumps(ex['output'], ensure_ascii=False, indent=2)}"
+            )
+        prompt += f"\n\nFEW-SHOT EXAMPLES:{few_shot_text}"
+        
+    prompt += "\n\nDISCOUNT RULE: Extract any explicitly mentioned discount amount from the text and place it in the 'discount_amount' field as a number (e.g. 5000 for 5000 IQD discount, or 10000). If no discount is mentioned, use null."
+    prompt += "\n\nCUSTOM DETAILS RULE: Extract any additional details, special instructions, custom notes, or unmapped text into the 'custom_details' field as text. If no extra details are mentioned, use null."
+    prompt += "\n\nNow extract the order data from the user's message and return ONLY valid JSON matching the schema."
+    return prompt
 
 
 # ---------------------------------------------------------------------------
@@ -231,28 +263,35 @@ def extract_order(raw_text: str) -> dict:
     Raises ExtractionError on API failure.
     Never touches the Frappe database (except reading Item catalog).
     """
-    api_key = frappe.conf.get("gemini_api_key")
+    settings = frappe.get_doc("AI Intake Settings")
+    
+    # Use API key from settings if available, else fallback to site config
+    api_key = settings.get_password("api_key") if settings.get("api_key") else frappe.conf.get("gemini_api_key")
     if not api_key:
         raise ExtractionError(
             "Gemini API key not configured. "
-            "Run: bench --site narjes.local set-config gemini_api_key YOUR_KEY"
+            "Set it in 'AI Intake Settings' or run: bench --site narjes.local set-config gemini_api_key YOUR_KEY"
         )
 
     # Fetch live catalog
     catalog = get_item_catalog()
 
     client = genai.Client(api_key=api_key)
+    
+    model_name = settings.model_name or "gemini-2.5-flash"
+    temperature = float(settings.temperature) if settings.temperature is not None else 0.1
+    max_tokens = int(settings.max_tokens) if settings.max_tokens is not None else 4096
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model_name,
             contents=[raw_text],
             config=types.GenerateContentConfig(
-                system_instruction=_build_system_prompt(catalog),
+                system_instruction=_build_system_prompt(catalog, settings),
                 response_mime_type="application/json",
                 response_schema=EXTRACTION_SCHEMA,
-                temperature=0.1,    # Low temperature = more deterministic extraction
-                max_output_tokens=4096,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
             ),
         )
     except Exception as e:

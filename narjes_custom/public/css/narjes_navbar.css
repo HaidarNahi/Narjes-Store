@@ -1,0 +1,29 @@
+/* Fixed, centered Home button in the desk navbar */
+.narjes-navbar-home-btn {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: var(--navbar-height, 50px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1031;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 16px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: background 0.15s ease;
+}
+
+.narjes-navbar-home-btn:hover,
+.narjes-navbar-home-btn:focus {
+    background: var(--bg-color-menu, rgba(0, 0, 0, 0.06));
+    outline: none;
+}
+
+.narjes-navbar-home-icon {
+    font-size: 20px;
+}

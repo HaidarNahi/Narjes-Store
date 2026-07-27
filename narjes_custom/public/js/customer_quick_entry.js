@@ -59,6 +59,21 @@ $(document).ready(function() {
             e.preventDefault();
             frappe.set_route('narjes-home');
         });
+
+        // Fixed, centered Home button in the navbar — always reachable from anywhere in the desk
+        if (!document.getElementById('narjes-navbar-home-btn')) {
+            $('<button>', {
+                id: 'narjes-navbar-home-btn',
+                class: 'narjes-navbar-home-btn',
+                title: __('Go to Home'),
+                html: '<span class="narjes-navbar-home-icon">🏠</span>'
+            })
+                .on('click', function(e) {
+                    e.preventDefault();
+                    frappe.set_route('narjes-home');
+                })
+                .appendTo('body');
+        }
     }, 1000);
 });
 

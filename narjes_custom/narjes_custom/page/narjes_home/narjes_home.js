@@ -25,10 +25,11 @@ var NarjesHomeDashboard = class {
         if (saved) {
             try { return JSON.parse(saved); } catch (e) {}
         }
+        const defaults = (frappe.boot && frappe.boot.narjes_settings) || {};
         return {
-            show_ai_intake: true,
-            show_shortcuts: true,
-            show_analytics: true
+            show_ai_intake: defaults.default_show_ai_intake !== false,
+            show_shortcuts: defaults.default_show_shortcuts !== false,
+            show_analytics: defaults.default_show_analytics !== false
         };
     }
 
@@ -61,16 +62,9 @@ var NarjesHomeDashboard = class {
     }
 
     init_page() {
-        // Load CSS if not loaded
-        if (!document.getElementById('narjes-home-css')) {
-            $('<link>')
-                .attr('id', 'narjes-home-css')
-                .attr('rel', 'stylesheet')
-                .attr('type', 'text/css')
-                .attr('href', '/assets/narjes_custom/page/narjes_home/narjes_home.css')
-                .appendTo('head');
-        }
-
+        // narjes_home.css is loaded automatically by Frappe (Page.load_assets
+        // injects it as an inline <style> alongside this script) — no manual
+        // <link> needed here.
         this.render();
     }
 

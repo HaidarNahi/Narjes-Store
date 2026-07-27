@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-07-27 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "home_dashboard_section",
+  "default_show_ai_intake",
+  "column_break_home_1",
+  "default_show_shortcuts",
+  "column_break_home_2",
+  "default_show_analytics",
+  "business_constants_section",
+  "baghdad_delivery_fee",
+  "column_break_biz_1",
+  "other_governorate_delivery_fee",
+  "section_break_biz_2",
+  "painting_rate_per_cm",
+  "column_break_biz_3",
+  "sheet_rate_per_item",
+  "column_break_biz_4",
+  "default_packaging_cost",
+  "business_constants_note",
+  "sidebar_section",
+  "sidebar_links_note",
+  "sidebar_links"
+ ],
+ "fields": [
+  {
+   "fieldname": "home_dashboard_section",
+   "fieldtype": "Section Break",
+   "label": "Home Dashboard Defaults"
+  },
+  {
+   "fieldname": "default_show_ai_intake",
+   "fieldtype": "Check",
+   "label": "Show AI Order Intake Section by Default",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_home_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_show_shortcuts",
+   "fieldtype": "Check",
+   "label": "Show Shortcuts Bar by Default",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_home_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_show_analytics",
+   "fieldtype": "Check",
+   "label": "Show Analytics & Charts by Default",
+   "default": "1"
+  },
+  {
+   "fieldname": "business_constants_section",
+   "fieldtype": "Section Break",
+   "label": "Business Constants"
+  },
+  {
+   "fieldname": "baghdad_delivery_fee",
+   "fieldtype": "Currency",
+   "label": "Baghdad Delivery Fee",
+   "default": "4000",
+   "reqd": 1,
+   "description": "Applied to Sales Orders / Invoices / Delivery Notes when governorate of delivery is Baghdad."
+  },
+  {
+   "fieldname": "column_break_biz_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "other_governorate_delivery_fee",
+   "fieldtype": "Currency",
+   "label": "Other Governorate Delivery Fee",
+   "default": "6000",
+   "reqd": 1,
+   "description": "Applied when governorate of delivery is set and is not Baghdad."
+  },
+  {
+   "fieldname": "section_break_biz_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "painting_rate_per_cm",
+   "fieldtype": "Float",
+   "label": "Painting Rate per cm²",
+   "precision": "2",
+   "default": "0.95"
+  },
+  {
+   "fieldname": "column_break_biz_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sheet_rate_per_item",
+   "fieldtype": "Currency",
+   "label": "Sheet Rate per Item",
+   "default": "250"
+  },
+  {
+   "fieldname": "column_break_biz_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_packaging_cost",
+   "fieldtype": "Currency",
+   "label": "Default Packaging Cost",
+   "default": "1250"
+  },
+  {
+   "fieldname": "business_constants_note",
+   "fieldtype": "HTML",
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Delivery fees above are live and used on every Sales Order / Sales Invoice / Delivery Note. The painting rate, sheet rate, and packaging cost fields are staged for the canvas/sheet costing automation, which is still pending review before it goes live — they are not yet read by any running code.</p>"
+  },
+  {
+   "fieldname": "sidebar_section",
+   "fieldtype": "Section Break",
+   "label": "Narjes Dashboard Workspace Sidebar"
+  },
+  {
+   "fieldname": "sidebar_links_note",
+   "fieldtype": "HTML",
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Links listed here are synced onto the \"Narjes Dashboard\" workspace sidebar whenever this form is saved (in addition to the built-in Home Dashboard link).</p>"
+  },
+  {
+   "fieldname": "sidebar_links",
+   "fieldtype": "Table",
+   "label": "Sidebar Links",
+   "options": "Narjes Sidebar Link"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-27 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "Narjes Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

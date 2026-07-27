@@ -92,7 +92,7 @@ def sales_order_before_validate(doc, method):
 
     fee = 0
     gov = doc.get('governorate_of_delivery')
-    
+
     if not gov and doc.doctype in ["Sales Invoice", "Delivery Note"]:
         for item in doc.get("items"):
             so_name = item.get("sales_order")
@@ -100,10 +100,12 @@ def sales_order_before_validate(doc, method):
                 gov = frappe.db.get_value("Sales Order", so_name, "governorate_of_delivery")
                 break
 
-    if gov == 'بغداد':
-        fee = 4000
-    elif gov:
-        fee = 6000
+    if gov:
+        settings = frappe.get_cached_doc("Narjes Settings")
+        if gov == 'بغداد':
+            fee = settings.baghdad_delivery_fee or 0
+        else:
+            fee = settings.other_governorate_delivery_fee or 0
 
     if doc.meta.has_field("delivery_fees"):
         doc.delivery_fees = fee
@@ -295,8 +297,16 @@ def get_home_dashboard_data():
 
 @frappe.whitelist()
 def extend_bootinfo(bootinfo):
-    """Force default home page to be our custom dashboard"""
+    """Force default home page to be our custom dashboard, and expose
+    Narjes Settings' Home Dashboard defaults for narjes_home.js to use."""
     bootinfo.home_page = "narjes-home"
+
+    settings = frappe.get_cached_doc("Narjes Settings")
+    bootinfo.narjes_settings = {
+        "default_show_ai_intake": bool(settings.default_show_ai_intake),
+        "default_show_shortcuts": bool(settings.default_show_shortcuts),
+        "default_show_analytics": bool(settings.default_show_analytics),
+    }
 
 @frappe.whitelist()
 def fix_all():

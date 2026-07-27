@@ -390,6 +390,16 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                                 <input type="text" id="ai-gov-delivery" value="${frappe.utils.escape_html(ex.governorate || "")}"/>
                             </div>
                         </div>
+                        <div class="ai-field-row">
+                            <div class="ai-field-group">
+                                <label>Discount Amount</label>
+                                <input type="number" id="ai-discount-amount" value="${ex.discount_amount || 0}" min="0"/>
+                            </div>
+                            <div class="ai-field-group">
+                                <label>Custom Details</label>
+                                <input type="text" id="ai-custom-details" value="${frappe.utils.escape_html(ex.custom_details || "")}" placeholder="Any extra unstructured details..."/>
+                            </div>
+                        </div>
                         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                             <input type="checkbox" id="ai-gift" ${ex.gift ? "checked" : ""}/>
                             <label for="ai-gift" style="font-size:14px;cursor:pointer;font-weight:600;">🎁 Mark as Gift Order</label>
@@ -734,6 +744,8 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 gift: $("#ai-gift").is(":checked"),
                 priority: $("#ai-priority").val() || null,
                 governorate_of_delivery: $("#ai-gov-delivery").val().trim(),
+                discount_amount: parseFloat($("#ai-discount-amount").val()) || 0,
+                custom_details: $("#ai-custom-details").val().trim(),
                 order_items,
             };
 

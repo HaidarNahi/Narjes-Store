@@ -219,24 +219,40 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             "Customer", {"customer_name": customer_name_str}, "name"
         )
         if existing_by_name:
-            frappe.throw(
-                f"A customer named '{customer_name_str}' already exists ({existing_by_name}). "
-                "Switch to 'Use existing customer' or use a different name."
-            )
+            # Automatically use the existing customer
+            customer_docname = existing_by_name
+            frappe.msgprint(f"Customer '{customer_name_str}' already exists. Automatically linking to the existing record instead of creating a new one.")
+        else:
+            # Normalize governorate
+            gov = data.get("governorate") or ""
+            if gov:
+                try:
+                    meta = frappe.get_meta("Customer")
+                    gov_field = meta.get_field("governorate")
+                    if gov_field and gov_field.options:
+                        valid_options = [opt for opt in gov_field.options.split("\n") if opt.strip()]
+                        if gov not in valid_options:
+                            gov_normalized = gov.replace("ال", "").strip()
+                            for opt in valid_options:
+                                if opt.replace("ال", "").strip() == gov_normalized:
+                                    gov = opt
+                                    break
+                except Exception:
+                    pass
 
-        cust = frappe.get_doc({
-            "doctype": "Customer",
-            "customer_name": customer_name_str,
-            "customer_type": "Individual",
-            "main_phone_number": data.get("main_phone_number"),
-            "secondary_phone_number": data.get("secondary_phone_number"),
-            "username": data.get("username") or "",
-            "governorate": data.get("governorate") or "",
-            "full_address": data.get("full_address") or "",
-        })
-        cust.insert(ignore_permissions=True)
-        customer_docname = cust.name
-        created_customer_name = cust.name
+            cust = frappe.get_doc({
+                "doctype": "Customer",
+                "customer_name": customer_name_str,
+                "customer_type": "Individual",
+                "main_phone_number": data.get("main_phone_number"),
+                "secondary_phone_number": data.get("secondary_phone_number"),
+                "username": data.get("username") or "",
+                "governorate": gov,
+                "full_address": data.get("full_address") or "",
+            })
+            cust.insert(ignore_permissions=True)
+            customer_docname = cust.name
+            created_customer_name = cust.name
     else:
         customer_docname = data.get("customer_name") or intake.matched_customer
         if not customer_docname:
@@ -248,6 +264,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
     default_warehouse, default_uom = _get_default_so_items_params()
 
     so_items = []
+    flower_items = []
     for item in items:
         item_code = item.get("item_code", "").strip()
         if not item_code:
@@ -259,16 +276,44 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 f"Item '{item_code}' does not exist in the item master. "
                 "Please correct the item code in the review screen."
             )
-        so_items.append({
-            "item_code": item_code,
-            "item_name": item.get("item_name") or item_code,
-            "description": item.get("description") or item_code,
-            "qty": float(item.get("qty") or 1),
-            "rate": float(item.get("rate") or item.get("unit_price") or 0),
-            "uom": default_uom,
-            "warehouse": default_warehouse,
-            "additional_notes": item.get("notes") or "",
-        })
+            
+        qty = float(item.get("qty") or 1)
+        rate = float(item.get("rate") or item.get("unit_price") or 0)
+        
+        is_flower = frappe.db.get_value("Item", item_code, "custom_is_flower")
+        
+        if is_flower:
+            flower_items.append({
+                "item_code": item_code,
+                "qty": qty,
+                "rate": rate,
+                "amount": qty * rate,
+                "delivery_date": data.get("delivery_date") or today()
+            })
+        else:
+            so_items.append({
+                "item_code": item_code,
+                "item_name": item.get("item_name") or item_code,
+                "description": item.get("description") or item_code,
+                "qty": qty,
+                "rate": rate,
+                "uom": default_uom,
+                "warehouse": default_warehouse,
+                "additional_notes": item.get("notes") or "",
+            })
+
+    # If all items are flowers, populate so_items to satisfy ERPNext mandatory table rule
+    if not so_items and flower_items:
+        for f in flower_items:
+            so_items.append({
+                "item_code": f["item_code"],
+                "item_name": f["item_code"],
+                "description": f["item_code"],
+                "qty": f["qty"],
+                "rate": f["rate"],
+                "uom": default_uom,
+                "warehouse": default_warehouse,
+            })
 
     # ── Create Sales Order ─────────────────────────────────────────────────
     so = frappe.get_doc({
@@ -279,9 +324,13 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
         "currency": data.get("currency") or "IQD",
         "gift": 1 if data.get("gift") else 0,
         "priority": data.get("priority") or "",
+        "custom_details": data.get("custom_details") or "",
+        "discount_amount": float(data.get("discount_amount") or 0),
+        "additional_discount_percentage": 0,
         "governorate_of_delivery": data.get("governorate_of_delivery") or "",
         "order_type": "Sales",
         "items": so_items,
+        "custom_flower_items": flower_items,
     })
     so.insert(ignore_permissions=True)
 
