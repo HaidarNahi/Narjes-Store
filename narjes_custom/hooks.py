@@ -23,6 +23,7 @@ app_license = "mit"
 
 # Includes in <head>
 # ------------------
+extend_bootinfo = "narjes_custom.api.extend_bootinfo"
 
 # include js, css files in header of desk.html
 app_include_css = [
@@ -45,7 +46,10 @@ app_include_js = [
 # webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
-page_js = {"ai-intake": "narjes_custom/page/ai_intake/ai_intake.js"}
+page_js = {
+    "ai-intake": "narjes_custom/page/ai_intake/ai_intake.js",
+    "narjes-home": "narjes_custom/page/narjes_home/narjes_home.js"
+}
 
 # include js in doctype views
 doctype_js = {

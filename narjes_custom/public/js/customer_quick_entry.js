@@ -20,3 +20,45 @@ frappe.ui.form.CustomerQuickEntryForm = class CustomerQuickEntryForm extends (
         super.render_dialog();
     }
 };
+
+// Auto-redirect Desk home landing page to narjes-home
+window.has_redirected_to_narjes_home = false;
+
+frappe.router.on('change', function() {
+    let route = frappe.get_route();
+    if (!route) return;
+    
+    let is_landing = (route[0] === 'workspace' || route[0] === 'home' || route.length === 0);
+    let is_broken_sidebar = (route.includes('narjes-dashboard') || route.includes('Narjes Dashboard'));
+
+    if (is_broken_sidebar) {
+        // ALWAYS redirect if they click the broken sidebar link
+        setTimeout(() => { frappe.set_route('narjes-home'); }, 10);
+    } else if (is_landing) {
+        // Only redirect once on initial load
+        if (!window.has_redirected_to_narjes_home) {
+            window.has_redirected_to_narjes_home = true;
+            setTimeout(() => { frappe.set_route('narjes-home'); }, 10);
+        }
+    }
+});
+
+// Force sidebar cache clear once
+if (!localStorage.getItem('narjes_sidebar_cleared')) {
+    Object.keys(localStorage).forEach(key => {
+        if (key.includes('sidebar_items') || key.includes('workspace')) {
+            localStorage.removeItem(key);
+        }
+    });
+    localStorage.setItem('narjes_sidebar_cleared', '1');
+}
+
+$(document).ready(function() {
+    setTimeout(() => {
+        $('.navbar-brand').off('click').on('click', function(e) {
+            e.preventDefault();
+            frappe.set_route('narjes-home');
+        });
+    }, 1000);
+});
+

@@ -215,3 +215,133 @@ def purchase_order_before_validate(doc, method):
         # Remove the transportation row if amount is 0 or empty
         if existing_row:
             doc.taxes = [t for t in doc.taxes if not (t.account_head == account_head and t.description == description)]
+
+
+@frappe.whitelist()
+def get_home_dashboard_data():
+    """
+    Fetch KPI metrics and time-series data for the Home Dashboard charts.
+    """
+    today_str = frappe.utils.today()
+    first_day_of_month = frappe.utils.get_first_day(today_str)
+
+    # 1. KPI Metrics
+    today_rev = frappe.db.sql("""
+        SELECT COALESCE(SUM(grand_total), 0)
+        FROM `tabSales Order`
+        WHERE transaction_date = %s AND docstatus != 2
+    """, (today_str,))[0][0] or 0.0
+
+    today_orders_count = frappe.db.count("Sales Order", filters={"transaction_date": today_str, "docstatus": ["!=", 2]})
+
+    pending_deliveries_count = frappe.db.count("Sales Order", filters={"status": ["in", ["To Deliver", "To Deliver and Bill"]], "docstatus": 1})
+
+    total_customers_count = frappe.db.count("Customer")
+
+    # 2. Financial Time Series (Last 14 days)
+    start_date = frappe.utils.add_days(today_str, -13)
+
+    so_daily = frappe.db.sql("""
+        SELECT transaction_date, COALESCE(SUM(grand_total), 0) as total
+        FROM `tabSales Order`
+        WHERE transaction_date >= %s AND docstatus != 2
+        GROUP BY transaction_date
+        ORDER BY transaction_date ASC
+    """, (start_date,), as_dict=True)
+
+    po_daily = frappe.db.sql("""
+        SELECT transaction_date, COALESCE(SUM(grand_total), 0) as total
+        FROM `tabPurchase Order`
+        WHERE transaction_date >= %s AND docstatus != 2
+        GROUP BY transaction_date
+        ORDER BY transaction_date ASC
+    """, (start_date,), as_dict=True)
+
+    so_map = {str(r.transaction_date): float(r.total) for r in so_daily}
+    po_map = {str(r.transaction_date): float(r.total) for r in po_daily}
+
+    labels = []
+    income_data = []
+    outcome_data = []
+    net_revenue_data = []
+
+    curr = frappe.utils.getdate(start_date)
+    end = frappe.utils.getdate(today_str)
+
+    while curr <= end:
+        ds = str(curr)
+        labels.append(frappe.utils.formatdate(ds, "dd MMM"))
+        inc = so_map.get(ds, 0.0)
+        out = po_map.get(ds, 0.0)
+        income_data.append(inc)
+        outcome_data.append(out)
+        net_revenue_data.append(inc - out)
+        curr = frappe.utils.add_days(curr, 1)
+
+    return {
+        "kpis": {
+            "today_revenue": today_rev,
+            "today_orders": today_orders_count,
+            "pending_deliveries": pending_deliveries_count,
+            "total_customers": total_customers_count
+        },
+        "charts": {
+            "labels": labels,
+            "income": income_data,
+            "outcome": outcome_data,
+            "net_revenue": net_revenue_data
+        }
+    }
+
+@frappe.whitelist()
+def extend_bootinfo(bootinfo):
+    """Force default home page to be our custom dashboard"""
+    bootinfo.home_page = "narjes-home"
+
+@frappe.whitelist()
+def fix_all():
+    # 1. Force reload the page JS/CSS from disk into the database
+    frappe.reload_doc("narjes_custom", "page", "narjes_home")
+
+    # 2. Delete the broken Workspace that Frappe can't find
+    if frappe.db.exists("Workspace", "Narjes Dashboard"):
+        frappe.delete_doc("Workspace", "Narjes Dashboard", force=1, ignore_permissions=True)
+    if frappe.db.exists("Workspace", "narjes-dashboard"):
+        frappe.delete_doc("Workspace", "narjes-dashboard", force=1, ignore_permissions=True)
+
+    # 3. Create a clean, purely database-driven Workspace link
+    frappe.get_doc({
+        "doctype": "Workspace",
+        "name": "Narjes Dashboard",
+        "title": "Narjes Dashboard",
+        "label": "Narjes Dashboard",
+        "is_standard": 0, # THIS PREVENTS IT FROM LOOKING FOR A JSON FILE
+        "public": 1,
+        "icon": "home",
+        "sequence_id": 1,
+        "content": '[{"type": "header", "data": {"text": "Narjes Dashboard", "level": 2}}]',
+        "links": [{"type": "Link", "label": "Home Dashboard", "link_to": "narjes-home", "link_type": "Page"}]
+    }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+    return "SUCCESS: Reloaded JS and Rebuilt Workspace natively."
+
+@frappe.whitelist()
+def create_narjes_dashboard():
+    """Create the Workspace dynamically"""
+    workspace_name = "Narjes Dashboard"
+    if not frappe.db.exists("Workspace", {"label": workspace_name}):
+        frappe.get_doc({
+            "doctype": "Workspace",
+            "label": workspace_name,
+            "module": "Narjes Custom",
+            "is_standard": 1,
+            "public": 1,
+            "icon": "home",
+            "sequence_id": 1,
+            "content": '[{"type": "header", "data": {"text": "Narjes Dashboard", "level": 2}}]',
+            "links": [{"type": "Link", "label": "Home Dashboard", "link_to": "narjes-home", "link_type": "Page"}]
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+        return "✅ Created Workspace!"
+    return "✅ Workspace already exists!"

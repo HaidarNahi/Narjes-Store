@@ -1,0 +1,350 @@
+/* Narjes Store Custom Home Dashboard Styling */
+:root {
+    --narjes-mint: #A6D3C7;
+    --narjes-mint-dark: #82b8aa;
+    --narjes-mint-light: #eef7f4;
+    --narjes-navy: #0F172A;
+    --narjes-navy-card: #1E293B;
+    --narjes-coral: #FF8559;
+    --narjes-bg: #F8FAFC;
+    --narjes-card-bg: #FFFFFF;
+    --narjes-text: #1E293B;
+    --narjes-muted: #64748B;
+    --narjes-border: #E2E8F0;
+    --narjes-radius: 12px;
+    --narjes-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+}
+
+.narjes-home-wrapper {
+    max-width: 1280px;
+    margin: 20px auto 40px auto;
+    padding: 0 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--narjes-text);
+}
+
+/* Header Banner */
+.narjes-hero-banner {
+    background: linear-gradient(135deg, var(--narjes-navy) 0%, #1e293b 100%);
+    border-radius: var(--narjes-radius);
+    padding: 24px 30px;
+    color: #ffffff;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.narjes-hero-banner::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(166, 211, 199, 0.15) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.narjes-hero-title h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.narjes-hero-title h2 span.brand-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: var(--narjes-mint);
+    border-radius: 50%;
+}
+
+.narjes-hero-title p {
+    margin: 0;
+    color: #94A3B8;
+    font-size: 13px;
+}
+
+.narjes-header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-narjes-customize {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-narjes-customize:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* AI Order Intake Section */
+.narjes-section-card {
+    background: var(--narjes-card-bg);
+    border: 1px solid var(--narjes-border);
+    border-radius: var(--narjes-radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--narjes-shadow);
+    transition: box-shadow 0.2s ease;
+}
+
+.narjes-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.narjes-section-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--narjes-navy);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.narjes-ai-box {
+    position: relative;
+}
+
+.narjes-ai-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 14px 16px;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--narjes-text);
+    background: #F8FAFC;
+    resize: vertical;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.narjes-ai-textarea:focus {
+    outline: none;
+    border-color: var(--narjes-mint-dark);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(166, 211, 199, 0.3);
+}
+
+.narjes-ai-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.btn-narjes-primary {
+    background: var(--narjes-mint);
+    color: var(--narjes-navy);
+    border: none;
+    border-radius: 8px;
+    padding: 9px 22px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-narjes-primary:hover {
+    background: var(--narjes-mint-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(166, 211, 199, 0.4);
+}
+
+/* Shortcuts Section */
+.narjes-shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+}
+
+.narjes-shortcut-card {
+    background: #F8FAFC;
+    border: 1px solid var(--narjes-border);
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+    text-decoration: none !important;
+    color: var(--narjes-text);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    cursor: pointer;
+}
+
+.narjes-shortcut-card:hover {
+    background: #FFFFFF;
+    border-color: var(--narjes-mint);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.narjes-shortcut-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--narjes-mint-light);
+    color: var(--narjes-navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: transform 0.2s ease;
+}
+
+.narjes-shortcut-card:hover .narjes-shortcut-icon {
+    transform: scale(1.1);
+    background: var(--narjes-mint);
+}
+
+.narjes-shortcut-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--narjes-navy);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.narjes-shortcut-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #EF4444;
+    color: #FFFFFF;
+    font-size: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid #FFFFFF;
+}
+
+.narjes-shortcuts-grid.edit-mode .narjes-shortcut-remove {
+    display: flex;
+}
+
+/* KPI Cards Section */
+.narjes-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.narjes-kpi-card {
+    background: var(--narjes-card-bg);
+    border: 1px solid var(--narjes-border);
+    border-radius: var(--narjes-radius);
+    padding: 20px;
+    box-shadow: var(--narjes-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s ease;
+}
+
+.narjes-kpi-card:hover {
+    transform: translateY(-2px);
+}
+
+.narjes-kpi-info p {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--narjes-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.narjes-kpi-info h4 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--narjes-navy);
+}
+
+.narjes-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.kpi-icon-mint { background: var(--narjes-mint-light); color: #0D9488; }
+.kpi-icon-coral { background: #FFF7ED; color: var(--narjes-coral); }
+.kpi-icon-navy { background: #F1F5F9; color: var(--narjes-navy); }
+.kpi-icon-purple { background: #FAF5FF; color: #9333EA; }
+
+/* Analytics Charts Section */
+.narjes-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.narjes-chart-card {
+    background: var(--narjes-card-bg);
+    border: 1px solid var(--narjes-border);
+    border-radius: var(--narjes-radius);
+    padding: 20px;
+    box-shadow: var(--narjes-shadow);
+}
+
+.narjes-chart-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--narjes-navy);
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.narjes-chart-wrapper {
+    position: relative;
+    height: 240px;
+    width: 100%;
+}
