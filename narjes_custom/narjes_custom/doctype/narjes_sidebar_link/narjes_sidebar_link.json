@@ -6,6 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "workspace",
   "label",
   "link_type",
   "link_to",
@@ -13,12 +14,21 @@
  ],
  "fields": [
   {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "label": "Workspace",
+   "options": "Workspace",
+   "in_list_view": 1,
+   "reqd": 1,
+   "columns": 2
+  },
+  {
    "fieldname": "label",
    "fieldtype": "Data",
    "label": "Label",
    "in_list_view": 1,
    "reqd": 1,
-   "columns": 3
+   "columns": 2
   },
   {
    "fieldname": "link_type",
@@ -32,12 +42,13 @@
   },
   {
    "fieldname": "link_to",
-   "fieldtype": "Data",
+   "fieldtype": "Dynamic Link",
    "label": "Link To",
-   "description": "Page name / DocType name / Report name",
+   "options": "link_type",
+   "description": "Pulls a live list from the selected Link Type (Page / DocType / Report).",
    "in_list_view": 1,
    "reqd": 1,
-   "columns": 3
+   "columns": 2
   },
   {
    "fieldname": "icon",
@@ -45,7 +56,7 @@
    "label": "Icon",
    "description": "Optional Frappe icon name, e.g. 'home'",
    "in_list_view": 1,
-   "columns": 2
+   "columns": 1
   }
  ],
  "index_web_pages_for_search": 0,

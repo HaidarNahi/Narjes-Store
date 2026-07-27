@@ -148,6 +148,10 @@
     box-sizing: border-box;
 }
 
+.narjes-ai-textarea:hover {
+    border-color: #B9C4D0;
+}
+
 .narjes-ai-textarea:focus {
     outline: none;
     border-color: var(--narjes-mint-dark);
@@ -171,7 +175,7 @@
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -181,6 +185,26 @@
     background: var(--narjes-mint-dark);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(166, 211, 199, 0.4);
+}
+
+.btn-narjes-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(166, 211, 199, 0.4);
+    filter: brightness(0.97);
+}
+
+.narjes-ai-actions #btn-clear-home-ai {
+    border-radius: 8px;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.narjes-ai-actions #btn-clear-home-ai:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+}
+
+.narjes-ai-actions #btn-clear-home-ai:active {
+    transform: translateY(1px);
 }
 
 /* Shortcuts Section */

@@ -22,6 +22,8 @@
   "column_break_biz_4",
   "default_packaging_cost",
   "business_constants_note",
+  "shortcuts_section",
+  "quick_shortcuts",
   "sidebar_section",
   "sidebar_links_note",
   "sidebar_links"
@@ -120,14 +122,26 @@
    "options": "<p style='color: var(--text-muted); font-size: 12px;'>Delivery fees above are live and used on every Sales Order / Sales Invoice / Delivery Note. The painting rate, sheet rate, and packaging cost fields are staged for the canvas/sheet costing automation, which is still pending review before it goes live — they are not yet read by any running code.</p>"
   },
   {
+   "fieldname": "shortcuts_section",
+   "fieldtype": "Section Break",
+   "label": "Quick Shortcuts (Home Dashboard)"
+  },
+  {
+   "fieldname": "quick_shortcuts",
+   "fieldtype": "Table",
+   "label": "Quick Shortcuts",
+   "options": "Narjes Quick Shortcut",
+   "description": "Shown on the Home Dashboard's Quick Shortcuts section. Leave Role blank to show a shortcut to everyone; set it to only show that shortcut to users with that role."
+  },
+  {
    "fieldname": "sidebar_section",
    "fieldtype": "Section Break",
-   "label": "Narjes Dashboard Workspace Sidebar"
+   "label": "Workspace Sidebars"
   },
   {
    "fieldname": "sidebar_links_note",
    "fieldtype": "HTML",
-   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Links listed here are synced onto the \"Narjes Dashboard\" workspace sidebar whenever this form is saved (in addition to the built-in Home Dashboard link).</p>"
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Pick a Workspace per row, then a Link Type and Link To (autocompletes from actual Pages/DocTypes/Reports). Every Workspace that has at least one row here gets its sidebar fully rebuilt from those rows whenever this form is saved. Workspaces with no rows here are left untouched.</p>"
   },
   {
    "fieldname": "sidebar_links",

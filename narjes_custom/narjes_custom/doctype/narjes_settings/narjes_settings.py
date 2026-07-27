@@ -4,8 +4,6 @@
 import frappe
 from frappe.model.document import Document
 
-DASHBOARD_WORKSPACE = "Narjes Dashboard"
-
 
 class NarjesSettings(Document):
 	def on_update(self):
@@ -13,25 +11,27 @@ class NarjesSettings(Document):
 
 
 def sync_sidebar_links(doc):
-	"""Rebuild the Narjes Dashboard workspace sidebar from the configured links."""
-	if not frappe.db.exists("Workspace", DASHBOARD_WORKSPACE):
-		return
+	"""Rebuild the sidebar of every Workspace referenced in sidebar_links.
 
-	workspace = frappe.get_doc("Workspace", DASHBOARD_WORKSPACE)
-	workspace.set("links", [])
-	workspace.append("links", {
-		"type": "Link",
-		"label": "Home Dashboard",
-		"link_to": "narjes-home",
-		"link_type": "Page",
-	})
-
+	Only Workspaces that have at least one configured row are touched — a
+	Workspace with no rows here is left exactly as-is (native/manual edits
+	are never overwritten unless the admin explicitly manages it here).
+	"""
+	rows_by_workspace = {}
 	for row in doc.sidebar_links:
-		workspace.append("links", {
-			"type": "Link",
-			"label": row.label,
-			"link_to": row.link_to,
-			"link_type": row.link_type,
-		})
+		rows_by_workspace.setdefault(row.workspace, []).append(row)
 
-	workspace.save(ignore_permissions=True)
+	for workspace_name, rows in rows_by_workspace.items():
+		if not frappe.db.exists("Workspace", workspace_name):
+			continue
+
+		workspace = frappe.get_doc("Workspace", workspace_name)
+		workspace.set("links", [])
+		for row in rows:
+			workspace.append("links", {
+				"type": "Link",
+				"label": row.label,
+				"link_to": row.link_to,
+				"link_type": row.link_type,
+			})
+		workspace.save(ignore_permissions=True)

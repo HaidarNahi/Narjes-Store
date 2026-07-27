@@ -40,25 +40,11 @@ var NarjesHomeDashboard = class {
     }
 
     get_shortcuts() {
-        const saved = localStorage.getItem('narjes_home_shortcuts');
-        if (saved) {
-            try { return JSON.parse(saved); } catch (e) {}
-        }
-        return [
-            { label: "Sales Orders", icon: "📋", route: "/app/sales-order" },
-            { label: "Customers", icon: "👤", route: "/app/customer" },
-            { label: "Item Master", icon: "📦", route: "/app/item" },
-            { label: "Revenue Report", icon: "📊", route: "/app/query-report/Sales Revenue Report" },
-            { label: "Delivery Notes", icon: "🚚", route: "/app/delivery-note" },
-            { label: "Purchase Orders", icon: "🛒", route: "/app/purchase-order" },
-            { label: "AI Order Intake", icon: "✨", route: "/app/ai-intake" }
-        ];
-    }
-
-    save_shortcuts(shortcuts) {
-        this.shortcuts = shortcuts;
-        localStorage.setItem('narjes_home_shortcuts', JSON.stringify(shortcuts));
-        this.render_shortcuts_grid();
+        // Shortcuts are configured centrally in Narjes Settings (System Manager
+        // only) so a "Role" can be attached to each one. Filter here to only
+        // what the current user is allowed to see.
+        const all = (frappe.boot && frappe.boot.narjes_settings && frappe.boot.narjes_settings.shortcuts) || [];
+        return all.filter((sc) => !sc.role || (frappe.user_roles || []).includes(sc.role));
     }
 
     init_page() {
@@ -114,9 +100,11 @@ var NarjesHomeDashboard = class {
                 <div class="narjes-section-card" id="section-shortcuts">
                     <div class="narjes-section-header">
                         <h3>🔗 Quick Shortcuts</h3>
+                        ${frappe.user_roles.includes('System Manager') ? `
                         <button class="btn btn-xs btn-default" id="btn-manage-shortcuts">
                             ✏️ Edit Shortcuts
                         </button>
+                        ` : ''}
                     </div>
                     <div class="narjes-shortcuts-grid" id="home-shortcuts-grid"></div>
                 </div>
@@ -207,8 +195,15 @@ var NarjesHomeDashboard = class {
             });
         });
 
-        // Manage Shortcuts
-        $('#btn-manage-shortcuts').on('click', () => this.show_manage_shortcuts_dialog());
+        // Manage Shortcuts — edited via Narjes Settings' Quick Shortcuts table
+        // (gives a real editable grid with a working Role autocomplete).
+        $('#btn-manage-shortcuts').on('click', () => {
+            frappe.set_route('Form', 'Narjes Settings').then(() => {
+                setTimeout(() => {
+                    if (cur_frm) cur_frm.scroll_to_field('quick_shortcuts');
+                }, 300);
+            });
+        });
     }
 
     render_shortcuts_grid() {
@@ -260,58 +255,6 @@ var NarjesHomeDashboard = class {
             }
         });
         d.show();
-    }
-
-    show_manage_shortcuts_dialog() {
-        let currentShortcuts = [...this.shortcuts];
-
-        const d = new frappe.ui.Dialog({
-            title: '✏️ Manage Shortcuts',
-            fields: [
-                {
-                    fieldtype: 'HTML',
-                    fieldname: 'shortcuts_list',
-                    options: '<div id="dialog-shortcuts-container"></div>'
-                },
-                { fieldtype: 'Section Break', label: 'Add New Shortcut' },
-                { fieldtype: 'Data', fieldname: 'new_label', label: 'Label (e.g. Invoices)' },
-                { fieldtype: 'Data', fieldname: 'new_icon', label: 'Emoji Icon (e.g. 📑)', default: '🔗' },
-                { fieldtype: 'Data', fieldname: 'new_route', label: 'Route (e.g. /app/sales-invoice)' }
-            ],
-            primary_action_label: 'Save Shortcuts',
-            primary_action: (values) => {
-                if (values.new_label && values.new_route) {
-                    currentShortcuts.push({
-                        label: values.new_label,
-                        icon: values.new_icon || '🔗',
-                        route: values.new_route
-                    });
-                }
-                this.save_shortcuts(currentShortcuts);
-                d.hide();
-                frappe.show_alert({ message: 'Shortcuts updated!', indicator: 'green' });
-            }
-        });
-
-        d.show();
-
-        const render_dialog_list = () => {
-            const $wrap = $('#dialog-shortcuts-container');
-            $wrap.html(currentShortcuts.map((s, idx) => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--narjes-border);font-size:13px;">
-                    <div><span>${s.icon}</span> <strong>${frappe.utils.escape_html(s.label)}</strong> <span style="color:var(--narjes-muted);font-size:11px;">(${s.route})</span></div>
-                    <button class="btn btn-xs btn-danger btn-del-shortcut" data-idx="${idx}">Remove</button>
-                </div>
-            `).join(''));
-
-            $wrap.find('.btn-del-shortcut').on('click', function() {
-                const idx = $(this).data('idx');
-                currentShortcuts.splice(idx, 1);
-                render_dialog_list();
-            });
-        };
-
-        render_dialog_list();
     }
 
     load_analytics_data() {

@@ -306,6 +306,15 @@ def extend_bootinfo(bootinfo):
         "default_show_ai_intake": bool(settings.default_show_ai_intake),
         "default_show_shortcuts": bool(settings.default_show_shortcuts),
         "default_show_analytics": bool(settings.default_show_analytics),
+        "shortcuts": [
+            {
+                "label": row.label,
+                "icon": row.icon,
+                "route": row.route,
+                "role": row.role,
+            }
+            for row in settings.quick_shortcuts
+        ],
     }
 
 @frappe.whitelist()
