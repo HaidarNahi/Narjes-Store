@@ -102,6 +102,14 @@ doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 
 # before_install = "narjes_custom.install.before_install"
 # after_install = "narjes_custom.install.after_install"
+after_install = "narjes_custom.setup.custom_fields.run"
+
+# Re-sync custom fields on every migrate too, not just on first install —
+# belt-and-suspenders alongside the `fixtures` export above, and what makes
+# the local-dev-vs-production drift described in NARJES_STORE_SYSTEM.md §12
+# self-correcting going forward instead of something that has to be
+# remembered and run by hand.
+after_migrate = "narjes_custom.setup.custom_fields.run"
 
 # Uninstallation
 # ------------
@@ -153,10 +161,24 @@ doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 # ---------------
 # Hook on document methods and events
 
+# Every custom field this app depends on is defined once, in
+# narjes_custom.setup.custom_fields, and exported here so it travels with
+# the app in git and is reproducible on a fresh site (see
+# NARJES_STORE_SYSTEM.md §14.1/§14.2 — this used to be either hand-edited
+# directly into ERPNext's own core doctype JSON files, or created by half a
+# dozen separate one-off scripts with no fixture export at all).
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [["dt", "in", ["Customer", "Item", "Sales Order", "Purchase Order"]]],
+	},
+]
+
 doc_events = {
 	"Sales Order": {
 		"before_validate": "narjes_custom.api.sales_order_before_validate",
-		"validate": "narjes_custom.api.sales_order_validate"
+		"validate": "narjes_custom.api.sales_order_validate",
+		"on_submit": "narjes_custom.api.automate_so_flow"
 	},
 	"Sales Invoice": {
 		"before_validate": "narjes_custom.api.sales_order_before_validate",
@@ -167,7 +189,11 @@ doc_events = {
 		"validate": "narjes_custom.api.sales_order_validate"
 	},
 	"Purchase Order": {
-		"before_validate": "narjes_custom.api.purchase_order_before_validate"
+		"before_validate": "narjes_custom.api.purchase_order_before_validate",
+		"on_submit": "narjes_custom.api.automate_po_flow"
+	},
+	"Item": {
+		"validate": "narjes_custom.api.item_validate"
 	}
 }
 

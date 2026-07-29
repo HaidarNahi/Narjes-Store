@@ -23,6 +23,13 @@ from narjes_custom.ai_intake.extraction import (
     is_complete_extraction,
 )
 from narjes_custom.ai_intake.matching import match_customer
+from narjes_custom.business_logic import is_discount_excessive
+
+# A discount above this percentage of the order subtotal blocks confirm_intake
+# outright rather than trusting the (AI-extracted, human-reviewed-but-not-
+# guaranteed-reviewed) discount_amount value — see the sanity check in
+# confirm_intake() and NARJES_STORE_SYSTEM.md §8.4/§15.
+MAX_DISCOUNT_PERCENTAGE = 50
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +322,24 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 "warehouse": default_warehouse,
             })
 
+    # ── Discount sanity check ───────────────────────────────────────────────
+    # discount_amount and every item's rate come straight from AI-extracted
+    # customer-supplied free text with no server-side bound. A human is
+    # expected to review it on the review screen, but that's not a
+    # guarantee — a crafted or garbled message could push an unreasonable
+    # discount through unnoticed. This is a coarse backstop, not a
+    # replacement for review: it blocks the exceptional case rather than
+    # trying to validate every number (see NARJES_STORE_SYSTEM.md §8.4).
+    discount_amount = float(data.get("discount_amount") or 0)
+    order_subtotal = sum((item.get("qty") or 0) * (item.get("rate") or 0) for item in so_items)
+    order_subtotal += sum((f.get("qty") or 0) * (f.get("rate") or 0) for f in flower_items)
+    if is_discount_excessive(discount_amount, order_subtotal, MAX_DISCOUNT_PERCENTAGE):
+        frappe.throw(
+            f"The discount ({discount_amount:,.0f}) is more than {MAX_DISCOUNT_PERCENTAGE}% of the "
+            f"order subtotal ({order_subtotal:,.0f}). Please double-check it on the review screen — "
+            f"if it's genuinely correct, create/adjust this Sales Order manually instead of through AI intake."
+        )
+
     # ── Create Sales Order ─────────────────────────────────────────────────
     so = frappe.get_doc({
         "doctype": "Sales Order",
@@ -367,6 +392,7 @@ def get_item_catalog_endpoint() -> list:
 @frappe.whitelist()
 def get_customers_for_search(query: str) -> list:
     """Live search for customers by name — used in the review screen."""
+    frappe.has_permission("Customer", ptype="read", throw=True)
     return frappe.get_all(
         "Customer",
         filters=[["customer_name", "like", f"%{query}%"]],

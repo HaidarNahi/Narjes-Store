@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from narjes_custom.business_logic import compute_profit, compute_profit_percentage
+
 
 def execute(filters=None):
     columns = get_columns()
@@ -110,30 +112,37 @@ def get_data(filters):
         ORDER BY so.transaction_date DESC
     """.format(conditions=conditions), filters, as_dict=True)
 
+    # Buying Rate = sum of (valuation_rate * qty) for all items in each SO.
+    # Batched into a single grouped query instead of one query per order —
+    # the previous per-row query doesn't cause wrong results, just an
+    # avoidable N+1 round trip that scales with how many orders are in the
+    # filtered date range (see NARJES_STORE_SYSTEM.md §5.2).
+    order_names = [row.sales_order for row in orders]
+    buying_rates = {}
+    if order_names:
+        buying_rows = frappe.db.sql("""
+            SELECT soi.parent, IFNULL(SUM(soi.valuation_rate * soi.qty), 0) AS total_buying
+            FROM `tabSales Order Item` soi
+            WHERE soi.parent IN %(order_names)s
+            GROUP BY soi.parent
+        """, {"order_names": order_names}, as_dict=True)
+        buying_rates = {r.parent: r.total_buying for r in buying_rows}
+
     data = []
     for row in orders:
         # Selling Rate = Grand Total - Delivery Fees
         delivery_fees = row.delivery_fees or 0
         selling_rate = (row.grand_total or 0) - delivery_fees
 
-        # Buying Rate = sum of (valuation_rate * qty) for all items in this SO
-        buying_data = frappe.db.sql("""
-            SELECT IFNULL(SUM(soi.valuation_rate * soi.qty), 0) AS total_buying
-            FROM `tabSales Order Item` soi
-            WHERE soi.parent = %s
-        """, row.sales_order, as_dict=True)
-        buying_rate = buying_data[0].total_buying if buying_data else 0
+        buying_rate = buying_rates.get(row.sales_order, 0)
 
         # Packaging + Painting costs
         packaging_costs = row.packaging_costs or 0
         painting_costs = row.custom_total_painting_cost or 0
         packaging_and_painting = packaging_costs + painting_costs
 
-        # Profit = Selling Rate - Buying Rate - (Packaging + Painting)
-        profit = selling_rate - buying_rate - packaging_and_painting
-
-        # Profit Percentage
-        profit_percentage = (profit / selling_rate * 100) if selling_rate else 0
+        profit = compute_profit(selling_rate, buying_rate, packaging_and_painting)
+        profit_percentage = compute_profit_percentage(profit, selling_rate)
 
         data.append({
             "sales_order": row.sales_order,
@@ -170,7 +179,17 @@ def get_conditions(filters):
 
 @frappe.whitelist()
 def get_order_items(sales_order):
-    """Return items detail for the popup dialog."""
+    """Return items detail for the popup dialog.
+
+    Explicit permission check: frappe.whitelist() alone only requires a
+    logged-in session, not doctype-level read access — without this check
+    any authenticated user could call this method directly with a guessed
+    Sales Order name and read that order's cost/margin data, bypassing both
+    this report's own System Manager-only role restriction and Sales
+    Order's normal read permissions (see NARJES_STORE_SYSTEM.md §5.2).
+    """
+    frappe.has_permission("Sales Order", doc=sales_order, throw=True)
+
     items = frappe.db.sql("""
         SELECT
             soi.item_code,

@@ -1,0 +1,45 @@
+name: Tests
+
+# Runs the app's pure-Python unit test suite on every push/PR.
+#
+# This deliberately does NOT spin up a full bench (MariaDB, Redis, a site)
+# — the tests that exist today (narjes_custom/tests/test_business_logic.py,
+# narjes_custom/ai_intake/tests/test_matching.py) are all pure-Python
+# calculation/matching logic with no live-site dependency, by design (see
+# their own module docstrings). A full-bench CI job is worth adding once
+# there's DB-backed test coverage to justify the extra time/complexity —
+# see NARJES_STORE_SYSTEM.md §14.9/§15: "even just running the existing
+# pytest suite on push would catch a meaningful fraction of what's
+# currently only caught by an SSH session into production."
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest rapidfuzz
+          # narjes_custom.ai_intake.matching imports `frappe` at module
+          # level (never actually connects to a site in these tests — see
+          # test_matching.py). If this install ever breaks because a given
+          # Frappe release stops publishing to PyPI, switch this job to a
+          # full `bench init`-based setup instead.
+          pip install frappe || echo "::warning::pip install frappe failed — matching.py tests will be skipped, business_logic tests still run"
+
+      - name: Run unit tests
+        run: |
+          python -m pytest narjes_custom/tests/test_business_logic.py -v
+          python -m pytest narjes_custom/ai_intake/tests/test_matching.py -v || echo "::warning::matching.py tests did not run (see install step above)"

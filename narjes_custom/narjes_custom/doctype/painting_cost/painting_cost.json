@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "PAINT-.YYYY.-.#####",
+ "creation": "2026-07-29 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sales_order",
+  "items",
+  "total_area",
+  "column_break_1",
+  "rate_per_cm",
+  "total_painting_cost"
+ ],
+ "fields": [
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Canvas Items",
+   "options": "Painting Cost Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_area",
+   "fieldtype": "Int",
+   "label": "Total Area (cm²)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rate_per_cm",
+   "fieldtype": "Currency",
+   "label": "Rate per cm²",
+   "reqd": 1,
+   "description": "Populated from Narjes Settings.painting_rate_per_cm at creation time — not a static field default (see NARJES_STORE_SYSTEM.md §14.5)."
+  },
+  {
+   "fieldname": "total_painting_cost",
+   "fieldtype": "Currency",
+   "label": "Total Painting Cost",
+   "read_only": 1,
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-07-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "Painting Cost",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

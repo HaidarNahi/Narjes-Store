@@ -156,6 +156,26 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
     .ai-loading-step.active { color: var(--primary); font-weight: 600; }
     `;
 
+    // Iraq's 18 governorates — must stay in sync with
+    // narjes_custom.business_logic.IRAQ_GOVERNORATES (the canonical list
+    // used server-side for Customer.governorate / Sales Order.
+    // governorate_of_delivery, both proper Select fields — see
+    // NARJES_STORE_SYSTEM.md §14.6). A free-text input here would let a
+    // human reviewer type a value the backend Select field then rejects.
+    const IRAQ_GOVERNORATES = [
+        "بغداد", "بابل", "واسط", "ديالى", "الديوانية", "كربلاء", "النجف",
+        "ذي قار", "ميسان", "المثنى", "البصرة", "الانبار", "صلاح الدين",
+        "كركوك", "نينوى", "اربيل", "سليمانية", "دهوك",
+    ];
+
+    function governorate_options_html(selected) {
+        let html = `<option value="" ${!selected ? "selected" : ""}>— None —</option>`;
+        IRAQ_GOVERNORATES.forEach((gov) => {
+            html += `<option value="${gov}" ${selected === gov ? "selected" : ""}>${gov}</option>`;
+        });
+        return html;
+    }
+
     // Simple Levenshtein distance for fuzzy matching
     function levenshtein(a, b) {
         if (a.length === 0) return b.length;
@@ -349,7 +369,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                             <div class="ai-field-row">
                                 <div class="ai-field-group">
                                     <label>Governorate</label>
-                                    <input type="text" id="ai-new-gov" value="${frappe.utils.escape_html(ex.governorate || "")}"/>
+                                    <select id="ai-new-gov">${governorate_options_html(ex.governorate)}</select>
                                 </div>
                                 <div class="ai-field-group">
                                     <label>Full Address</label>
@@ -387,7 +407,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                             </div>
                             <div class="ai-field-group">
                                 <label>Governorate of Delivery</label>
-                                <input type="text" id="ai-gov-delivery" value="${frappe.utils.escape_html(ex.governorate || "")}"/>
+                                <select id="ai-gov-delivery">${governorate_options_html(ex.governorate)}</select>
                             </div>
                         </div>
                         <div class="ai-field-row">

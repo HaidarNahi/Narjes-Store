@@ -119,7 +119,7 @@
   {
    "fieldname": "business_constants_note",
    "fieldtype": "HTML",
-   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Delivery fees above are live and used on every Sales Order / Sales Invoice / Delivery Note. The painting rate, sheet rate, and packaging cost fields are staged for the canvas/sheet costing automation, which is still pending review before it goes live — they are not yet read by any running code.</p>"
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>All fields above are live: delivery fees are used on every Sales Order / Sales Invoice / Delivery Note, and the painting rate / sheet rate / default packaging cost are read directly by the canvas/sheet costing calculation and the packaging-cost default (see api.py's sales_order_before_validate / sales_order_validate). Change a value here and it takes effect on the next order — none of these are hardcoded in code anymore.</p>"
   },
   {
    "fieldname": "shortcuts_section",

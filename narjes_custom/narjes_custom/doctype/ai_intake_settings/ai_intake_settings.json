@@ -1,0 +1,114 @@
+{
+ "actions": [],
+ "creation": "2026-07-29 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_settings_section",
+  "api_key",
+  "model_name",
+  "column_break_1",
+  "temperature",
+  "max_tokens",
+  "prompt_section",
+  "system_prompt_base",
+  "extraction_rules",
+  "append_catalog",
+  "append_examples"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_settings_section",
+   "fieldtype": "Section Break",
+   "label": "API Settings"
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "Gemini API Key",
+   "description": "Leave blank to use the site config api_key (gemini_api_key)."
+  },
+  {
+   "fieldname": "model_name",
+   "fieldtype": "Data",
+   "label": "Model Name",
+   "default": "gemini-2.5-flash",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "temperature",
+   "fieldtype": "Float",
+   "label": "Temperature",
+   "default": "0.1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "max_tokens",
+   "fieldtype": "Int",
+   "label": "Max Output Tokens",
+   "default": "4096",
+   "reqd": 1
+  },
+  {
+   "fieldname": "prompt_section",
+   "fieldtype": "Section Break",
+   "label": "Prompt Engineering"
+  },
+  {
+   "fieldname": "system_prompt_base",
+   "fieldtype": "Text",
+   "label": "System Prompt Base",
+   "reqd": 1,
+   "default": "You are an order intake assistant for a canvas printing business in Iraq.\nYour ONLY job is to extract structured order data from informal, messy customer messages.\nThese messages are typically from WhatsApp and may be in Arabic, English, or mixed."
+  },
+  {
+   "fieldname": "extraction_rules",
+   "fieldtype": "Text",
+   "label": "Extraction Rules",
+   "reqd": 1,
+   "default": "1. Extract ONLY what is explicitly stated. Never guess or hallucinate values.\n2. For any field you cannot determine with confidence, use null (or empty array for lists).\n3. For delivery_date: if a specific date is mentioned, output it as YYYY-MM-DD. If only a day name (e.g. \"Thursday\") is mentioned, note it in extraction_notes and set delivery_date to null.\n4. For priority: output \"High\", \"Medium\", or \"Low\" only if explicitly mentioned or strongly implied (e.g. \"ضروري\", \"urgent\", \"عاجل\" -> \"High\"). Otherwise null.\n5. For gift: true only if explicitly stated (e.g. \"هدية\", \"gift\").\n6. For currency: default to \"IQD\" unless USD ($, دولار) is clearly mentioned.\n\nITEM MATCHING - CRITICAL RULES:\n7. For item_code_hint: you MUST match to the MOST SPECIFIC item from the catalog below.\n   - ALWAYS prefer a more specific match over a generic one.\n   - Example: if the customer says \"ستاند خشب\" (wooden stand), match to \"Wood Stand\", NOT to the generic \"Stand\".\n   - Example: if the customer says \"ستاند حديد\" or \"metal stand\", match to \"Metal Stand\", NOT to the generic \"Stand\".\n   - Use the generic \"Stand\" ONLY if the customer does not specify any type of stand.\n   - The item_code_hint value MUST be the EXACT \"name\" string from the catalog (case-sensitive, character-perfect). Do NOT invent item codes.\n   - If NO item in the catalog is a close match, set item_code_hint to null and add a note to extraction_notes explaining what the customer requested.\n\n8. For phone_numbers: extract ALL phone numbers mentioned, include country code if present, do not normalize.\n9. Add extraction_notes for EVERY field you were uncertain about.",
+   "description": "DISCOUNT RULE and CUSTOM DETAILS RULE are appended automatically by extraction.py and don't need to be repeated here."
+  },
+  {
+   "fieldname": "append_catalog",
+   "fieldtype": "Check",
+   "label": "Append Live Item Catalog",
+   "default": "1",
+   "description": "Automatically append the live item catalog to the prompt so the AI can match products."
+  },
+  {
+   "fieldname": "append_examples",
+   "fieldtype": "Check",
+   "label": "Append Few-Shot Examples",
+   "default": "1",
+   "description": "Automatically append the hardcoded few-shot examples to teach the AI the output format."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-07-29 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "AI Intake Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
