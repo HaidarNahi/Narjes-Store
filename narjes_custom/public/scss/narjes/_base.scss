@@ -1,0 +1,73 @@
+// Canvas, grain, selection, focus, scrollbars, type utilities.
+// Structural rules only — colors come from the token/map layers.
+
+body.narjes-ledger {
+	// Paper grain on the app canvas, light mode only (plan P1.5): sells the
+	// ledger metaphor without touching any content layer.
+	&::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 0;
+		background-image: url("/assets/narjes_custom/patterns/grain.svg");
+		background-repeat: repeat;
+	}
+
+	::selection {
+		background: var(--n-selection);
+		color: var(--n-text);
+	}
+
+	// Global focus ring (fern in light, mint in dark via --n-focus)
+	:focus-visible {
+		outline: 2px solid var(--n-focus);
+		outline-offset: 2px;
+	}
+
+	// Ledger numerals: every number-bearing surface gets tabular mono
+	.list-row-col .frappe-timestamp,
+	.list-id,
+	.text-monospace,
+	code,
+	kbd {
+		font-family: var(--n-font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	// Page + dialog titles in Fraunces (Amiri behind it for Arabic data)
+	.page-title .title-text,
+	.modal-header .modal-title,
+	.title-area .title-text {
+		font-family: var(--n-font-display);
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	// Micro-caps role — reused by column headers, stamps, sidebar labels
+	.n-micro-caps {
+		font-family: var(--n-font-mono);
+		font-size: 11px;
+		line-height: 16px;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+
+	// Mixed-script bidi hygiene (plan P10.2): data-bearing cells render
+	// Arabic-first strings without scrambling adjacent Latin/punctuation.
+	.list-subject a,
+	.kanban-card-title,
+	.grid-static-col,
+	.dt-cell__content {
+		unicode-bidi: plaintext;
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger::before {
+	// grain dies on Ink — dark canvas stays clean (plan P1.5)
+	content: none;
+}
+
+// Reduced-motion guard lives in _shame.scss (its !important rules are the
+// one legal use of the quarantine file — plan P3.6).

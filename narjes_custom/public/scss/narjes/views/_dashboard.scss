@@ -1,0 +1,115 @@
+// P6.8 — dashboards & workspaces: KPI number cards, charts, shortcut cards.
+// frappe-charts default palette is set from JS (NARJES_BRAND); this file
+// covers the widget chrome and chart hairlines.
+
+body.narjes-ledger {
+	.widget {
+		border: 1px solid var(--n-border);
+		border-radius: var(--n-radius-md);
+		background: var(--n-surface);
+		box-shadow: var(--n-e1);
+		transition: box-shadow var(--n-dur-2) var(--n-ease),
+			transform var(--n-dur-2) var(--n-ease);
+
+		&:hover {
+			box-shadow: var(--n-e2);
+		}
+
+		.widget-title {
+			font-size: 13px;
+			font-weight: 500;
+			color: var(--n-text-2);
+		}
+	}
+
+	// number cards → the mock's KPI card
+	.widget.number-widget-box {
+		border-radius: var(--n-radius-lg);
+		padding: var(--n-space-5);
+
+		.widget-content .number {
+			font-family: var(--n-font-mono);
+			font-variant-numeric: tabular-nums;
+			font-feature-settings: "tnum";
+			font-size: 32px;
+			line-height: 38px;
+			font-weight: 600;
+			color: var(--n-text);
+		}
+
+		// delta arrow + percent
+		.card-stats {
+			font-family: var(--n-font-mono);
+			font-size: 12px;
+
+			.green .percentage-stat,
+			.percentage-stat.green {
+				color: var(--n-success);
+			}
+
+			.red .percentage-stat,
+			.percentage-stat.red {
+				color: var(--n-danger);
+			}
+		}
+	}
+
+	// charts: axis/grid hairlines + mono axis labels + themed tooltip
+	.chart-container {
+		.axis,
+		.chart-label {
+			font-family: var(--n-font-mono);
+			font-size: 10px;
+			fill: var(--n-text-3);
+		}
+
+		.line-horizontal,
+		.line-vertical,
+		.dashed {
+			stroke: var(--n-border);
+		}
+
+		.graph-svg-tip {
+			background: var(--n-ink);
+			border-radius: var(--n-radius-xs);
+
+			.title,
+			.data-point-list {
+				font-family: var(--n-font-mono);
+			}
+		}
+	}
+
+	// workspace shortcut cards & link lists
+	.widget.shortcut-widget-box:hover {
+		border-color: var(--n-fern-300);
+	}
+
+	.widget.links-widget-box .link-item:hover {
+		background: var(--n-fern-50);
+		border-radius: var(--n-radius-xs);
+	}
+
+	// workspace section headings
+	.workspace-title,
+	.section-heading {
+		font-family: var(--n-font-display);
+		font-weight: 600;
+	}
+
+	// onboarding widget hidden (P8.4)
+	.widget.onboarding-widget-box {
+		display: none;
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	.widget.links-widget-box .link-item:hover {
+		background: var(--n-fern-900);
+	}
+
+	.chart-container .graph-svg-tip {
+		background: var(--n-neutral-200);
+		color: var(--n-ink);
+	}
+}

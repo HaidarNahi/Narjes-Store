@@ -1,0 +1,217 @@
+// P6.6 — Kanban "Order Phases", the flagship view. Board canvas + column
+// chrome here; the card itself is custom-rendered markup (.so-kanban-card,
+// absorbed from narjes_kanban.css and re-pointed at --n-* tokens).
+// The three !important rules the old file needed live in _shame.scss.
+
+body.narjes-ledger {
+	.kanban {
+		// columns: Micro-caps title + count, phase underline
+		.kanban-column {
+			background: transparent;
+
+			.kanban-column-header {
+				border-block-end: 2px solid var(--n-border-strong);
+				padding-block-end: 8px;
+			}
+
+			.kanban-column-title {
+				font-family: var(--n-font-mono);
+				font-size: 11px;
+				font-weight: 500;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+
+				.indicator::before {
+					height: 6px;
+					width: 6px;
+				}
+			}
+
+			// per-column count in mono
+			.kanban-count,
+			.count {
+				font-family: var(--n-font-mono);
+				color: var(--n-text-3);
+			}
+
+			.add-card {
+				border: 1px dashed var(--n-border-strong);
+				border-radius: var(--n-radius-md);
+				color: var(--n-text-3);
+
+				&:hover {
+					border-color: var(--n-fern-400);
+					color: var(--n-primary);
+				}
+			}
+		}
+
+		.kanban-board {
+			gap: 20px;
+		}
+
+		// vertical rhythm between cards (issue #8)
+		.kanban-card-wrapper {
+			margin-block: var(--n-space-1) var(--n-space-3);
+		}
+	}
+
+	// ---- the card (mock-exact custom markup) ----
+	.so-kanban-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		background: var(--n-raised);
+		border-radius: var(--n-radius-md);
+		box-shadow: var(--n-e1);
+		border: 1px solid var(--n-border);
+		min-height: 200px;
+		padding: 20px 20px 56px;
+		font-family: var(--n-font-body);
+		cursor: grab;
+		overflow: hidden;
+		transition: box-shadow var(--n-dur-1) var(--n-ease),
+			transform var(--n-dur-1) var(--n-ease);
+
+		&:hover {
+			box-shadow: var(--n-e2);
+			transform: translateY(-2px);
+		}
+
+		&:active {
+			cursor: grabbing;
+		}
+	}
+
+	.so-content-row {
+		display: flex;
+		width: 100%;
+		flex: 1;
+	}
+
+	.so-left {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		min-width: 0;
+	}
+
+	// customer name — the display moment (Fraunces, Amiri for Arabic names)
+	.so-title-row {
+		font-family: var(--n-font-display);
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--n-text);
+		line-height: 1.3;
+		unicode-bidi: plaintext;
+
+		a {
+			color: inherit;
+			text-decoration: none;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	// ID / DLV rows in ledger mono
+	.so-info-row {
+		font-family: var(--n-font-mono);
+		font-size: 12px;
+		font-variant-numeric: tabular-nums;
+		color: var(--n-text-2);
+		line-height: 1.4;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.so-time-ago {
+		color: var(--n-text-3);
+		font-size: 12px;
+		font-style: normal;
+	}
+
+	.so-divider {
+		width: 1px;
+		background-color: var(--n-border);
+		margin-block: 0;
+		margin-inline: 18px;
+		align-self: stretch;
+	}
+
+	// right-edge icon rail (flag, flower, gift — order-type markers)
+	.so-right {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+		padding-block-start: 2px;
+	}
+
+	.so-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		color: var(--n-text-2);
+
+		svg {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+	}
+
+	// heart bottom-left
+	.so-heart-btn {
+		position: absolute;
+		bottom: 16px;
+		inset-inline-start: 20px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		color: var(--n-text-2);
+		transition: transform var(--n-dur-1) var(--n-ease);
+
+		&:hover {
+			transform: scale(1.15);
+		}
+	}
+
+	// assignee chip bottom-right: Ink bg / Paper text (fixed dark values on
+	// purpose — it must stay an ink stamp in both modes)
+	.so-creator-badge {
+		position: absolute;
+		bottom: 0;
+		inset-inline-end: 0;
+		background-color: var(--n-ink);
+		color: var(--n-neutral-100);
+		font-size: 12px;
+		font-weight: 500;
+		padding-block: 8px;
+		padding-inline: 16px;
+		border-start-start-radius: var(--n-radius-md);
+		border-end-end-radius: var(--n-radius-md);
+		letter-spacing: 0.3px;
+		max-width: 140px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	// keep the badge an ink stamp on Ink canvas: flip to raised surface + text
+	.so-creator-badge {
+		background-color: var(--n-well);
+		color: var(--n-text);
+		border-start-start-radius: var(--n-radius-md);
+	}
+}

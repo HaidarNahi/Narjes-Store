@@ -1,0 +1,85 @@
+// P4.1 — login: the first impression, strongest pattern use in the system.
+// Ships in narjes-web.bundle (web_include_css); the desk bundle never loads
+// it. v16.20 login DOM (verified): .login-content.page-card / .page-card-head
+// / .btn-login / .form-signin — there is no .for-* wrapper class.
+
+body.narjes-ledger.login-page {
+	background-color: var(--n-bg);
+
+	// full-bleed vine backdrop
+	&::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		background: url("/assets/narjes_custom/patterns/vine-light.svg") repeat;
+		opacity: 0.08;
+	}
+
+	.login-content.page-card,
+	.page-card {
+		position: relative;
+		background: var(--n-surface);
+		border: 1px solid var(--n-border);
+		border-radius: var(--n-radius-lg);
+		box-shadow: var(--n-e3);
+		padding: var(--n-space-8);
+	}
+
+	// headline in Fraunces
+	.page-card-head h4,
+	.page-card-head .lead,
+	h4 {
+		font-family: var(--n-font-display);
+		font-weight: 600;
+		color: var(--n-text);
+	}
+
+	.form-control {
+		border-radius: var(--n-radius-sm);
+		border: 1px solid var(--n-border-strong);
+		background: var(--n-surface);
+
+		&:focus {
+			border-color: var(--n-fern-500);
+			box-shadow: 0 0 0 2px var(--n-selection);
+		}
+	}
+
+	.btn-primary,
+	.btn-login {
+		background: var(--n-primary);
+		border-color: var(--n-primary);
+		color: var(--n-primary-text-on);
+		border-radius: var(--n-radius-sm);
+		font-weight: 500;
+
+		&:hover,
+		&:focus {
+			background: var(--n-primary-hover);
+			border-color: var(--n-primary-hover);
+			color: var(--n-primary-text-on);
+		}
+	}
+
+	.btn-login-option {
+		border: 1px solid var(--n-border-strong);
+		border-radius: var(--n-radius-sm);
+	}
+
+	.forgot-password-message,
+	a {
+		color: var(--n-link);
+	}
+
+	// invalid-login / signup-disabled messaging
+	.login-error,
+	.page-card .alert {
+		border-radius: var(--n-radius-sm);
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger.login-page::before {
+	background-image: url("/assets/narjes_custom/patterns/vine-dark.svg");
+	opacity: 0.07;
+}

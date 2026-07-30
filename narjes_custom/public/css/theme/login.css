@@ -1,0 +1,20 @@
+/* Light branded touch for the public login page (frappe/www/login.html).
+   web_include_css now loads tokens.css + frappe_overrides.css ahead of
+   this file (see hooks.py), so --narjes-* tokens and the --primary/
+   --btn-primary remap are both available here exactly as on the desk —
+   the login button (already `.btn-primary`) inherits the fern brand color
+   for free. This file only touches the page background/card chrome. */
+
+.for-login {
+	background: radial-gradient(circle at 15% 10%, var(--narjes-fern-tint) 0%, var(--narjes-paper) 45%);
+	min-height: 100vh;
+}
+
+.for-login .page-card {
+	border-top: 3px solid var(--narjes-fern);
+	box-shadow: 0 4px 24px -4px rgba(var(--narjes-shadow-rgb), 0.12);
+}
+
+.for-login .app-logo {
+	max-height: 56px;
+}

@@ -10,34 +10,56 @@ app_license = "mit"
 
 # required_apps = []
 
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "narjes_custom",
-# 		"logo": "/assets/narjes_custom/logo.png",
-# 		"title": "Narjes Custom",
-# 		"route": "/narjes_custom",
-# 		"has_permission": "narjes_custom.api.permission.has_app_permission"
-# 	}
-# ]
+# Narjes entry on the /apps screen (theme plan P8.5)
+add_to_apps_screen = [
+	{
+		"name": "narjes_custom",
+		"logo": "/assets/narjes_custom/images/narjes-logo.svg",
+		"title": "Narjes",
+		"route": "/app/narjes-home",
+	}
+]
 
 # Includes in <head>
 # ------------------
 extend_bootinfo = "narjes_custom.api.extend_bootinfo"
 
 # include js, css files in header of desk.html
-app_include_css = [
-    "/assets/narjes_custom/css/sales_order_gallery.css",
-    "/assets/narjes_custom/css/narjes_kanban.css",
-    "/assets/narjes_custom/css/narjes_navbar.css"
-]
+# Narjes Ledger (docs/THEME.md): everything rides the two bundles. The old
+# per-file theme css (tokens/components/kanban/navbar/gallery) is absorbed
+# into scss/narjes/ — see docs/AUDIT.md §6 for the absorb map. Kill switch:
+# narjes_theme_enabled in site_config (read in api.extend_bootinfo, applied
+# as body.narjes-ledger by narjes.bundle.js).
+app_include_css = "narjes.bundle.css"
 app_include_js = [
-    "/assets/narjes_custom/js/customer_quick_entry.js"
+    "narjes.bundle.js",
+    "/assets/narjes_custom/js/customer_quick_entry.js",
+]
+app_include_icons = [
+    "/assets/narjes_custom/icons/phosphor/icons.svg"
 ]
 
-# include js, css files in header of web template
-# web_include_css = "/assets/narjes_custom/css/narjes_custom.css"
-# web_include_js = "/assets/narjes_custom/js/narjes_custom.js"
+# login/website surfaces (theme plan P4.1)
+web_include_css = "narjes-web.bundle.css"
+web_include_js = "narjes-web.bundle.js"
+
+# navbar/splash brand mark (theme plan P4.2/P8.1)
+app_logo_url = "/assets/narjes_custom/images/narjes-logo.svg"
+
+# favicon + splash on every website-rendered page (theme plan P2.2/P2.3)
+website_context = {
+    "favicon": "/assets/narjes_custom/images/favicon.svg",
+    "splash_image": "/assets/narjes_custom/images/splash.svg",
+}
+
+# every outgoing email ends on the shop's line, never a framework footer
+# (theme plan P8.7/P9.5)
+default_mail_footer = """
+<div style="padding: 8px 0; font-size: 12px; color: #6A736C;">
+    Narjes Store · Baghdad — <a href="mailto:haimohx@gmail.com"
+    style="color: #264C3A;">haimohx@gmail.com</a>
+</div>
+"""
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "narjes_custom/public/scss/website"
@@ -102,14 +124,29 @@ doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 
 # before_install = "narjes_custom.install.before_install"
 # after_install = "narjes_custom.install.after_install"
-after_install = "narjes_custom.setup.custom_fields.run"
+after_install = [
+	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.branding.run",
+	"narjes_custom.setup.workspace_visibility.run",
+	"narjes_custom.setup.sidebar_layout.run",
+	"narjes_custom.setup.workspace_sidebar.run",
+]
 
 # Re-sync custom fields on every migrate too, not just on first install —
 # belt-and-suspenders alongside the `fixtures` export above, and what makes
 # the local-dev-vs-production drift described in NARJES_STORE_SYSTEM.md §12
 # self-correcting going forward instead of something that has to be
-# remembered and run by hand.
-after_migrate = "narjes_custom.setup.custom_fields.run"
+# remembered and run by hand. Also self-heals any Quick Shortcut rows still
+# holding a pre-Phosphor-reskin emoji value.
+after_migrate = [
+	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.branding.run",
+	"narjes_custom.setup.theme_branding.run",
+	"narjes_custom.setup.workspace_visibility.run",
+	"narjes_custom.setup.sidebar_layout.run",
+	"narjes_custom.setup.workspace_sidebar.run",
+	"narjes_custom.setup_narjes_settings_defaults.migrate_shortcut_icons_to_phosphor",
+]
 
 # Uninstallation
 # ------------

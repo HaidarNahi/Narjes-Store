@@ -1,0 +1,161 @@
+/* Narjes Ledger — desk shell. This is the part of the theme that goes
+   beyond swapping CSS-variable values (frappe_overrides.css) and actually
+   restyles Frappe's own real DOM — the navbar, sidebar, kanban board,
+   dialogs, and indicator pills — using their real selectors (traced from
+   apps/frappe/frappe/public/js/frappe/ui/{toolbar,sidebar}/*.html and the
+   matching scss under apps/frappe/frappe/public/scss/desk/). The goal:
+   the actual Frappe Desk should read as this theme's own product, not
+   "Frappe with different colors." Loads after frappe_overrides.css. */
+
+/* ---------- Navbar ---------- */
+.navbar {
+	background: var(--narjes-paper-raised);
+	border-bottom: 1px solid var(--narjes-border);
+	box-shadow: 0 1px 2px rgba(var(--narjes-shadow-rgb), 0.04);
+}
+.navbar .navbar-brand,
+.navbar-home {
+	font-family: var(--narjes-font-display);
+	font-weight: 600;
+}
+
+.search-bar {
+	max-width: 420px;
+}
+.search-bar .search-icon {
+	background-color: var(--narjes-paper-sunken);
+	border: 1px solid var(--narjes-border);
+	border-radius: var(--narjes-radius-pill);
+	padding: 7px 14px;
+	transition: border-color 150ms var(--narjes-ease), background-color 150ms var(--narjes-ease);
+}
+.search-bar .search-icon:hover,
+.search-bar .search-icon:focus-within {
+	background-color: var(--narjes-paper-raised);
+	border-color: var(--narjes-border-strong);
+}
+.search-bar .awesomplete input {
+	background: transparent;
+}
+.search-bar .awesomplete input:focus {
+	border-radius: var(--narjes-radius-md) !important;
+	box-shadow: none;
+	background-color: transparent;
+}
+.search-bar svg {
+	stroke: var(--narjes-ink-faint);
+}
+
+/* Navbar icon buttons (bell, settings, help) — quiet by default, ink on hover */
+.navbar .nav-link,
+.navbar-home + .nav-item .btn,
+#navbar-help .btn,
+#icon-button .btn {
+	color: var(--narjes-ink-muted);
+	transition: background-color 150ms var(--narjes-ease), color 150ms var(--narjes-ease);
+}
+
+/* ---------- Sidebar ---------- */
+.body-sidebar {
+	background: var(--narjes-paper);
+	border-right: 1px solid var(--narjes-border);
+}
+
+.standard-sidebar .standard-sidebar-item {
+	border-radius: var(--narjes-radius-sm);
+	padding: 7px 10px;
+	margin-bottom: 1px;
+	border-left: 3px solid transparent;
+	transition: background-color 150ms var(--narjes-ease), border-color 150ms var(--narjes-ease),
+		color 150ms var(--narjes-ease);
+}
+.standard-sidebar .standard-sidebar-item .sidebar-item-icon {
+	color: var(--narjes-ink-faint);
+}
+.standard-sidebar .standard-sidebar-item .sidebar-item-label {
+	color: var(--narjes-ink-muted);
+	font-weight: 500;
+}
+.standard-sidebar .standard-sidebar-item:hover {
+	border-left-color: var(--narjes-border-strong);
+}
+.standard-sidebar .standard-sidebar-item.selected {
+	border-left-color: var(--narjes-fern);
+	background-color: var(--narjes-fern-tint) !important;
+}
+.standard-sidebar .standard-sidebar-item.selected .sidebar-item-icon,
+.standard-sidebar .standard-sidebar-item.selected .sidebar-item-label {
+	color: var(--narjes-fern-strong);
+	font-weight: 600;
+}
+
+/* Section headers ("Reports", "Pages", ...) — mono, uppercase, letter-spaced,
+   matching the theme preview's --font-mono eyebrow treatment. */
+.standard-sidebar .item-anchor.section-break .sidebar-item-label {
+	font-family: var(--narjes-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--narjes-ink-faint);
+}
+
+.sidebar-user-button {
+	border-radius: var(--narjes-radius-sm);
+}
+.sidebar-user-button:hover {
+	background-color: var(--narjes-paper-sunken);
+}
+
+/* ---------- Kanban ---------- */
+:root {
+	--kanban-column-bg: var(--narjes-paper-sunken);
+	--kanban-card-bg: var(--narjes-paper-raised);
+	--kanban-card-hover-bg: var(--narjes-paper-raised);
+	--kanban-new-card-bg: var(--narjes-paper-sunken);
+	--kanban-new-card-hover-bg: var(--narjes-paper-raised);
+}
+.kanban-column-header .kanban-column-title {
+	font-family: var(--narjes-font-display);
+	font-weight: 600;
+	font-size: 15px;
+}
+.kanban .indicator-pill {
+	text-transform: uppercase;
+	font-size: 10.5px;
+	letter-spacing: 0.04em;
+	font-weight: 600;
+}
+
+/* ---------- Indicator pills, everywhere (list views, timelines, kanban) ---------- */
+.indicator-pill,
+.indicator-pill-right {
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+	font-weight: 600;
+	transition: background-color 150ms var(--narjes-ease), border-color 150ms var(--narjes-ease),
+		box-shadow 150ms var(--narjes-ease), color 150ms var(--narjes-ease);
+}
+.btn-primary:hover {
+	background-color: var(--narjes-fern-strong) !important;
+}
+
+/* ---------- Dialogs / modals ---------- */
+.modal-content {
+	border: 1px solid var(--narjes-border);
+	border-radius: var(--narjes-radius-md);
+	box-shadow: 0 12px 32px -12px rgba(var(--narjes-shadow-rgb), 0.28);
+}
+.modal-header .modal-title {
+	font-family: var(--narjes-font-display);
+	font-weight: 600;
+}
+
+/* ---------- List view ---------- */
+.list-row:hover {
+	background-color: var(--narjes-fern-tint);
+}

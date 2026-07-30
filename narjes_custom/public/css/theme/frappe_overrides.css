@@ -1,0 +1,148 @@
+/* Reskins the stock Frappe/ERPNext Desk by redeclaring the SAME CSS custom
+   properties Frappe itself defines (frappe/public/scss/common/css_variables.scss
+   + the [data-theme="dark"] overrides in frappe/public/scss/desk/dark.scss).
+   Because narjes_custom is the last app in apps.txt, this file's <link> tag
+   loads after Frappe's/ERPNext's own bundles, so these redeclarations win
+   the cascade — this is how Frappe's own theming works internally.
+
+   Every Frappe variable here is redeclared exactly ONCE, on a plain :root
+   selector — not split into separate light/dark blocks. Frappe's own dark
+   overrides live under a same-specificity `[data-theme="dark"]` selector
+   (0,1,0,0), identical to `:root`'s specificity, so a single later-loaded
+   :root rule already beats it in both modes. Theme-awareness comes for
+   free through indirection: these rules point at --narjes-* tokens, and
+   tokens.css is what actually branches per data-theme/prefers-color-scheme.
+   That's also the whole mechanism the "Appearance" section of Narjes
+   Settings uses to reconfigure the accent live (see narjes_theme.js) —
+   patch --narjes-fern/-strong/-tint, everything downstream just follows. */
+
+:root {
+	/* Brand / primary action */
+	--primary: var(--narjes-fern);
+	--primary-color: var(--narjes-fern);
+	--btn-primary: var(--narjes-fern);
+	--brand-color: var(--narjes-fern);
+	--border-primary: var(--narjes-fern);
+
+	/* Layout surfaces */
+	--bg-color: var(--narjes-paper);
+	--fg-color: var(--narjes-paper-raised);
+	--card-bg: var(--narjes-paper-raised);
+	--modal-bg: var(--narjes-paper-raised);
+	--toast-bg: var(--narjes-paper-raised);
+	--popover-bg: var(--narjes-paper-raised);
+	--subtle-accent: var(--narjes-fern-tint);
+	--subtle-fg: var(--narjes-paper-sunken);
+	--awesomebar-focus-bg: var(--narjes-paper-raised);
+	--awesomplete-hover-bg: var(--narjes-paper-sunken);
+
+	--control-bg: var(--narjes-paper-sunken);
+	--control-bg-on-gray: var(--narjes-paper-sunken);
+	--disabled-control-bg: var(--narjes-paper-sunken);
+	--disabled-text-color: var(--narjes-ink-faint);
+	--input-disabled-bg: var(--narjes-paper-sunken);
+	--placeholder-color: var(--narjes-ink-faint);
+
+	--btn-default-bg: var(--narjes-paper-sunken);
+	--btn-default-hover-bg: var(--narjes-border-strong);
+	--btn-ghost-hover-bg: var(--narjes-paper-sunken);
+	--btn-group-border-color: var(--narjes-border-strong);
+
+	--sidebar-select-color: var(--narjes-fern-tint);
+	--fg-hover-color: var(--narjes-fern-tint);
+	--highlight-color: var(--narjes-fern-tint);
+	--highlight-shadow: 1px 1px 10px var(--narjes-fern-tint), 0px 0px 4px var(--narjes-fern);
+
+	--border-color: var(--narjes-border);
+	--dark-border-color: var(--narjes-border-strong);
+	--table-border-color: var(--narjes-border);
+	--shadow-inset: inset 0px -1px 0px var(--narjes-border);
+	--scrollbar-thumb-color: var(--narjes-border-strong);
+	--scrollbar-track-color: var(--narjes-paper-sunken);
+	--switch-bg: var(--narjes-border-strong);
+
+	--code-block-bg: var(--narjes-ink);
+	--code-block-text: var(--narjes-paper-sunken);
+
+	/* Icons — retinted from Frappe's default gray so stock glyphs (sidebar,
+	   navbar, list row actions) read as part of this theme instead of
+	   leftover neutral gray; shapes stay native, only the ink changes. */
+	--icon-stroke: var(--narjes-ink-muted);
+	--icon-fill-bg: var(--narjes-paper);
+
+	/* Status vocabulary — this is what makes every list view, kanban card,
+	   form-header indicator, and timeline badge in the whole system pick up
+	   the ledger palette: Frappe's indicator-pill component (see
+	   common/indicator.scss) is entirely driven by these --bg-*/--text-on-*
+	   pairs. "Done" reads fern/green, "in progress" reads saffron/amber,
+	   "cancelled" reads stamp/red, "draft" reads quiet ink — matching this
+	   app's own st-done/st-transit/st-cancel/st-draft vocabulary exactly.
+	   Blue/purple/pink/cyan are left untouched: those carry distinct meaning
+	   elsewhere (tags, comment types) that shouldn't collapse into 3 hues. */
+	--bg-green: var(--narjes-success-tint);
+	--text-on-green: var(--narjes-success);
+	--bg-red: var(--narjes-danger-tint);
+	--text-on-red: var(--narjes-danger);
+	--bg-orange: var(--narjes-warning-tint);
+	--text-on-orange: var(--narjes-warning);
+	--bg-yellow: var(--narjes-warning-tint);
+	--text-on-yellow: var(--narjes-warning);
+	--bg-gray: var(--narjes-neutral-tint);
+	--bg-grey: var(--narjes-neutral-tint);
+	--bg-light-gray: var(--narjes-neutral-tint);
+	--text-on-gray: var(--narjes-neutral);
+	--text-on-grey: var(--narjes-neutral);
+	--text-on-light-gray: var(--narjes-ink-muted);
+	--bg-dark-gray: var(--narjes-border-strong);
+	--bg-darkgrey: var(--narjes-border-strong);
+	--text-on-dark-gray: var(--narjes-ink);
+	--text-on-darkgrey: var(--narjes-ink);
+
+	--alert-text-success: var(--narjes-success);
+	--alert-bg-success: var(--narjes-success-tint);
+	--alert-text-danger: var(--narjes-danger);
+	--alert-bg-danger: var(--narjes-danger-tint);
+	--alert-text-warning: var(--narjes-warning);
+	--alert-bg-warning: var(--narjes-warning-tint);
+}
+
+/* Typography — Plex Sans replaces the system font everywhere Frappe reads
+   --font-stack (desk shell, website base, the Quill editor); Fraunces is
+   used with restraint, only for page-level titles, matching the ledger
+   preview (body copy stayed in Plex Sans there too — a display serif on
+   every heading in a dense admin UI reads as noisy, not distinctive). */
+:root {
+	--font-stack:
+		"Narjes Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page-head .title-text,
+.workspace-header-head .h4,
+.modal-title {
+	font-family: var(--narjes-font-display);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+/* Numbers and identifiers get the mono face, same as the preview's ledger
+   table — currency/int/float/date fields, both editable and read-only. */
+.frappe-control[data-fieldtype="Currency"] input,
+.frappe-control[data-fieldtype="Currency"] .control-value,
+.frappe-control[data-fieldtype="Int"] input,
+.frappe-control[data-fieldtype="Int"] .control-value,
+.frappe-control[data-fieldtype="Float"] input,
+.frappe-control[data-fieldtype="Float"] .control-value,
+.frappe-control[data-fieldtype="Date"] input,
+.frappe-control[data-fieldtype="Date"] .control-value,
+.frappe-control[data-fieldtype="Datetime"] input,
+.frappe-control[data-fieldtype="Datetime"] .control-value {
+	font-family: var(--narjes-font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring — legible on both papers, tuned to the fern accent instead of
+   Frappe's default blue-ish focus shadow (still governed by --primary in
+   most places, but a few controls hardcode a focus box-shadow separately). */
+:focus-visible {
+	outline-color: var(--narjes-fern);
+}

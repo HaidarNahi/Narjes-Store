@@ -1,0 +1,24 @@
+// Narjes Ledger — desk bundle. Import order matters:
+// tokens → fonts → compat → Lever-1 maps → base → chrome → components → views
+// → shame last (its !important quarantine must win inside its own scope).
+
+@import "./scss/narjes/tokens";
+@import "./scss/narjes/fonts";
+@import "./scss/narjes/compat";
+@import "./scss/narjes/frappe-map-light";
+@import "./scss/narjes/frappe-map-dark";
+@import "./scss/narjes/base";
+@import "./scss/narjes/chrome";
+@import "./scss/narjes/components/legacy";
+@import "./scss/narjes/components/buttons";
+@import "./scss/narjes/components/controls";
+@import "./scss/narjes/components/stamps";
+@import "./scss/narjes/components/overlays";
+@import "./scss/narjes/views/list";
+@import "./scss/narjes/views/form";
+@import "./scss/narjes/views/report";
+@import "./scss/narjes/views/kanban";
+@import "./scss/narjes/views/dashboard";
+@import "./scss/narjes/views/gallery";
+@import "./scss/narjes/rtl";
+@import "./scss/narjes/shame";

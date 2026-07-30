@@ -1,0 +1,57 @@
+// Compatibility aliases — every pre-theme `--narjes-*` name the Rounds-1–3
+// pages (narjes_home, ai_intake, kanban, gallery) still reference, redefined
+// on top of the new token system so those pages keep rendering while P7
+// migrates them to `--n-*` directly. Delete a line here only after grepping
+// that no js/css still reads it.
+
+:root,
+[data-theme="light"] {
+	--narjes-paper: var(--n-bg);
+	--narjes-paper-raised: var(--n-raised);
+	--narjes-paper-sunken: var(--n-sunken);
+
+	--narjes-ink: var(--n-text);
+	--narjes-ink-muted: var(--n-text-2);
+	--narjes-ink-faint: var(--n-text-3);
+
+	--narjes-border: var(--n-border);
+	--narjes-border-strong: var(--n-border-strong);
+
+	--narjes-fern: var(--n-primary);
+	--narjes-fern-strong: var(--n-primary-hover);
+	--narjes-fern-tint: var(--n-fern-100);
+	--narjes-fern-on: var(--n-primary-text-on);
+
+	--narjes-sage: var(--n-mint);
+
+	--narjes-saffron: var(--n-accent);
+	--narjes-saffron-tint: var(--n-saffron-100);
+	--narjes-saffron-text: var(--n-accent-text);
+
+	--narjes-stamp: var(--n-danger);
+	--narjes-stamp-tint: var(--n-stamp-100);
+	--narjes-stamp-on: var(--n-white);
+
+	--narjes-shadow-rgb: var(--n-shadow-rgb);
+
+	--narjes-success: var(--n-success);
+	--narjes-success-tint: var(--n-success-bg);
+	--narjes-warning: var(--n-accent-text);
+	--narjes-warning-tint: var(--n-accent-bg);
+	--narjes-danger: var(--n-danger);
+	--narjes-danger-tint: var(--n-danger-bg);
+	--narjes-neutral: var(--n-text-3);
+	--narjes-neutral-tint: var(--n-sunken);
+
+	--narjes-font-display: var(--n-font-display);
+	--narjes-font-body: var(--n-font-body);
+	--narjes-font-mono: var(--n-font-mono);
+
+	--narjes-radius-xs: var(--n-radius-xs);
+	--narjes-radius-sm: var(--n-radius-sm);
+	--narjes-radius-md: var(--n-radius-md);
+	--narjes-radius-lg: var(--n-radius-lg);
+	--narjes-radius-pill: var(--n-radius-pill);
+
+	--narjes-ease: var(--n-ease);
+}

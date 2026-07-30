@@ -1,0 +1,173 @@
+// P5.4 — the Ink Stamp, the theme's signature component.
+//
+// Layer 1: Frappe's own .indicator-pill inherits the stamp anatomy (Micro-caps
+// mono, dot, 1.5px border, xs radius) — colors already flow from the Lever-1
+// ramp remap, so every list/form/kanban/calendar pill is a stamp for free.
+// Layer 2: the `stamped` terminal variant (−2°, double border, ink bleed) is
+// opt-in via .n-stamp--stamped; narjes.bundle.js applies it to the form-banner
+// indicator for terminal states (Done/Paid/Cancelled/Returned/Submitted) —
+// never to whole lists (plan P1.6).
+// Layer 3: .stamp-chip — the pre-theme class the custom pages hand-author —
+// keeps its API, restyled to the same anatomy (absorbed from components.css).
+
+@mixin n-stamp-anatomy {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 22px;
+	padding-block: 0;
+	padding-inline: 8px;
+	border: 1.5px solid currentColor;
+	border-radius: var(--n-radius-xs);
+	font-family: var(--n-font-mono);
+	font-size: 11px;
+	line-height: 16px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	white-space: nowrap;
+}
+
+body.narjes-ledger {
+	.indicator-pill,
+	.indicator-pill-right {
+		@include n-stamp-anatomy;
+		// the ramp-driven background stays (tint variant); the border keys to
+		// the pill's own text color so every state pairs correctly
+		border-color: currentColor;
+	}
+
+	.indicator-pill::before {
+		height: 6px;
+		width: 6px;
+	}
+
+	// ERPNext's compact docstatus pill carries only a colored dot
+	// (.indicator-doc-html) and no label — a stamp border around nothing
+	// reads as an empty box, so drop the chrome there
+	.indicator-pill:has(> .indicator-doc-html:only-child) {
+		border-color: transparent;
+		padding-inline: 0;
+		background: transparent;
+	}
+
+	// the page head always renders an (initially empty) indicator slot;
+	// stock CSS leaves it invisible, the stamp border made it a stray empty
+	// box next to the breadcrumbs (issue #3)
+	.indicator-pill:empty {
+		display: none;
+	}
+
+	// terminal states: the stamped variant — rotation, double border, bleed.
+	// Ring kept tight and the pill self-centered so it sits settled in the
+	// page-head next to breadcrumbs instead of floating high (issue #5)
+	.n-stamp--stamped {
+		position: relative;
+		align-self: center;
+		vertical-align: middle;
+		margin-inline: var(--n-space-2);
+		transform: rotate(-2deg);
+		box-shadow: 0 0 0 1px var(--n-bg), 0 0 0 2.5px currentColor;
+		border-width: 1.5px;
+
+		&::after {
+			content: "";
+			position: absolute;
+			inset: -2px;
+			border-radius: inherit;
+			pointer-events: none;
+			background: radial-gradient(
+				ellipse at 30% 60%,
+				currentColor 0%,
+				transparent 55%
+			);
+			opacity: 0.08;
+		}
+	}
+
+	// legacy hand-authored chips (Home Dashboard, kanban, gallery, AI intake)
+	.stamp-chip {
+		@include n-stamp-anatomy;
+		border-width: 1px;
+
+		.dot {
+			width: 5px;
+			height: 5px;
+			border-radius: 50%;
+			background: currentColor;
+			flex-shrink: 0;
+		}
+
+		&.st-draft {
+			color: var(--n-text-3);
+			border-color: var(--n-border-strong);
+		}
+
+		&.st-transit {
+			color: var(--n-accent-text);
+			background: var(--n-accent-bg);
+			border-color: transparent;
+		}
+
+		&.st-done {
+			color: var(--n-success);
+			background: var(--n-success-bg);
+			border-color: transparent;
+		}
+
+		&.st-cancel {
+			color: var(--n-danger);
+			background: var(--n-danger-bg);
+			border-color: transparent;
+		}
+	}
+
+	// form status banner for submitted/cancelled docs → full-width stamped band
+	.form-message.red {
+		background: var(--n-danger-bg);
+		border-inline-start: 3px solid var(--n-danger);
+	}
+
+	.form-message.blue,
+	.form-message.green {
+		background: var(--n-success-bg);
+		border-inline-start: 3px solid var(--n-success);
+	}
+
+	.form-message.yellow,
+	.form-message.orange {
+		background: var(--n-accent-bg);
+		border-inline-start: 3px solid var(--n-accent);
+	}
+}
+
+// stamp-down animation keyframes (fired by narjes.motion.stamp, P11)
+@keyframes n-stamp-down {
+	0% {
+		transform: rotate(-3deg) scale(1.15);
+		opacity: 0;
+	}
+
+	100% {
+		transform: rotate(-2deg) scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes n-ink-bleed {
+	0% {
+		opacity: 0.2;
+	}
+
+	100% {
+		opacity: 0.08;
+	}
+}
+
+body.narjes-ledger .n-stamp--stamping {
+	animation: n-stamp-down var(--n-dur-3) var(--n-ease) both;
+
+	&::after {
+		animation: n-ink-bleed var(--n-dur-4) var(--n-ease) both;
+	}
+}

@@ -1,0 +1,133 @@
+// P6.1 — list view: the ledger row. ID/amount in mono, Micro-caps header,
+// fern hover wash, filter pills.
+
+body.narjes-ledger {
+	.frappe-list {
+		// sticky Micro-caps header row
+		.list-row-head {
+			background: var(--n-bg);
+			border-block-end: 1px solid var(--n-border);
+
+			.list-row-col span,
+			.list-row-col .list-subject span {
+				font-family: var(--n-font-mono);
+				font-size: 11px;
+				font-weight: 500;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--n-text-3);
+			}
+		}
+
+		.list-row {
+			border-block-end: 1px solid var(--n-border);
+			transition: background-color var(--n-dur-1) var(--n-ease);
+
+			&:hover {
+				background: color-mix(in srgb, var(--n-fern-50) 40%, transparent);
+			}
+		}
+
+		// selected row: tick + fern wash
+		.list-row-checkbox:checked ~ * {
+			background: var(--n-fern-50);
+		}
+
+		// subject: name prominent, meta quiet
+		.list-subject {
+			font-weight: 500;
+		}
+
+		// right-aligned figures in mono
+		.list-row-col.tag-col,
+		.list-row-col:last-child {
+			font-variant-numeric: tabular-nums;
+		}
+
+		.level-item .frappe-timestamp {
+			color: var(--n-text-3);
+			font-size: 12px;
+		}
+
+		// footnote / load more
+		.list-paging-area {
+			border-block-start: 1px solid var(--n-border);
+
+			.btn-paging.btn-info,
+			.btn-paging[data-value].active {
+				background: var(--n-fern-100);
+				color: var(--n-primary);
+			}
+		}
+	}
+
+	// filter bar: Filter + its clear-x join into ONE continuous capsule —
+	// matched shapes instead of a square button next to an oval (issue #7)
+	.filter-selector .filter-button,
+	.filter-section .filter-button {
+		border-start-start-radius: var(--n-radius-pill);
+		border-end-start-radius: var(--n-radius-pill);
+		border-start-end-radius: 0;
+		border-end-end-radius: 0;
+	}
+
+	.filter-selector .filter-x-button,
+	.filter-section .filter-x-button {
+		border-start-start-radius: 0;
+		border-end-start-radius: 0;
+		border-start-end-radius: var(--n-radius-pill);
+		border-end-end-radius: var(--n-radius-pill);
+		margin-inline-start: -1px;
+	}
+
+	// a Filter button standing alone (no clear-x rendered) is a full capsule
+	.filter-selector .filter-button:last-child,
+	.filter-section .filter-button:last-child {
+		border-radius: var(--n-radius-pill);
+	}
+
+	.filter-icon.active use,
+	.filter-icon.active svg {
+		stroke: var(--n-primary);
+	}
+
+	// bulk-action bar
+	.checkbox-actions {
+		box-shadow: var(--n-e2);
+		border-radius: var(--n-radius-md);
+	}
+
+	// group-by headers + sidebar facets
+	.list-sidebar {
+		.list-link a,
+		.list-stats .stat-link {
+			border-radius: var(--n-radius-xs);
+
+			&:hover {
+				background: var(--n-fern-50);
+				color: var(--n-text);
+			}
+		}
+	}
+
+	// like/comment counts
+	.comment-count,
+	.like-count {
+		font-family: var(--n-font-mono);
+		font-size: 11px;
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	.frappe-list .list-row:hover {
+		background: color-mix(in srgb, var(--n-fern-900) 55%, transparent);
+	}
+
+	.frappe-list .list-row-checkbox:checked ~ * {
+		background: var(--n-fern-900);
+	}
+
+	.list-sidebar .list-link a:hover {
+		background: var(--n-fern-900);
+	}
+}

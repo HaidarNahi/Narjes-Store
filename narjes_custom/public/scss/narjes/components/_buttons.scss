@@ -1,0 +1,79 @@
+// P5.1 — buttons. Variants ride the Lever-1 vars (--btn-primary,
+// --btn-default-bg…); this file adds the Narjes geometry and states.
+
+body.narjes-ledger {
+	.btn {
+		border-radius: var(--n-radius-sm);
+		font-weight: 500;
+		transition: background-color var(--n-dur-1) var(--n-ease),
+			border-color var(--n-dur-1) var(--n-ease),
+			color var(--n-dur-1) var(--n-ease),
+			box-shadow var(--n-dur-1) var(--n-ease),
+			transform var(--n-dur-1) var(--n-ease);
+
+		&:active {
+			transform: scale(0.98);
+		}
+	}
+
+	.btn-primary {
+		background-color: var(--n-primary);
+		color: var(--n-primary-text-on);
+		border: 1px solid transparent;
+
+		&:hover,
+		&:focus-visible {
+			background-color: var(--n-primary-hover);
+			color: var(--n-primary-text-on);
+		}
+
+		.icon {
+			stroke: var(--n-primary-text-on);
+		}
+	}
+
+	.btn-default,
+	.btn-secondary {
+		background-color: var(--btn-default-bg);
+		border: 1px solid var(--n-border-strong);
+		color: var(--n-text);
+
+		&:hover {
+			background-color: var(--btn-default-hover-bg);
+		}
+	}
+
+	// danger: stamp outline; solid only inside confirm contexts
+	.btn-danger {
+		background-color: transparent;
+		border: 1px solid var(--n-danger);
+		color: var(--n-danger-text);
+
+		&:hover {
+			background-color: var(--n-danger-bg);
+		}
+	}
+
+	.modal-footer .btn-danger,
+	.msgprint-dialog .btn-danger {
+		background-color: var(--n-stamp-500);
+		border-color: var(--n-stamp-500);
+		color: var(--n-white);
+	}
+
+	// disabled: reduced contrast AND no shadow — never color-only
+	.btn:disabled,
+	.btn.disabled {
+		box-shadow: none;
+		opacity: 0.55;
+	}
+
+	// icon-only buttons keep a ≥44px hit area on touch
+	@media (pointer: coarse) {
+		.btn-icon,
+		.btn.icon-btn {
+			min-width: 44px;
+			min-height: 44px;
+		}
+	}
+}

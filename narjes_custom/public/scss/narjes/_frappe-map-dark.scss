@@ -1,0 +1,120 @@
+// Lever 1, dark / "Ink". Same variable names under the v16 dark selector
+// (extracted in P0: the switcher resolves to <html data-theme="dark">).
+// Ramps invert — a "100" tint used as a pill background must read as a deep
+// tone on Ink — so 50↔900, 100↔800 … 400↔500.
+
+$n-ramp-map-dark: (
+	"gray": "neutral",
+	"green": "fern",
+	"red": "stamp",
+	"orange": "saffron",
+	"yellow": "saffron",
+	"blue": "fern",
+	"cyan": "fern",
+	"teal": "fern",
+	"purple": "neutral",
+	"pink": "stamp",
+);
+$n-stops-inverted: (
+	50: 900, 100: 800, 200: 700, 300: 600, 400: 500,
+	500: 400, 600: 300, 700: 200, 800: 100, 900: 50,
+);
+
+[data-theme="dark"] body.narjes-ledger {
+	@each $frappe, $narjes in $n-ramp-map-dark {
+		@each $stop, $inv in $n-stops-inverted {
+			--#{$frappe}-#{$stop}: var(--n-#{$narjes}-#{$inv});
+		}
+		--#{$frappe}: var(--n-#{$narjes}-400);
+	}
+
+	// text-on-* pairs resolve through the inverted ramps automatically; the
+	// blocks below re-state only what differs structurally from the light map.
+
+	--bg-color: var(--n-bg);
+	--fg-color: var(--n-surface);
+	--card-bg: var(--n-surface);
+	--control-bg: var(--n-surface);
+	--control-bg-on-gray: var(--n-raised);
+	--disabled-control-bg: var(--n-sunken);
+	--input-disabled-bg: var(--n-sunken);
+	--modal-bg: var(--n-raised);
+	--popover-bg: var(--n-raised);
+	--toast-bg: var(--n-raised);
+	--navbar-bg: var(--n-surface);
+	--fg-hover-color: var(--n-fern-900);
+	--subtle-accent: var(--n-fern-900);
+	--subtle-fg: var(--n-raised);
+	--awesomebar-focus-bg: var(--n-raised);
+	--awesomplete-hover-bg: var(--n-fern-900);
+	--highlight-color: var(--n-selection);
+	--yellow-highlight-color: var(--n-saffron-800);
+	--skeleton-bg: var(--n-raised);
+
+	--text-color: var(--n-text);
+	--heading-color: var(--n-text);
+	--text-muted: var(--n-text-2);
+	--text-light: var(--n-text-3);
+	--disabled-text-color: var(--n-text-3);
+	--placeholder-color: var(--n-text-3);
+
+	--border-color: var(--n-border);
+	--dark-border-color: var(--n-border-strong);
+	--table-border-color: var(--n-border);
+	--border-primary: var(--n-primary);
+
+	--primary: var(--n-primary);
+	--primary-color: var(--n-primary);
+	--brand-color: var(--n-primary);
+	--btn-primary: var(--n-primary);
+	--btn-default-bg: var(--n-raised);
+	--btn-default-hover-bg: var(--n-fern-900);
+	--btn-ghost-hover-bg: var(--n-fern-900);
+	--btn-group-border-color: var(--n-border-strong);
+	--sidebar-select-color: var(--n-fern-800);
+
+	--icon-stroke: var(--n-text-2);
+	--icon-fill-bg: var(--n-surface);
+
+	--shadow-xs: var(--n-e1);
+	--shadow-sm: var(--n-e1);
+	--shadow-base: var(--n-e2);
+	--shadow-md: var(--n-e2);
+	--shadow-lg: var(--n-e3);
+	--shadow-2xl: var(--n-e3);
+	--card-shadow: var(--n-e1);
+	--modal-shadow: var(--n-e3);
+
+	--scrollbar-thumb-color: var(--n-border-strong);
+	--scrollbar-track-color: transparent;
+
+	--error-bg: var(--n-danger-bg);
+	--error-border: var(--n-stamp-500);
+	--alert-text-success: var(--n-fern-300);
+	--alert-text-info: var(--n-mint);
+	--alert-text-warning: var(--n-saffron-300);
+	--alert-text-danger: var(--n-stamp-300);
+	--alert-bg-success: var(--n-fern-900);
+	--alert-bg-info: var(--n-fern-900);
+	--alert-bg-warning: var(--n-accent-bg);
+	--alert-bg-danger: var(--n-danger-bg);
+	--appreciation-color: var(--n-fern-300);
+	--appreciation-bg: var(--n-fern-800);
+	--criticism-color: var(--n-stamp-300);
+	--criticism-bg: var(--n-stamp-800);
+	--diff-added: var(--n-fern-800);
+	--diff-removed: var(--n-stamp-800);
+	--diff-changed: var(--n-saffron-800);
+
+	--checkbox-focus-shadow: 0 0 0 2px var(--n-fern-800);
+	--switch-bg: var(--n-border-strong);
+	--date-active-text: var(--n-primary-text-on);
+	--date-active-bg: var(--n-primary);
+	--date-range-bg: var(--n-fern-900);
+
+	--timeline-badge-color: var(--n-text-2);
+	--timeline-badge-bg: var(--n-sunken);
+
+	--code-block-bg: var(--n-well);
+	--code-block-text: var(--n-mint);
+}

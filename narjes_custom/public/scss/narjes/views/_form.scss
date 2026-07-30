@@ -1,0 +1,190 @@
+// P6.2/6.3 — form view: section rhythm, tabs, timeline, form sidebar, grid.
+
+body.narjes-ledger {
+	.form-page {
+		.form-section,
+		.form-dashboard-section {
+			border-block-end: 1px solid var(--n-border);
+
+			.section-head {
+				font-weight: 600;
+				color: var(--n-text);
+			}
+		}
+
+		// tabs: underline fern, Micro-caps labels. The strip and the tab
+		// buttons share ONE surface (--fg-color, same as the form body) —
+		// the stock white-button-on-gray-strip banding read as broken
+		// contrast (issue #1)
+		.form-tabs-list {
+			background: var(--fg-color);
+			border-block-end: 1px solid var(--n-border);
+
+			.nav-item {
+				background: transparent;
+			}
+
+			.nav-link {
+				background: transparent;
+				font-family: var(--n-font-mono);
+				font-size: 11px;
+				font-weight: 500;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				color: var(--n-text-2);
+				border: none;
+				border-block-end: 2px solid transparent;
+
+				&:hover {
+					color: var(--n-text);
+				}
+
+				&.active {
+					color: var(--n-primary);
+					border-block-end-color: var(--n-primary);
+				}
+			}
+		}
+	}
+
+	// form dashboard: % delivered / % billed bars → fern on neutral track
+	.form-dashboard {
+		.progress-chart .progress {
+			background: var(--n-neutral-200);
+		}
+
+		.progress-bar {
+			background: var(--n-primary);
+		}
+	}
+
+	// ---- timeline ----
+	.new-timeline {
+		&::before {
+			border-color: var(--n-border);
+		}
+
+		.timeline-item {
+			.timeline-badge {
+				background: var(--timeline-badge-bg);
+				color: var(--timeline-badge-color);
+			}
+
+			.timeline-content {
+				border-radius: var(--n-radius-md);
+			}
+
+			// comment composer & boxes: Paper card
+			.comment-input-wrapper .comment-input-container,
+			&.frappe-card {
+				border: 1px solid var(--n-border);
+				border-radius: var(--n-radius-md);
+				box-shadow: var(--n-e1);
+			}
+		}
+
+		// version/change entries: field diffs in mono
+		.timeline-message-box .content b,
+		.version-diff {
+			font-family: var(--n-font-mono);
+			font-size: 12px;
+		}
+	}
+
+	// ---- form sidebar ----
+	.form-sidebar {
+		.sidebar-menu,
+		.form-sidebar-items {
+			font-size: 12px;
+		}
+
+		.modified-by,
+		.created-by,
+		.form-stats-likes,
+		.frappe-timestamp {
+			font-family: var(--n-font-mono);
+			font-size: 11px;
+			color: var(--n-text-3);
+		}
+
+		.attachment-row .attachment-link {
+			border-radius: var(--n-radius-xs);
+
+			&:hover {
+				background: var(--n-fern-50);
+			}
+		}
+	}
+
+	// ---- grid / child tables (incl. custom_flower_items) ----
+	.form-grid {
+		border-radius: var(--n-radius-sm);
+		border: 1px solid var(--n-border);
+
+		.grid-heading-row {
+			background: var(--n-bg);
+
+			.grid-static-col {
+				font-family: var(--n-font-mono);
+				font-size: 10.5px;
+				font-weight: 500;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--n-text-3);
+			}
+		}
+
+		.grid-row {
+			border-block-end: 1px solid var(--n-border);
+
+			&:hover {
+				background: color-mix(in srgb, var(--n-fern-50) 40%, transparent);
+			}
+		}
+
+		// inline-edit focus ring inside the cell
+		.grid-static-col.editable-col:focus-within,
+		.grid-row .editable:focus-within {
+			box-shadow: inset 0 0 0 2px var(--n-fern-500);
+			border-radius: var(--n-radius-xs);
+		}
+
+		// currency cells in mono
+		.grid-static-col[data-fieldtype="Currency"],
+		.grid-static-col[data-fieldtype="Int"],
+		.grid-static-col[data-fieldtype="Float"] {
+			font-family: var(--n-font-mono);
+			font-variant-numeric: tabular-nums;
+			text-align: end;
+		}
+
+		// add-row ghost button
+		.grid-add-row,
+		.grid-footer .grid-add-row {
+			color: var(--n-primary);
+		}
+
+		// row-detail expansion as inset Paper card
+		.grid-form-body {
+			background: var(--n-surface);
+			border: 1px solid var(--n-border);
+			border-radius: var(--n-radius-md);
+			box-shadow: var(--n-e1);
+		}
+	}
+
+	// SO image gallery (custom section): breathing room above (issue #10)
+	.custom-gallery-container {
+		margin-block-start: var(--n-space-6);
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	.form-grid .grid-row:hover {
+		background: color-mix(in srgb, var(--n-fern-900) 55%, transparent);
+	}
+
+	.form-sidebar .attachment-row .attachment-link:hover {
+		background: var(--n-fern-900);
+	}
+}

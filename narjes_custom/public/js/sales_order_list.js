@@ -148,12 +148,15 @@ function narjes_custom_card(card, wrapper) {
         }
     }
 
-    // Priority flag color
+    // Priority flag: FILLED glyph when a priority is set, outline when not.
+    // Grades ride the Narjes ramps — High = stamp (danger), Medium = saffron
+    // (the accent proper, not its darker text tone — this is an icon fill),
+    // Low = a calm fern-400 (the palette has no blue; fern carries "info").
     const priority = doc.priority || "";
-    let flag_color = "#718096"; // default gray
-    if (priority === "High") flag_color = "#ff0000ff";
-    else if (priority === "Medium") flag_color = "#969400ff";
-    else if (priority === "Low") flag_color = "#3182CE";
+    let flag_color = "currentColor";
+    if (priority === "High") flag_color = NARJES_BRAND.danger;
+    else if (priority === "Medium") flag_color = NARJES_BRAND.saffron;
+    else if (priority === "Low") flag_color = NARJES_BRAND.fernSoft;
 
     // Conditional icons
     const has_flower = doc.has_flower ? true : false;
@@ -171,14 +174,18 @@ function narjes_custom_card(card, wrapper) {
     const owner_raw = doc.owner || card.owner || "Unknown";
     const owner_display = owner_raw.split("@")[0];
 
-    // --- SVG Icons ---
-    const flag_svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${flag_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`;
-    const flower_svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.5a4.5 4.5 0 1 1 4.5 4.5M12 7.5A4.5 4.5 0 1 0 7.5 12M12 7.5V22M16.5 12a4.5 4.5 0 1 1-4.5 4.5M7.5 12A4.5 4.5 0 1 0 12 16.5"></path></svg>`;
-    const stand_svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="12" rx="2" ry="2"></rect><path d="M12 15v6"></path><path d="M8 21h8"></path></svg>`;
-    const gift_svg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>`;
-    const heart_fill = is_liked ? "#E53E3E" : "none";
-    const heart_stroke = is_liked ? "#E53E3E" : "currentColor";
-    const heart_svg = `<svg class="so-heart ${is_liked ? 'liked' : ''}" width="22" height="22" viewBox="0 0 24 24" fill="${heart_fill}" stroke="${heart_stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+    // --- Phosphor Icons (narjes_icon(), from the app's own sprite) ---
+    // flag/heart use an explicit color style since they carry state-dependent
+    // color (priority / liked) rather than just inheriting currentColor.
+    const flag_svg = narjes_icon(priority ? 'flag-fill' : 'flag', {size: 'md', class: 'so-flag'}).replace('<svg ', `<svg style="color:${flag_color}" `);
+    const flower_svg = narjes_icon('flower', {size: 'md'});
+    const stand_svg = narjes_icon('potted-plant', {size: 'md'});
+    const gift_svg = narjes_icon('gift', {size: 'md'});
+    // Solid heart glyph when liked, outline glyph otherwise — matching
+    // Phosphor's own regular/fill weight pair instead of faking a fill
+    // toggle on a single stroke-based icon.
+    const heart_color = is_liked ? NARJES_BRAND.danger : 'currentColor';
+    const heart_svg = narjes_icon(is_liked ? 'heart-fill' : 'heart', {size: 'md', class: `so-heart ${is_liked ? 'liked' : ''}`}).replace('<svg ', `<svg style="color:${heart_color}" `);
 
     // Build right-side icons (always flag first, then conditionally flower/stand/gift)
     let icons_html = `<div class="so-icon" title="Priority: ${priority || 'None'}">${flag_svg}</div>`;
@@ -215,8 +222,8 @@ function narjes_custom_card(card, wrapper) {
     $card.find(".so-heart-btn").on("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
-        const svg = $card.find(".so-heart");
-        const currently_liked = svg.hasClass("liked");
+        const $heart_btn = $(this);
+        const currently_liked = $card.find(".so-heart").hasClass("liked");
         const add = currently_liked ? "No" : "Yes";
 
         frappe.call({
@@ -225,11 +232,12 @@ function narjes_custom_card(card, wrapper) {
             args: { doctype: "Sales Order", name: card.name, add: add },
             callback: function (r) {
                 if (r.exc) return;
-                if (add === "Yes") {
-                    svg.addClass("liked").attr("fill", "#E53E3E").attr("stroke", "#E53E3E");
-                } else {
-                    svg.removeClass("liked").attr("fill", "none").attr("stroke", "currentColor");
-                }
+                const now_liked = add === "Yes";
+                const color = now_liked ? NARJES_BRAND.danger : "currentColor";
+                $heart_btn.html(
+                    narjes_icon(now_liked ? "heart-fill" : "heart", {size: "md", class: `so-heart ${now_liked ? "liked" : ""}`})
+                        .replace("<svg ", `<svg style="color:${color}" `)
+                );
             },
         });
     });

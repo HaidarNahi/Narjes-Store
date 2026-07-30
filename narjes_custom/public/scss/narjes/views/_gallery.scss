@@ -1,0 +1,206 @@
+.custom-gallery-container {
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color, #d1d8dd);
+    border-radius: var(--border-radius-md, 8px);
+    background-color: var(--card-bg, #fff);
+    overflow: hidden;
+    transition: border-color 0.3s, background-color 0.3s;
+}
+
+.custom-gallery-container.dragover {
+    border: 2px dashed var(--primary, var(--narjes-fern, #2E5C46));
+    background-color: var(--highlight-color, #f0f8ff);
+}
+
+.custom-gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color, #d1d8dd);
+    background-color: var(--control-bg, #f4f5f6);
+}
+
+.custom-gallery-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.custom-gallery-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.custom-gallery-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 15px;
+    padding: 15px;
+    min-height: 120px;
+    align-items: center;
+}
+
+.custom-gallery-item {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: var(--border-radius-sm, 6px);
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color, #d1d8dd);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.custom-gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.custom-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.custom-gallery-item-selector {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.custom-gallery-item-selector .narjes-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.custom-gallery-item:hover .custom-gallery-item-selector,
+.custom-gallery-item.selected .custom-gallery-item-selector {
+    opacity: 1;
+}
+
+.custom-gallery-item.selected .custom-gallery-item-selector {
+    color: var(--primary, var(--narjes-fern, #2E5C46));
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.custom-gallery-item.selected {
+    border-color: var(--primary, var(--narjes-fern, #2E5C46));
+    box-shadow: 0 0 0 2px var(--primary, var(--narjes-fern, #2E5C46));
+}
+
+.custom-gallery-item-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: 8px;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.custom-gallery-item:hover .custom-gallery-item-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#custom-gallery-previewer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(76, 76, 76, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.btn-close-preview {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-close-preview:hover {
+    opacity: 0.7;
+}
+
+.btn-prev-preview,
+.btn-next-preview {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 30px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.btn-prev-preview:hover,
+.btn-next-preview:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-prev-preview {
+    left: 30px;
+}
+
+.btn-next-preview {
+    right: 30px;
+}
+
+.preview-image {
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.preview-counter {
+    position: absolute;
+    bottom: 30px;
+    color: white;
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+}

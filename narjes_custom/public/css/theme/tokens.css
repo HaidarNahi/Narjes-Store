@@ -1,0 +1,160 @@
+/* Narjes Ledger — the shop's own design system.
+   Not a reskin of stock Frappe colors: a from-scratch palette + type system
+   named after what it actually represents (paper, ink, a botanical fern,
+   a marigold "saffron" accent, and "stamp" for an ink-stamp status motif),
+   sourced from the approved theme-preview artifact. Every pairing below was
+   contrast-checked (WCAG) in both light and dark before being used here.
+
+   Accent tokens (--narjes-fern / --narjes-fern-strong / --narjes-fern-tint)
+   are deliberately re-declared a second time, later in the cascade, by an
+   injected <style id="narjes-accent-override"> tag — see narjes_theme.js.
+   That's how "Appearance" in Narjes Settings reconfigures the accent live,
+   without a bench build: this file defines the shipped default (the "Fern"
+   preset), the override tag patches just the 3 accent variables per theme. */
+
+:root,
+[data-theme="light"] {
+	--narjes-paper: #f2f4f1;
+	--narjes-paper-raised: #ffffff;
+	--narjes-paper-sunken: #e9ede7;
+
+	--narjes-ink: #1b211d;
+	--narjes-ink-muted: #5b655c;
+	--narjes-ink-faint: #8b948a;
+
+	--narjes-border: #dce3da;
+	--narjes-border-strong: #c3cdc0;
+
+	--narjes-fern: #2e5c46;
+	--narjes-fern-strong: #234433;
+	--narjes-fern-tint: #e4f0ea;
+	--narjes-fern-on: #ffffff;
+
+	--narjes-sage: #a2d4c9;
+
+	--narjes-saffron: #c8842a;
+	--narjes-saffron-tint: #f7ead6;
+	--narjes-saffron-text: #8a5a17;
+
+	--narjes-stamp: #9b3b3b;
+	--narjes-stamp-tint: #f5e4e2;
+	--narjes-stamp-on: #ffffff;
+
+	--narjes-shadow-rgb: 27, 33, 29;
+
+	/* Semantic aliases — meaningful names for meaningful uses, same pattern
+	   as Frappe's own --text-on-red/--bg-red layer sitting on top of raw
+	   color tokens. Draft/neutral status has no dedicated hue: it reads as
+	   quiet ink, not a color, same as the artifact's .st-draft chip. */
+	--narjes-success: var(--narjes-fern);
+	--narjes-success-tint: var(--narjes-fern-tint);
+	--narjes-warning: var(--narjes-saffron-text);
+	--narjes-warning-tint: var(--narjes-saffron-tint);
+	--narjes-danger: var(--narjes-stamp);
+	--narjes-danger-tint: var(--narjes-stamp-tint);
+	--narjes-neutral: var(--narjes-ink-faint);
+	--narjes-neutral-tint: var(--narjes-paper-sunken);
+}
+
+[data-theme="dark"] {
+	--narjes-paper: #12160f;
+	--narjes-paper-raised: #1d241c;
+	--narjes-paper-sunken: #0d100b;
+
+	--narjes-ink: #ece9e1;
+	--narjes-ink-muted: #a8afa3;
+	--narjes-ink-faint: #727a6e;
+
+	--narjes-border: #2a3227;
+	--narjes-border-strong: #3b4536;
+
+	--narjes-fern: #7fd4ae;
+	--narjes-fern-strong: #9ee0c3;
+	--narjes-fern-tint: #1e2e26;
+	--narjes-fern-on: #12160f;
+
+	--narjes-sage: #4e7a6b;
+
+	--narjes-saffron: #e0a44c;
+	--narjes-saffron-tint: #332614;
+	--narjes-saffron-text: #f0c384;
+
+	--narjes-stamp: #e08585;
+	--narjes-stamp-tint: #3a1f1f;
+	--narjes-stamp-on: #2a1010;
+
+	--narjes-shadow-rgb: 0, 0, 0;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--narjes-paper: #12160f;
+		--narjes-paper-raised: #1d241c;
+		--narjes-paper-sunken: #0d100b;
+
+		--narjes-ink: #ece9e1;
+		--narjes-ink-muted: #a8afa3;
+		--narjes-ink-faint: #727a6e;
+
+		--narjes-border: #2a3227;
+		--narjes-border-strong: #3b4536;
+
+		--narjes-fern: #7fd4ae;
+		--narjes-fern-strong: #9ee0c3;
+		--narjes-fern-tint: #1e2e26;
+		--narjes-fern-on: #12160f;
+
+		--narjes-sage: #4e7a6b;
+
+		--narjes-saffron: #e0a44c;
+		--narjes-saffron-tint: #332614;
+		--narjes-saffron-text: #f0c384;
+
+		--narjes-stamp: #e08585;
+		--narjes-stamp-tint: #3a1f1f;
+		--narjes-stamp-on: #2a1010;
+
+		--narjes-shadow-rgb: 0, 0, 0;
+	}
+}
+
+:root {
+	--narjes-radius-xs: 3px;
+	--narjes-radius-sm: 6px;
+	--narjes-radius-md: 10px;
+	--narjes-radius-pill: 999px;
+	--narjes-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+	--narjes-font-display: "Narjes Fraunces", ui-serif, Georgia, serif;
+	--narjes-font-body: "Narjes Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--narjes-font-mono: "Narjes Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@font-face {
+	font-family: "Narjes Fraunces";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("/assets/narjes_custom/fonts/fraunces-semibold.woff2") format("woff2");
+}
+@font-face {
+	font-family: "Narjes Plex Sans";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("/assets/narjes_custom/fonts/plex-sans-regular.woff2") format("woff2");
+}
+@font-face {
+	font-family: "Narjes Plex Sans";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("/assets/narjes_custom/fonts/plex-sans-semibold.woff2") format("woff2");
+}
+@font-face {
+	font-family: "Narjes Plex Mono";
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("/assets/narjes_custom/fonts/plex-mono-medium.woff2") format("woff2");
+}

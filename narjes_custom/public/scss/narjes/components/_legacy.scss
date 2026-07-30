@@ -1,0 +1,126 @@
+// Absorbed verbatim-in-spirit from the pre-theme components.css: the
+// namespaced classes custom-page JS renders (.narjes-icon sizing + fill
+// reset, ledger KPI tile, ledger table). Deliberately NOT scoped to
+// body.narjes-ledger — these are our own namespaced classes and the custom
+// pages need them regardless of the kill switch, exactly as before.
+
+// Phosphor glyphs are filled (fill="currentColor", no stroke); Frappe's
+// common icons.scss sets .icon { fill: transparent; stroke: var(--icon-stroke) }
+// for its own Lucide outlines, which turns Phosphor glyphs invisible. Reset
+// both — this file loads after core (narjes_custom is the last app).
+.narjes-icon {
+	color: currentColor;
+	fill: currentColor;
+	stroke: none;
+	vertical-align: -0.125em;
+
+	&.icon-xs {
+		width: 12px;
+		height: 12px;
+	}
+
+	&.icon-sm {
+		width: 16px;
+		height: 16px;
+	}
+
+	&.icon-md {
+		width: 20px;
+		height: 20px;
+	}
+
+	&.icon-lg {
+		width: 28px;
+		height: 28px;
+	}
+
+	&.icon-xl {
+		width: 36px;
+		height: 36px;
+	}
+}
+
+.narjes-ledger-kpi {
+	background: var(--n-raised);
+	border: 1px solid var(--n-border);
+	border-radius: var(--n-radius-md);
+	padding: 16px;
+	box-shadow: var(--n-e1);
+	transition: box-shadow var(--n-dur-2) var(--n-ease),
+		transform var(--n-dur-2) var(--n-ease);
+
+	&:hover {
+		box-shadow: var(--n-e2);
+		transform: translateY(-1px);
+	}
+}
+
+.narjes-ledger-kpi-icon {
+	width: 34px;
+	height: 34px;
+	border-radius: var(--n-radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&.i-fern {
+		background: var(--n-success-bg);
+		color: var(--n-success);
+	}
+
+	&.i-saffron {
+		background: var(--n-accent-bg);
+		color: var(--n-accent-text);
+	}
+
+	&.i-stamp {
+		background: var(--n-danger-bg);
+		color: var(--n-danger);
+	}
+}
+
+.narjes-ledger-kpi-value {
+	font-family: var(--n-font-mono);
+	font-variant-numeric: tabular-nums;
+	font-size: 22px;
+	font-weight: 600;
+	color: var(--n-text);
+}
+
+.narjes-ledger-kpi-label {
+	font-size: 12px;
+	color: var(--n-text-2);
+}
+
+.narjes-ledger-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+
+	th {
+		text-align: start;
+		font-family: var(--n-font-mono);
+		font-size: 10.5px;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--n-text-3);
+		padding-block: 8px;
+		padding-inline: 12px;
+		border-block-end: 1px solid var(--n-border);
+	}
+
+	td {
+		padding-block: 10px;
+		padding-inline: 12px;
+		border-block-end: 1px solid var(--n-border);
+		color: var(--n-text);
+	}
+
+	tbody tr {
+		transition: background-color var(--n-dur-1) var(--n-ease);
+
+		&:hover {
+			background: var(--n-sunken);
+		}
+	}
+}

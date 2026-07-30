@@ -1,0 +1,18 @@
+// P10 — RTL. The theme writes logical properties everywhere (P3.6), and
+// Frappe auto-generates css-rtl/ twins of this bundle via rtlcss, so this
+// file only carries the exceptions rtlcss can't infer.
+
+body.narjes-ledger {
+	// stamps: the dot leads the label in both directions (flex handles it);
+	// keep the ink-bleed gradient origin visually "bottom-leading"
+	[dir="rtl"] & .n-stamp--stamped::after {
+		background: radial-gradient(ellipse at 70% 60%, currentColor 0%, transparent 55%);
+	}
+
+	// numbers + unit strings stay LTR as a unit inside RTL text (P10.2)
+	.n-ltr-num,
+	.so-info-row,
+	[data-fieldtype="Currency"] .control-value {
+		unicode-bidi: plaintext;
+	}
+}

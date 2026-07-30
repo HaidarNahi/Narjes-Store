@@ -1,0 +1,76 @@
+{% extends "templates/web.html" %}
+
+{%- block title -%}{{ _("Not Found") }} · Narjes{%- endblock -%}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block page_content %}
+<style>
+	body {
+		background-color: #F2F4F1;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		body {
+			background-color: #121714;
+		}
+
+		.narjes-error h1 {
+			color: #ECEFEA !important;
+		}
+	}
+
+	.narjes-error {
+		max-width: 420px;
+		margin: 15vh auto 0;
+		text-align: center;
+		padding: 24px;
+	}
+
+	.narjes-error img {
+		width: 64px;
+		height: 64px;
+		margin-bottom: 16px;
+	}
+
+	.narjes-error h1 {
+		font-family: Fraunces, Amiri, Georgia, serif;
+		font-weight: 600;
+		font-size: 28px;
+		color: #1B211D;
+		margin-bottom: 8px;
+	}
+
+	.narjes-error p {
+		color: #6A736C;
+		margin-bottom: 20px;
+	}
+
+	.narjes-error a {
+		display: inline-block;
+		background: #2E5C46;
+		color: #FFFFFF;
+		border-radius: 8px;
+		padding: 8px 20px;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.narjes-error a:hover {
+		background: #264C3A;
+		color: #FFFFFF;
+	}
+</style>
+
+<script>
+	window.is_404 = true;
+</script>
+
+<div class="narjes-error">
+	<img src="/assets/narjes_custom/images/narjes-logo.svg" alt="">
+	<h1>{{ _("This page doesn't exist") }}</h1>
+	<p>{{ _("The link may be old, or the page may have moved.") }}</p>
+	<a href="/app">{{ _("Back to your orders") }} →</a>
+</div>
+{% endblock %}

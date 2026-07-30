@@ -1,0 +1,132 @@
+// P4 — global chrome: navbar, workspace sidebar, page head, breadcrumbs.
+// Geometry + structure only; every color rides on the Lever-1 variables.
+
+body.narjes-ledger {
+	// ---- navbar: Paper surface, 1px hairline, no shadow ----
+	.navbar {
+		border-block-end: 1px solid var(--n-border);
+		box-shadow: none;
+
+		.navbar-brand {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+
+			img {
+				height: 24px;
+				width: auto;
+			}
+		}
+
+		// awesomebar as the mock's pill search field
+		.search-bar input,
+		#navbar-search {
+			border-radius: var(--n-radius-pill);
+			background: var(--n-surface);
+			border: 1px solid var(--n-border-strong);
+
+			&:focus {
+				border-color: var(--n-focus);
+			}
+		}
+	}
+
+	// notification bell unread dot → saffron
+	.notifications-seen .notification-indicator,
+	.nav-item .badge {
+		background: var(--n-accent);
+	}
+
+	// ---- workspace sidebar (v16 body-sidebar) ----
+	.body-sidebar,
+	.desk-sidebar {
+		// section labels in Micro-caps like the mock's WORKSPACE / INSIGHTS
+		.sidebar-section-label,
+		.standard-sidebar-label {
+			font-family: var(--n-font-mono);
+			font-size: 11px;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--n-text-3);
+		}
+
+		.item-anchor,
+		.sidebar-item-container > .desk-sidebar-item,
+		.standard-sidebar-item {
+			border-radius: var(--n-radius-sm);
+		}
+
+		// active item: fern text + fern-100 fill + 3px inset fern bar
+		.selected .item-anchor,
+		.standard-sidebar-item.selected,
+		.desk-sidebar-item.selected {
+			color: var(--n-primary);
+			background: var(--sidebar-select-color);
+			box-shadow: inset 3px 0 0 0 var(--n-primary);
+
+			.sidebar-item-icon .icon {
+				stroke: var(--n-primary);
+			}
+		}
+	}
+
+	// ---- page head: sticky, Fraunces title, action rhythm ----
+	.page-head {
+		background: var(--n-bg);
+		border-block-end: 1px solid var(--n-border);
+
+		.page-title .title-text {
+			font-size: 20px;
+		}
+
+		.indicator-pill {
+			margin-inline-start: var(--n-space-3);
+		}
+	}
+
+	// breadcrumbs: quiet mono trail
+	#navbar-breadcrumbs {
+		a {
+			color: var(--n-text-3);
+
+			&:hover {
+				color: var(--n-link);
+			}
+		}
+
+		.disabled a {
+			color: var(--n-text-2);
+		}
+	}
+
+	// offline / reconnect banner
+	.msgprint-dialog .modal-body .msgprint,
+	#freeze .freeze-message {
+		font-family: var(--n-font-body);
+	}
+
+	// responsive page head: the title column may shrink (breadcrumbs get
+	// ellipsis) and the action cluster wraps instead of overflowing —
+	// holds up against both the window and the container (issue #6)
+	.page-head {
+		.page-title,
+		.title-area {
+			min-width: 0;
+		}
+
+		.navbar-breadcrumbs {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.page-actions {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: flex-end;
+			row-gap: 4px;
+		}
+	}
+}

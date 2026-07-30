@@ -1,0 +1,68 @@
+// P6.4/6.5 — report view + frappe-datatable skin (.dt-* is self-contained).
+// Validated against Items Balance and Sales Revenue.
+
+body.narjes-ledger {
+	.frappe-datatable,
+	.datatable {
+		--dt-border-color: var(--n-border);
+		--dt-header-cell-bg: var(--n-bg);
+		--dt-cell-bg: var(--n-surface);
+		--dt-focus-border-width: 2px;
+		--dt-selection-highlight-color: var(--n-selection);
+		--dt-text-color: var(--n-text);
+		--dt-text-light: var(--n-text-3);
+		--dt-spacer-1: 4px;
+
+		.dt-header .dt-cell__content {
+			font-family: var(--n-font-mono);
+			font-size: 10.5px;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--n-text-3);
+		}
+
+		.dt-row:hover .dt-cell {
+			background: color-mix(in srgb, var(--n-fern-50) 40%, transparent);
+		}
+
+		.dt-cell--focused {
+			outline-color: var(--n-fern-500);
+		}
+
+		// totals row: firm top rule, mono bold
+		.dt-row--totals .dt-cell__content,
+		.dt-row-totalRow .dt-cell__content {
+			font-family: var(--n-font-mono);
+			font-weight: 600;
+			border-block-start: 1px solid var(--n-border-strong);
+		}
+
+		// tree expand carets
+		.dt-tree-node__toggle {
+			color: var(--n-text-3);
+		}
+	}
+
+	// report toolbar + summary cards
+	.report-summary {
+		.summary-item,
+		.summary-value {
+			font-family: var(--n-font-mono);
+			font-variant-numeric: tabular-nums;
+		}
+	}
+
+	// report view (list's spreadsheet mode)
+	.report-view {
+		.dt-cell--editing {
+			box-shadow: inset 0 0 0 2px var(--n-fern-500);
+		}
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	.frappe-datatable .dt-row:hover .dt-cell {
+		background: color-mix(in srgb, var(--n-fern-900) 55%, transparent);
+	}
+}

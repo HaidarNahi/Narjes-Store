@@ -1,0 +1,185 @@
+/* Narjes Ledger component layer — small, reusable classes that our own
+   custom markup (Home Dashboard, Sales Order kanban/gallery, AI Intake)
+   can opt into, plus a light global polish pass on stock Frappe elements.
+   Kept deliberately minimal: broad !important-laden overrides of ERPNext's
+   own component CSS are exactly the kind of fragile customization this app
+   has been moving away from. Every transition below only touches
+   background/box-shadow/transform/color — never layout — so nothing feels
+   laggy. */
+
+.btn,
+.list-row,
+.narjes-icon,
+.stamp-chip {
+	transition: background-color 150ms var(--narjes-ease), box-shadow 150ms var(--narjes-ease),
+		color 150ms var(--narjes-ease), border-color 150ms var(--narjes-ease);
+}
+
+.widget,
+.form-dashboard-section .dashboard-list,
+.frappe-card {
+	transition: box-shadow 180ms var(--narjes-ease), transform 180ms var(--narjes-ease);
+}
+
+.btn {
+	border-radius: var(--narjes-radius-sm);
+}
+
+/* .narjes-icon is the class every narjes_icon() svg carries. It shares
+   Frappe's own .icon class for sizing/display, but NOT for fill/stroke:
+   Frappe v16's own icon set (Lucide) is stroke-based, so common/icons.scss
+   sets `.icon { fill: var(--icon-fill); stroke: var(--icon-stroke); }`,
+   and --icon-fill is literally `transparent` (see css_variables.scss) —
+   correct for Frappe's own outline glyphs, but it left every Phosphor icon
+   here rendering as an almost-invisible transparent-filled silhouette with
+   only a faint 1.5px stroke outline. Phosphor's "regular" weight is a
+   solid, filled glyph (fill="currentColor", no stroke at all), so this
+   explicitly resets both properties back — loads after icons.scss (same
+   0,0,1,0 specificity, narjes_custom is the last app), so it wins. */
+.narjes-icon {
+	color: currentColor;
+	fill: currentColor;
+	stroke: none;
+	vertical-align: -0.125em;
+}
+.narjes-icon.icon-xs {
+	width: 12px;
+	height: 12px;
+}
+.narjes-icon.icon-sm {
+	width: 16px;
+	height: 16px;
+}
+.narjes-icon.icon-md {
+	width: 20px;
+	height: 20px;
+}
+.narjes-icon.icon-lg {
+	width: 28px;
+	height: 28px;
+}
+.narjes-icon.icon-xl {
+	width: 36px;
+	height: 36px;
+}
+
+/* Ink-stamp status chip — the shop's own status vocabulary (draft / in
+   progress / done / cancelled), used on the Home Dashboard, the Sales
+   Order kanban/gallery cards, and AI Intake results. Frappe's own
+   indicator-pill already carries this same palette system-wide via
+   frappe_overrides.css; this is the same idea for markup we hand-author
+   ourselves instead of markup Frappe renders for us. */
+.stamp-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: var(--narjes-radius-pill);
+	border: 1px solid transparent;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+.stamp-chip .dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: currentColor;
+	flex-shrink: 0;
+}
+.stamp-chip.st-draft {
+	color: var(--narjes-ink-faint);
+	border-color: var(--narjes-border-strong);
+}
+.stamp-chip.st-transit {
+	color: var(--narjes-warning);
+	background: var(--narjes-warning-tint);
+}
+.stamp-chip.st-done {
+	color: var(--narjes-success);
+	background: var(--narjes-success-tint);
+}
+.stamp-chip.st-cancel {
+	color: var(--narjes-danger);
+	background: var(--narjes-danger-tint);
+}
+
+/* Ledger KPI tile — a reusable summary-card component for pages other than
+   the Home Dashboard (which already has its own bespoke .narjes-kpi-card
+   markup/styling in narjes_home.css; kept namespaced as "ledger-kpi" here
+   specifically so the two never collide). */
+.narjes-ledger-kpi {
+	background: var(--narjes-paper-raised);
+	border: 1px solid var(--narjes-border);
+	border-radius: var(--narjes-radius-md);
+	padding: 16px;
+	box-shadow: 0 1px 2px rgba(var(--narjes-shadow-rgb), 0.05);
+	transition: box-shadow 180ms var(--narjes-ease), transform 180ms var(--narjes-ease);
+}
+.narjes-ledger-kpi:hover {
+	box-shadow: 0 4px 16px -4px rgba(var(--narjes-shadow-rgb), 0.14);
+	transform: translateY(-1px);
+}
+.narjes-ledger-kpi-icon {
+	width: 34px;
+	height: 34px;
+	border-radius: var(--narjes-radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.narjes-ledger-kpi-icon.i-fern {
+	background: var(--narjes-success-tint);
+	color: var(--narjes-success);
+}
+.narjes-ledger-kpi-icon.i-saffron {
+	background: var(--narjes-warning-tint);
+	color: var(--narjes-warning);
+}
+.narjes-ledger-kpi-icon.i-stamp {
+	background: var(--narjes-danger-tint);
+	color: var(--narjes-danger);
+}
+.narjes-ledger-kpi-value {
+	font-family: var(--narjes-font-mono);
+	font-variant-numeric: tabular-nums;
+	font-size: 22px;
+	font-weight: 600;
+	color: var(--narjes-ink);
+}
+.narjes-ledger-kpi-label {
+	font-size: 12px;
+	color: var(--narjes-ink-muted);
+}
+
+/* Ledger-style table — a slightly firmer header row and a hairline row
+   rule, for our own hand-built tables (e.g. narjes_home.js's recent-orders
+   list). Frappe's own list view keeps its native structure/behavior; this
+   is only for markup we render ourselves. */
+.narjes-ledger-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+.narjes-ledger-table th {
+	text-align: left;
+	font-family: var(--narjes-font-mono);
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--narjes-ink-faint);
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--narjes-border);
+}
+.narjes-ledger-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--narjes-border);
+	color: var(--narjes-ink);
+}
+.narjes-ledger-table tbody tr {
+	transition: background-color 150ms var(--narjes-ease);
+}
+.narjes-ledger-table tbody tr:hover {
+	background: var(--narjes-paper-sunken);
+}

@@ -1,3 +1,5 @@
+import colorsys
+
 # pyrefly: ignore [missing-import]
 import frappe
 # pyrefly: ignore [missing-import]
@@ -7,9 +9,30 @@ from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchas
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
 from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
-from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from narjes_custom.business_logic import compute_canvas_cost, compute_delivery_fee, compute_sheet_cost
+
+
+def _get_account(account_name, company):
+    """Resolve a company account by its plain name instead of a hardcoded
+    '- NS' suffix (which silently breaks for any company whose abbreviation
+    isn't NS), and fail loudly and immediately if it's missing instead of
+    letting a stray fallback string surface as an opaque error partway
+    through document creation (see NARJES_STORE_SYSTEM.md audit follow-up)."""
+    account = frappe.db.get_value("Account", {"account_name": account_name, "company": company})
+    if not account:
+        frappe.throw(
+            f"Account '{account_name}' does not exist for company '{company}'. "
+            f"Create it before this automation can run."
+        )
+    return account
+
+
+def _get_cost_center(company):
+    cost_center = frappe.db.get_value("Company", company, "cost_center")
+    if not cost_center:
+        frappe.throw(f"Company '{company}' has no default Cost Center set.")
+    return cost_center
 
 
 def automate_po_flow(doc, method):
@@ -32,50 +55,84 @@ def automate_po_flow(doc, method):
         if not pe.mode_of_payment:
             pe.mode_of_payment = frappe.db.get_value("Mode of Payment", {"type": "Cash"}, "name") or "Cash"
         if not pe.paid_from:
-            pe.paid_from = frappe.db.get_value("Account", {"account_name": "Cash", "company": doc.company}) or "Cash - NS"
+            pe.paid_from = _get_account("Cash", doc.company)
         pe.insert(ignore_permissions=True)
         pe.submit()
 
         frappe.msgprint(
             f"Auto-generated Purchase Receipt, Purchase Invoice, and Payment Entry for {doc.name}")
 
-    except Exception as e:
-        frappe.throw(f"Auto-creation failed: {str(e)}")
+    except Exception:
+        # Log the real traceback before re-raising — the previous
+        # `frappe.throw(str(e))` discarded the stack trace and exception
+        # type, making production failures here nearly undebuggable.
+        frappe.log_error(title=f"Purchase auto-creation failed for {doc.name}", message=frappe.get_traceback())
+        raise
 
 # --- NEW SALES AUTOMATION ---
+
+
+def _append_flower_items(target_doc, flower_items, doc, default_income_account, only_stock_items=False, warehouse=None):
+    """Shared by the auto Sales Invoice and auto Delivery Note so flower
+    rows aren't only added to the invoice — leaving them off the Delivery
+    Note meant a stock-tracked flower's consumption never hit the Stock
+    Ledger (see NARJES_STORE_SYSTEM.md audit follow-up)."""
+    for flower in flower_items or []:
+        item_doc = frappe.get_doc("Item", flower.flower_item)
+        if only_stock_items and not item_doc.is_stock_item:
+            continue
+        row = {
+            "item_code": flower.flower_item,
+            "item_name": item_doc.item_name,
+            "description": item_doc.description,
+            "uom": item_doc.stock_uom or "Nos",
+            "stock_uom": item_doc.stock_uom or "Nos",
+            "conversion_factor": 1.0,
+            "qty": flower.qty,
+            "rate": flower.rate,
+        }
+        if only_stock_items:
+            row["warehouse"] = warehouse
+            row["against_sales_order"] = doc.name
+        else:
+            row["price_list_rate"] = flower.rate
+            row["amount"] = (flower.qty or 0) * (flower.rate or 0)
+            row["income_account"] = default_income_account
+            row["cost_center"] = _get_cost_center(doc.company)
+            row["sales_order"] = doc.name
+        target_doc.append("items", row)
 
 
 def automate_so_flow(doc, method):
     try:
         # 1. Create and Submit Delivery Note (for physical items)
         dn = make_delivery_note(doc.name)
+
+        stock_flowers = [f for f in (doc.get("custom_flower_items") or [])
+                          if frappe.db.get_value("Item", f.flower_item, "is_stock_item")]
+        if stock_flowers:
+            warehouse = dn.items[0].warehouse if dn.get("items") else frappe.db.get_value(
+                "Item Default", {"parent": stock_flowers[0].flower_item, "company": doc.company}, "default_warehouse"
+            )
+            if not warehouse:
+                frappe.throw(
+                    f"No warehouse available to deliver stock item '{stock_flowers[0].flower_item}' "
+                    f"from Sales Order {doc.name}. Set a default warehouse for this item or company."
+                )
+            _append_flower_items(dn, stock_flowers, doc, None, only_stock_items=True, warehouse=warehouse)
+
         if len(dn.get("items") or []) > 0:
             dn.insert(ignore_permissions=True)
             dn.submit()
-            
+
         # 2. Create Sales Invoice directly from SO (includes all standard items and services)
         from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice as make_si_from_so
         si = make_si_from_so(doc.name)
-        
+
         # Inject flower items into the Sales Invoice
-        for flower in doc.get("custom_flower_items") or []:
-            item_doc = frappe.get_doc("Item", flower.flower_item)
-            si.append("items", {
-                "item_code": flower.flower_item,
-                "item_name": item_doc.item_name,
-                "description": item_doc.description,
-                "uom": item_doc.stock_uom or "Nos",
-                "stock_uom": item_doc.stock_uom or "Nos",
-                "conversion_factor": 1.0,
-                "qty": flower.qty,
-                "rate": flower.rate,
-                "price_list_rate": flower.rate,
-                "amount": (flower.qty or 0) * (flower.rate or 0),
-                "income_account": "Sales - NS",
-                "cost_center": frappe.db.get_value("Company", doc.company, "cost_center") or "Main - NS",
-                "sales_order": doc.name
-            })
-        
+        income_account = _get_account("Sales", doc.company)
+        _append_flower_items(si, doc.get("custom_flower_items"), doc, income_account)
+
         si.insert(ignore_permissions=True)
         si.submit()
 
@@ -86,7 +143,7 @@ def automate_so_flow(doc, method):
         if not pe.mode_of_payment:
             pe.mode_of_payment = frappe.db.get_value("Mode of Payment", {"type": "Cash"}, "name") or "Cash"
         if not pe.paid_to:
-            pe.paid_to = frappe.db.get_value("Account", {"account_name": "Cash", "company": doc.company}) or "Cash - NS"
+            pe.paid_to = _get_account("Cash", doc.company)
         pe.insert(ignore_permissions=True)
         pe.submit()
 
@@ -101,11 +158,11 @@ def automate_so_flow(doc, method):
                 "user_remark": f"Packaging Expenses for Sales Order {doc.name}",
                 "accounts": [
                     {
-                        "account": "Packaging Expenses - NS",
+                        "account": _get_account("Packaging Expenses", doc.company),
                         "debit_in_account_currency": packaging_costs
                     },
                     {
-                        "account": "Cash - NS",
+                        "account": _get_account("Cash", doc.company),
                         "credit_in_account_currency": packaging_costs
                     }
                 ]
@@ -146,11 +203,11 @@ def automate_so_flow(doc, method):
                 "user_remark": f"Painting Costs for Sales Order {doc.name} (Canvas: {doc.get('custom_canvas_painting_cost') or 0}, Sheet: {doc.get('custom_sheet_painting_cost') or 0})",
                 "accounts": [
                     {
-                        "account": "Painting Costs - NS",
+                        "account": _get_account("Painting Costs", doc.company),
                         "debit_in_account_currency": total_painting_cost
                     },
                     {
-                        "account": "Cash - NS",
+                        "account": _get_account("Cash", doc.company),
                         "credit_in_account_currency": total_painting_cost
                     }
                 ]
@@ -169,11 +226,11 @@ def automate_so_flow(doc, method):
                 "user_remark": f"Flower COGS for Sales Order {doc.name}",
                 "accounts": [
                     {
-                        "account": "Cost of Goods Sold - NS",
+                        "account": _get_account("Cost of Goods Sold", doc.company),
                         "debit_in_account_currency": flower_total
                     },
                     {
-                        "account": "Cash - NS",
+                        "account": _get_account("Cash", doc.company),
                         "credit_in_account_currency": flower_total
                     }
                 ]
@@ -184,8 +241,9 @@ def automate_so_flow(doc, method):
         frappe.msgprint(
             f"Auto-generated Delivery Note, Sales Invoice, Payment Entry, and all expense JEs for {doc.name}")
 
-    except Exception as e:
-        frappe.throw(f"Sales auto-creation failed: {str(e)}")
+    except Exception:
+        frappe.log_error(title=f"Sales auto-creation failed for {doc.name}", message=frappe.get_traceback())
+        raise
 
 
 # def force_last_purchase_rate(doc, method):
@@ -250,9 +308,9 @@ def sales_order_before_validate(doc, method):
     # The ONLY ERPNext-compliant way to add a fee to grand_total without breaking GL entries
     # is to add it to the Taxes and Charges table.
     if fee > 0 and getattr(doc, "taxes", None) is not None:
-        delivery_account = "Service - NS" # Dynamically found income account
-        cost_center = "Main - NS"
-        
+        delivery_account = _get_account("Service", doc.company)
+        cost_center = _get_cost_center(doc.company)
+
         # Check if we already have a delivery fee tax row
         found = False
         for tax in doc.taxes:
@@ -305,14 +363,29 @@ def sales_order_validate(doc, method):
         doc.grand_total = doc.net_total + taxes_total - (doc.discount_amount or 0)
         doc.base_grand_total = doc.grand_total # Assuming 1:1 conversion for IQD/USD standard
         
-    # --- Canvas Items ---
+    # --- Canvas + Sheet Items ---
+    # Item flags are batched into one query instead of one `get_value` call
+    # per item row — this runs on every single Sales Order/Sales Invoice/
+    # Delivery Note save, not just in a report, so the per-row N+1 here was
+    # the hottest instance of the pattern in the app.
     settings = frappe.get_cached_doc("Narjes Settings")
+    item_codes = list({item.item_code for item in doc.items if item.item_code})
+    item_flags = {}
+    if item_codes:
+        rows = frappe.db.get_all(
+            "Item",
+            filters={"name": ["in", item_codes]},
+            fields=["name", "custom_is_canvas", "custom_area", "custom_is_sheet"],
+        )
+        item_flags = {r.name: r for r in rows}
+
     doc.set("custom_painting_items", [])
     total_area = 0
     rate_per_cm = settings.painting_rate_per_cm or 0
 
     for item in doc.items:
-        is_canvas, area = frappe.db.get_value("Item", item.item_code, ["custom_is_canvas", "custom_area"]) or (0, 0)
+        flags = item_flags.get(item.item_code)
+        is_canvas, area = (flags.custom_is_canvas, flags.custom_area) if flags else (0, 0)
         if is_canvas and area:
             row_area = area * item.qty
             total_area += row_area
@@ -322,18 +395,19 @@ def sales_order_validate(doc, method):
                 "area_per_item": area,
                 "total_area": row_area
             })
-            
+
     doc.custom_total_canvas_area = total_area
     canvas_cost = compute_canvas_cost(total_area, rate_per_cm)
     doc.custom_canvas_painting_cost = canvas_cost
-    
+
     # --- Sheet Items ---
     doc.set("custom_sheet_items", [])
     sheet_rate = settings.sheet_rate_per_item or 0
     sheet_cost = 0
-    
+
     for item in doc.items:
-        is_sheet = frappe.db.get_value("Item", item.item_code, "custom_is_sheet") or 0
+        flags = item_flags.get(item.item_code)
+        is_sheet = flags.custom_is_sheet if flags else 0
         if is_sheet:
             row_cost = compute_sheet_cost(item.qty, sheet_rate)
             sheet_cost += row_cost
@@ -343,7 +417,7 @@ def sales_order_validate(doc, method):
                 "rate_per_sheet": sheet_rate,
                 "total_cost": row_cost
             })
-    
+
     doc.custom_sheet_painting_cost = sheet_cost
     
     # --- Combined Total ---
@@ -357,6 +431,12 @@ def item_validate(doc, method):
 
 @frappe.whitelist()
 def discard_draft(docname):
+    """`frappe.db.set_value` bypasses permission checks entirely (unlike
+    `doc.save()`/`doc.cancel()`), so without an explicit check here any
+    logged-in user — regardless of their actual Sales Order permissions —
+    could discard someone else's draft (see NARJES_STORE_SYSTEM.md audit
+    follow-up)."""
+    frappe.has_permission("Sales Order", doc=docname, ptype="write", throw=True)
     doc = frappe.get_doc("Sales Order", docname)
     if doc.docstatus == 0:
         frappe.db.set_value("Sales Order", docname, "docstatus", 2)
@@ -367,6 +447,8 @@ def discard_draft(docname):
 
 @frappe.whitelist()
 def cancel_sales_order_and_links(docname):
+    frappe.has_permission("Sales Order", doc=docname, ptype="cancel", throw=True)
+
     # 1. Cancel Linked Payment Entries (identified by reference_no = AUTO-{docname})
     pe_names = frappe.get_all("Payment Entry", filters={"reference_no": f"AUTO-{docname}", "docstatus": 1}, pluck="name")
     for pe in pe_names:
@@ -402,19 +484,22 @@ def purchase_order_before_validate(doc, method):
     This ensures data integrity even if the PO is created via API without JS running.
     """
     amount = doc.get("transportation_charges") or 0
-    account_head = "Transportation Charges - NS"
     description = "Transportation Charges"
 
-    # Find existing transportation row
+    # Match by description alone so a PO with no transportation charge never
+    # requires the account to exist — the account is only resolved (and
+    # required) when there's actually a nonzero charge to book.
     existing_row = None
     for tax in doc.get("taxes", []):
-        if tax.account_head == account_head and tax.description == description:
+        if tax.description == description:
             existing_row = tax
             break
 
     if amount > 0:
+        account_head = _get_account("Transportation Charges", doc.company)
         if existing_row:
             existing_row.tax_amount = amount
+            existing_row.account_head = account_head
         else:
             doc.append("taxes", {
                 "charge_type": "Actual",
@@ -427,7 +512,7 @@ def purchase_order_before_validate(doc, method):
     else:
         # Remove the transportation row if amount is 0 or empty
         if existing_row:
-            doc.taxes = [t for t in doc.taxes if not (t.account_head == account_head and t.description == description)]
+            doc.taxes = [t for t in doc.taxes if t.description != description]
 
 def setup_packaging():
     """Create the Packaging Expenses account used by automate_so_flow's
@@ -468,17 +553,23 @@ def get_home_dashboard_data():
     """
     Fetch KPI metrics and time-series data for the Home Dashboard charts.
     """
+    frappe.has_permission("Sales Order", ptype="read", throw=True)
+
     today_str = frappe.utils.today()
     first_day_of_month = frappe.utils.get_first_day(today_str)
-    
+
     # 1. KPI Metrics
+    # Only docstatus = 1 (submitted) counts as revenue/orders — a draft
+    # Sales Order isn't a confirmed order yet, so `docstatus != 2` (which
+    # counted drafts alongside submitted ones) overstated "today's revenue"
+    # with unconfirmed orders (see NARJES_STORE_SYSTEM.md audit follow-up).
     today_rev = frappe.db.sql("""
         SELECT COALESCE(SUM(grand_total), 0)
         FROM `tabSales Order`
-        WHERE transaction_date = %s AND docstatus != 2
+        WHERE transaction_date = %s AND docstatus = 1
     """, (today_str,))[0][0] or 0.0
 
-    today_orders_count = frappe.db.count("Sales Order", filters={"transaction_date": today_str, "docstatus": ["!=", 2]})
+    today_orders_count = frappe.db.count("Sales Order", filters={"transaction_date": today_str, "docstatus": 1})
 
     pending_deliveries_count = frappe.db.count("Sales Order", filters={"status": ["in", ["To Deliver", "To Deliver and Bill"]], "docstatus": 1})
 
@@ -486,11 +577,11 @@ def get_home_dashboard_data():
 
     # 2. Financial Time Series (Last 14 days)
     start_date = frappe.utils.add_days(today_str, -13)
-    
+
     so_daily = frappe.db.sql("""
         SELECT transaction_date, COALESCE(SUM(grand_total), 0) as total
         FROM `tabSales Order`
-        WHERE transaction_date >= %s AND docstatus != 2
+        WHERE transaction_date >= %s AND docstatus = 1
         GROUP BY transaction_date
         ORDER BY transaction_date ASC
     """, (start_date,), as_dict=True)
@@ -498,7 +589,7 @@ def get_home_dashboard_data():
     po_daily = frappe.db.sql("""
         SELECT transaction_date, COALESCE(SUM(grand_total), 0) as total
         FROM `tabPurchase Order`
-        WHERE transaction_date >= %s AND docstatus != 2
+        WHERE transaction_date >= %s AND docstatus = 1
         GROUP BY transaction_date
         ORDER BY transaction_date ASC
     """, (start_date,), as_dict=True)
@@ -539,6 +630,102 @@ def get_home_dashboard_data():
         }
     }
 
+# Narjes Ledger theme accent presets — light+dark {fern, strong, tint}
+# triples, matching exactly what was shown in the approved theme-preview
+# artifact. "Fern" is the shipped default already baked into tokens.css;
+# the other three (and "Custom") are patched in live by narjes_theme.js
+# from bootinfo.narjes_theme, so switching accents needs no bench build.
+THEME_PRESETS = {
+    "Fern": {
+        "light": {"fern": "#2E5C46", "strong": "#234433", "tint": "#E4F0EA"},
+        "dark": {"fern": "#7FD4AE", "strong": "#9EE0C3", "tint": "#1E2E26"},
+    },
+    "Plum": {
+        "light": {"fern": "#6B3757", "strong": "#54293F", "tint": "#F3E6EC"},
+        "dark": {"fern": "#DE9FC7", "strong": "#EBBEDA", "tint": "#2E1E28"},
+    },
+    "Teal": {
+        "light": {"fern": "#1F5C63", "strong": "#17454A", "tint": "#E1EEEE"},
+        "dark": {"fern": "#6FCBD1", "strong": "#95DBDF", "tint": "#182B2C"},
+    },
+    "Ochre": {
+        "light": {"fern": "#8A5A17", "strong": "#6B4611", "tint": "#F3E9D6"},
+        "dark": {"fern": "#E0A44C", "strong": "#EABE78", "tint": "#332813"},
+    },
+}
+
+
+def _hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def _rgb_to_hex(rgb):
+    return "#" + "".join(f"{round(max(0.0, min(1.0, c)) * 255):02X}" for c in rgb)
+
+
+def _relative_luminance(rgb):
+    def channel(c):
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (channel(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast_ratio(rgb1, rgb2):
+    l1, l2 = _relative_luminance(rgb1), _relative_luminance(rgb2)
+    lighter, darker = max(l1, l2), min(l1, l2)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def _derive_custom_accent(hex_color):
+    """Derive a full light+dark accent pair (hover shade, soft tint, and a
+    dark-mode variant) from the single color an admin picks in Narjes
+    Settings > Appearance, instead of asking a shop owner to hand-pick 6
+    mutually-consistent, contrast-safe colors. Nudges lightness until the
+    light-mode accent holds at least 4.5:1 contrast against white button
+    text, and until the dark-mode accent holds the same against the app's
+    near-black dark paper — so a poorly chosen custom color can't silently
+    ship an unreadable button in either mode."""
+    h, l, s = colorsys.rgb_to_hls(*_hex_to_rgb(hex_color))
+    white = (1.0, 1.0, 1.0)
+    near_black = _hex_to_rgb("#12160F")
+
+    light_l = l
+    while light_l > 0.05 and _contrast_ratio(colorsys.hls_to_rgb(h, light_l, s), white) < 4.5:
+        light_l -= 0.04
+    light_fern = colorsys.hls_to_rgb(h, light_l, s)
+    light_strong = colorsys.hls_to_rgb(h, max(0.05, light_l - 0.08), s)
+    light_tint = colorsys.hls_to_rgb(h, 0.93, min(s, 0.35))
+
+    dark_l = 0.72
+    while dark_l < 0.95 and _contrast_ratio(colorsys.hls_to_rgb(h, dark_l, s), near_black) < 4.5:
+        dark_l += 0.04
+    dark_fern = colorsys.hls_to_rgb(h, dark_l, min(s, 0.75))
+    dark_strong = colorsys.hls_to_rgb(h, min(0.95, dark_l + 0.1), min(s, 0.75))
+    dark_tint = colorsys.hls_to_rgb(h, 0.14, min(s, 0.45))
+
+    return {
+        "light": {
+            "fern": _rgb_to_hex(light_fern),
+            "strong": _rgb_to_hex(light_strong),
+            "tint": _rgb_to_hex(light_tint),
+        },
+        "dark": {
+            "fern": _rgb_to_hex(dark_fern),
+            "strong": _rgb_to_hex(dark_strong),
+            "tint": _rgb_to_hex(dark_tint),
+        },
+    }
+
+
+def _resolve_theme(settings):
+    accent = settings.theme_accent or "Fern"
+    if accent == "Custom" and settings.custom_accent_color:
+        return _derive_custom_accent(settings.custom_accent_color)
+    return THEME_PRESETS.get(accent, THEME_PRESETS["Fern"])
+
+
 @frappe.whitelist()
 def extend_bootinfo(bootinfo):
     """Force default home page to be our custom dashboard, and expose
@@ -548,7 +735,16 @@ def extend_bootinfo(bootinfo):
     which emptied the Home Dashboard's shortcuts grid for every user)."""
     bootinfo.home_page = "narjes-home"
 
+    # Narjes Ledger kill switch (theme plan P0.7): site_config
+    # narjes_theme_enabled, default on. narjes.bundle.js reads this and adds/
+    # removes body.narjes-ledger — every structural theme rule is scoped to
+    # that class, so flipping the flag reverts to near-stock with no rebuild.
+    bootinfo.narjes_theme_enabled = bool(
+        frappe.conf.get("narjes_theme_enabled", 1)
+    )
+
     settings = frappe.get_cached_doc("Narjes Settings")
+    bootinfo.narjes_theme = _resolve_theme(settings)
     bootinfo.narjes_settings = {
         "default_show_ai_intake": bool(settings.default_show_ai_intake),
         "default_show_shortcuts": bool(settings.default_show_shortcuts),
@@ -588,6 +784,9 @@ def ensure_narjes_dashboard_workspace():
     matching module JSON file for, which this app doesn't ship) instead of
     being a plain DB-driven public workspace.
     """
+    if "System Manager" not in frappe.get_roles():
+        frappe.throw("Not permitted", frappe.PermissionError)
+
     frappe.reload_doc("narjes_custom", "page", "narjes_home")
 
     existing = frappe.db.get_value("Workspace", WORKSPACE_NAME, ["name", "module"], as_dict=True)

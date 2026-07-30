@@ -1,0 +1,32 @@
+// The ONE file where !important is legal (plan P3.2). Every rule needs a
+// comment saying why it exists and what would have to change to delete it.
+
+// 1. Reduced-motion guard (P1.7/P11): must beat every inline style and
+//    third-party animation the desk runs; accessibility wins over cascade
+//    etiquette. Delete if Frappe ever ships its own global guard.
+@media (prefers-reduced-motion: reduce) {
+	body.narjes-ledger *,
+	body.narjes-ledger *::before,
+	body.narjes-ledger *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+// 2. Kanban "Order Phases" wide columns (absorbed from narjes_kanban.css):
+//    frappe's kanban sets column width inline/with higher specificity; the
+//    custom .so-kanban-card needs the 400px column. Delete when Frappe
+//    exposes a column-width setting.
+body.narjes-ledger .kanban .kanban-column {
+	min-width: 400px !important;
+	max-width: 400px !important;
+	width: 400px !important;
+}
+
+// 3. The custom kanban card fully replaces Frappe's own card markup; the
+//    stock card must never flash in (absorbed from narjes_kanban.css).
+//    Delete if the custom renderer is retired.
+body.narjes-ledger .kanban-card-wrapper .kanban-card {
+	display: none !important;
+}

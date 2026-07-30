@@ -1,0 +1,194 @@
+// P5.5 — dialogs, toasts, tooltips, menus, tags, avatars, progress, freeze,
+// skeletons, empty states. Colors ride Lever 1; geometry and the brand
+// moments (vine header strip, mark-pulse freeze) live here.
+
+body.narjes-ledger {
+	// ---- dialogs ----
+	.modal-content {
+		border-radius: var(--n-radius-lg);
+		border: 1px solid var(--n-border);
+		box-shadow: var(--n-e3);
+	}
+
+	.modal-header {
+		position: relative;
+		border-block-end: 1px solid var(--n-border);
+		overflow: hidden;
+
+		// very faint vine strip (plan P1.5 placement map)
+		&::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			background: url("/assets/narjes_custom/patterns/vine-light.svg") repeat;
+			opacity: 0.03;
+		}
+
+		.modal-title {
+			font-size: 20px;
+			line-height: 28px;
+		}
+	}
+
+	.modal-footer {
+		border-block-start: 1px solid var(--n-border);
+	}
+
+	.modal.fade .modal-dialog {
+		transform: scale(0.98);
+		transition: transform var(--n-dur-2) var(--n-ease);
+	}
+
+	.modal.show .modal-dialog {
+		transform: scale(1);
+	}
+
+	// ---- toasts (frappe.show_alert): Paper card, state rail ----
+	.desk-alert {
+		border-radius: var(--n-radius-md);
+		background: var(--toast-bg);
+		border: 1px solid var(--n-border);
+		box-shadow: var(--n-e2);
+		border-inline-start-width: 3px;
+
+		&.green,
+		&.blue {
+			border-inline-start-color: var(--n-success);
+		}
+
+		&.yellow,
+		&.orange {
+			border-inline-start-color: var(--n-accent);
+		}
+
+		&.red {
+			border-inline-start-color: var(--n-danger);
+		}
+	}
+
+	// ---- tooltips: Ink bg / Paper text ----
+	.tooltip-inner {
+		background: var(--n-ink);
+		color: var(--n-neutral-100);
+		font-size: 11px;
+		border-radius: var(--n-radius-xs);
+		padding-block: 4px;
+		padding-inline: 8px;
+	}
+
+	// ---- dropdown & context menus ----
+	.dropdown-menu {
+		border-radius: var(--n-radius-md);
+		border: 1px solid var(--n-border);
+		box-shadow: var(--n-e2);
+		padding: 8px;
+
+		.dropdown-item {
+			border-radius: var(--n-radius-xs);
+
+			&:hover,
+			&:focus {
+				background: var(--n-fern-50);
+				color: var(--n-text);
+			}
+		}
+	}
+
+	// ---- tags ----
+	.tag-pill,
+	.data-pill {
+		border-radius: var(--n-radius-pill);
+	}
+
+	// ---- avatars: initials on brand tints ----
+	.avatar {
+		.avatar-frame,
+		.standard-image {
+			border-radius: 50%;
+		}
+	}
+
+	// ---- progress ----
+	.progress {
+		background: var(--n-neutral-200);
+		border-radius: var(--n-radius-pill);
+
+		.progress-bar {
+			background: var(--n-primary);
+		}
+	}
+
+	// ---- freeze overlay: Paper scrim + pulsing mark ----
+	.freeze .freeze-message-container,
+	#freeze {
+		backdrop-filter: none;
+	}
+
+	#freeze.show {
+		background: color-mix(in srgb, var(--n-bg) 80%, transparent);
+	}
+
+	// ---- skeletons: the only loop in the system ----
+	.skeleton,
+	.frappe-skeleton {
+		background: var(--skeleton-bg);
+		border-radius: var(--n-radius-xs);
+		animation: n-shimmer 1.2s var(--n-ease) infinite;
+	}
+
+	// ---- empty states ----
+	.msg-box,
+	.no-result,
+	.list-empty-state {
+		color: var(--n-text-2);
+
+		.empty-state-heading,
+		p.bold {
+			font-family: var(--n-font-display);
+			font-weight: 600;
+			font-size: 20px;
+			color: var(--n-text);
+		}
+	}
+
+	// like-heart: filled stamp-red when liked
+	.liked-by .liked,
+	.like-action.liked .es-icon {
+		color: var(--n-stamp-500);
+		fill: var(--n-stamp-500);
+	}
+}
+
+[data-theme="dark"] body.narjes-ledger {
+	.modal-header::before {
+		background-image: url("/assets/narjes_custom/patterns/vine-dark.svg");
+		opacity: 0.04;
+	}
+
+	.tooltip-inner {
+		background: var(--n-neutral-200);
+		color: var(--n-ink);
+	}
+
+	.dropdown-menu .dropdown-item {
+		&:hover,
+		&:focus {
+			background: var(--n-fern-900);
+		}
+	}
+}
+
+@keyframes n-shimmer {
+	0% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.55;
+	}
+
+	100% {
+		opacity: 1;
+	}
+}
