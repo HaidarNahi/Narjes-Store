@@ -48,30 +48,10 @@ function set_search_placeholder() {
 	if (input) input.setAttribute("placeholder", __("Search orders, customers…"));
 }
 
-// SHIM_REGISTRY.md #4 — Workspace sidebar header: the v16 app switcher shows
-// the owning app's identity (module icon + "ERPNext"); rebrand to the Narjes
-// mark + name (plan P8.1). MutationObserver because the header re-renders on
-// workspace change.
-function white_label_sidebar() {
-	const apply = () => {
-		document.querySelectorAll(".body-sidebar .sidebar-header").forEach((header) => {
-			const logo = header.querySelector(".header-logo img");
-			if (logo && !logo.src.includes("narjes")) {
-				logo.src = "/assets/narjes_custom/images/narjes-logo.svg";
-			}
-			const subtitle = header.querySelector(".header-subtitle");
-			if (subtitle && subtitle.textContent.trim() !== "Narjes") {
-				subtitle.textContent = "Narjes";
-			}
-		});
-	};
-	apply();
-	const sidebar = document.querySelector(".body-sidebar-container, .body-sidebar");
-	if (sidebar && !sidebar.dataset.narjesObserved) {
-		sidebar.dataset.narjesObserved = "1";
-		new MutationObserver(apply).observe(sidebar, { childList: true, subtree: true });
-	}
-}
+// (The workspace-sidebar brand — module icon + "ERPNext" app name — used to be
+// a JS shim here. Frappe re-renders that header after page-change, so any JS
+// swap loses the race; it's now handled race-free in _chrome.scss. See
+// SHIM_REGISTRY.md.)
 
 // Terminal states get the stamped variant on the page-head indicator
 // (plan P1.6/P5.4) — never applied in lists en masse.
@@ -86,13 +66,11 @@ $(document).on("app_ready", () => {
 	apply_body_class();
 	relabel_theme_switcher();
 	set_search_placeholder();
-	white_label_sidebar();
 	remove_legacy_home_button();
 });
 
 $(document).on("page-change", () => {
 	set_search_placeholder();
-	white_label_sidebar();
 	// let the route render its header first
 	setTimeout(stamp_terminal_indicator, 300);
 });

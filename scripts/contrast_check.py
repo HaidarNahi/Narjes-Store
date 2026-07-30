@@ -7,6 +7,7 @@ Run from the app root:  python3 scripts/contrast_check.py
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -54,6 +55,37 @@ def build_pairings(sem, ramps, singles):
     ]
 
 
+def readable_on(bg):
+    """Mirror of readable_on() in js/narjes/brand.js — the label color the
+    runtime picks for text sitting on a given accent."""
+    ink, paper = "#121714", "#FFFFFF"
+    return ink if ratio(ink, bg) >= ratio(paper, bg) else paper
+
+
+def accent_presets():
+    """THEME_PRESETS from narjes_custom/api.py — the accents Narjes Settings →
+    Appearance can apply at runtime. These override --n-primary, so they must
+    be contrast-checked too: the static token pairing passing is not enough
+    (the Ink-mode preset accents are light, the static dark token is dark)."""
+    src = (ROOT / "narjes_custom" / "api.py").read_text()
+    m = re.search(r"THEME_PRESETS\s*=\s*\{(.*?)\n\}", src, re.S)
+    if not m:
+        return {}
+    presets, current = {}, None
+    for line in m.group(1).splitlines():
+        name = re.match(r'\s*"(\w+)":\s*\{\s*$', line)
+        if name:
+            current = name.group(1)
+            presets[current] = {}
+            continue
+        mode = re.match(r'\s*"(light|dark)":\s*\{([^}]*)\}', line)
+        if mode and current:
+            presets[current][mode.group(1)] = dict(
+                re.findall(r'"(\w+)":\s*"(#[0-9A-Fa-f]{6})"', mode.group(2))
+            )
+    return presets
+
+
 tokens = json.loads(TOKENS.read_text())
 LIGHT = tokens["semantic"]["light"]
 DARK = tokens["semantic"]["dark"]
@@ -69,6 +101,25 @@ for mode, sem in (("Paper (light)", LIGHT), ("Ink (dark)", DARK)):
             f"| {mode} | {label} | `{fg}` on `{bg}` | {value:.2f} | {threshold} |"
             f" {'✅' if ok else '❌'} |"
         )
+
+for preset, modes in accent_presets().items():
+    for mode_key, canvas in (("light", LIGHT), ("dark", DARK)):
+        accent = modes.get(mode_key, {}).get("fern")
+        if not accent:
+            continue
+        mode = f"{preset} accent · {'Paper' if mode_key == 'light' else 'Ink'}"
+        for label, fg, bg, threshold in (
+            ("button label on accent", readable_on(accent), accent, 4.5),
+            ("accent fill vs canvas (UI)", accent, canvas["bg"], 3.0),
+        ):
+            value = ratio(fg, bg)
+            ok = value >= threshold
+            if not ok:
+                failures.append((mode, label, value, threshold))
+            rows.append(
+                f"| {mode} | {label} | `{fg}` on `{bg}` | {value:.2f} | {threshold} |"
+                f" {'✅' if ok else '❌'} |"
+            )
 
 OUT.parent.mkdir(exist_ok=True)
 OUT.write_text(

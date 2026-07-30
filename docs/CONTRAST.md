@@ -36,3 +36,19 @@ WCAG AA: 4.5:1 body text, 3:1 large text / UI components.
 | Ink (dark) | focus ring on canvas (UI) | `#A2D4C9` on `#121714` | 11.05 | 3.0 | ✅ |
 | Ink (dark) | border-strong on surface (UI) | `#3A423B` on `#1B211D` | 1.58 | 1.2 | ✅ |
 | Ink (dark) | text on selection | `#ECEFEA` on `#1F3D30` | 10.24 | 4.5 | ✅ |
+| Fern accent · Paper | button label on accent | `#FFFFFF` on `#2E5C46` | 7.68 | 4.5 | ✅ |
+| Fern accent · Paper | accent fill vs canvas (UI) | `#2E5C46` on `#F2F4F1` | 6.94 | 3.0 | ✅ |
+| Fern accent · Ink | button label on accent | `#121714` on `#7FD4AE` | 10.30 | 4.5 | ✅ |
+| Fern accent · Ink | accent fill vs canvas (UI) | `#7FD4AE` on `#121714` | 10.30 | 3.0 | ✅ |
+| Plum accent · Paper | button label on accent | `#FFFFFF` on `#6B3757` | 9.09 | 4.5 | ✅ |
+| Plum accent · Paper | accent fill vs canvas (UI) | `#6B3757` on `#F2F4F1` | 8.22 | 3.0 | ✅ |
+| Plum accent · Ink | button label on accent | `#121714` on `#DE9FC7` | 8.54 | 4.5 | ✅ |
+| Plum accent · Ink | accent fill vs canvas (UI) | `#DE9FC7` on `#121714` | 8.54 | 3.0 | ✅ |
+| Teal accent · Paper | button label on accent | `#FFFFFF` on `#1F5C63` | 7.58 | 4.5 | ✅ |
+| Teal accent · Paper | accent fill vs canvas (UI) | `#1F5C63` on `#F2F4F1` | 6.86 | 3.0 | ✅ |
+| Teal accent · Ink | button label on accent | `#121714` on `#6FCBD1` | 9.62 | 4.5 | ✅ |
+| Teal accent · Ink | accent fill vs canvas (UI) | `#6FCBD1` on `#121714` | 9.62 | 3.0 | ✅ |
+| Ochre accent · Paper | button label on accent | `#FFFFFF` on `#8A5A17` | 5.91 | 4.5 | ✅ |
+| Ochre accent · Paper | accent fill vs canvas (UI) | `#8A5A17` on `#F2F4F1` | 5.34 | 3.0 | ✅ |
+| Ochre accent · Ink | button label on accent | `#121714` on `#E0A44C` | 8.27 | 4.5 | ✅ |
+| Ochre accent · Ink | accent fill vs canvas (UI) | `#E0A44C` on `#121714` | 8.27 | 3.0 | ✅ |

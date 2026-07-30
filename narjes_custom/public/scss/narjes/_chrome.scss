@@ -37,6 +37,41 @@ body.narjes-ledger {
 		background: var(--n-accent);
 	}
 
+	// ---- sidebar header brand (white-label, plan P8.1) ----
+	// Frappe paints the owning app's identity here — a module icon (or a gray
+	// letter-avatar when the workspace has no logo) plus the app name
+	// "ERPNext" — and re-renders it on every workspace switch, *after*
+	// page-change fires. A JS shim therefore always loses the race, so this is
+	// done in CSS instead: paint the mark on the slot, hide whatever Frappe
+	// drew inside it, and overwrite the app-name line.
+	.body-sidebar .sidebar-header {
+		.header-logo {
+			width: 24px;
+			height: 24px;
+			flex-shrink: 0;
+			background: url("/assets/narjes_custom/images/narjes-logo.svg") center / contain
+				no-repeat;
+
+			> * {
+				visibility: hidden;
+			}
+		}
+
+		.header-subtitle {
+			position: relative;
+			visibility: hidden;
+
+			&::after {
+				content: "Narjes";
+				visibility: visible;
+				position: absolute;
+				inset-inline-start: 0;
+				top: 0;
+				white-space: nowrap;
+			}
+		}
+	}
+
 	// ---- workspace sidebar (v16 body-sidebar) ----
 	.body-sidebar,
 	.desk-sidebar {

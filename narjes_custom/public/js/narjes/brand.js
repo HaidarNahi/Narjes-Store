@@ -41,29 +41,49 @@ window.NARJES_BRAND = {
 
 // Live accent reconfiguration without a bench build: patches BOTH the legacy
 // --narjes-* aliases and the new --n-primary tokens the theme reads.
+// Label color for text sitting ON the accent. Must be computed, not fixed:
+// the Ink-mode accents the presets ship are LIGHT (Fern #7FD4AE, Plum #DE9FC7,
+// Teal #6FCBD1, Ochre #E0A44C) — the opposite polarity from the light-mode
+// accents — and the "Custom" preset accepts any hex. A static value gave
+// near-white labels on light mint in Ink mode: 1.52:1, unreadable.
+function readable_on(bg) {
+	const luminance = (hex) => {
+		const h = hex.replace("#", "");
+		const [r, g, b] = [0, 2, 4].map((i) => {
+			const c = parseInt(h.slice(i, i + 2), 16) / 255;
+			return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+		});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+	const contrast = (a, b) => {
+		const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+		return (hi + 0.05) / (lo + 0.05);
+	};
+	const INK = "#121714";
+	const PAPER = "#FFFFFF";
+	return contrast(INK, bg) >= contrast(PAPER, bg) ? INK : PAPER;
+}
+
 function apply_narjes_accent() {
 	const theme = frappe.boot && frappe.boot.narjes_theme;
 	if (!theme || !theme.light || !theme.dark) return;
 
-	const root = document.documentElement;
-	const set = (name, value) => root.style.setProperty(name, value);
-	set("--narjes-fern", theme.light.fern);
-	set("--narjes-fern-strong", theme.light.strong);
-	set("--narjes-fern-tint", theme.light.tint);
-	set("--n-primary", theme.light.fern);
-	set("--n-primary-hover", theme.light.strong);
-	set("--n-fern-100", theme.light.tint);
-	set("--n-selection", theme.light.tint);
-
-	const dark_block = (sel) =>
+	// Both modes go into ONE injected stylesheet, and nothing is written as an
+	// inline style on <html>. Inline custom properties on the root element beat
+	// every stylesheet rule — including `:root[data-theme="dark"]` — so setting
+	// the light accent inline (as the pre-theme version did) left Ink mode
+	// permanently on the light accent. In a stylesheet the normal cascade
+	// applies: `:root[data-theme="dark"]` (0,2,0) outranks `:root` (0,1,0).
+	const block = (sel, v, tint_stop) =>
 		`${sel} {` +
-		`--narjes-fern:${theme.dark.fern};` +
-		`--narjes-fern-strong:${theme.dark.strong};` +
-		`--narjes-fern-tint:${theme.dark.tint};` +
-		`--n-primary:${theme.dark.fern};` +
-		`--n-primary-hover:${theme.dark.strong};` +
-		`--n-fern-800:${theme.dark.tint};` +
-		`--n-selection:${theme.dark.tint};` +
+		`--narjes-fern:${v.fern};` +
+		`--narjes-fern-strong:${v.strong};` +
+		`--narjes-fern-tint:${v.tint};` +
+		`--n-primary:${v.fern};` +
+		`--n-primary-hover:${v.strong};` +
+		`--n-primary-text-on:${readable_on(v.fern)};` +
+		`--n-fern-${tint_stop}:${v.tint};` +
+		`--n-selection:${v.tint};` +
 		`}`;
 
 	const style_id = "narjes-accent-override";
@@ -74,9 +94,10 @@ function apply_narjes_accent() {
 		document.head.appendChild(tag);
 	}
 	tag.textContent =
-		dark_block(':root[data-theme="dark"]') +
+		block(':root, :root[data-theme="light"]', theme.light, 100) +
+		block(':root[data-theme="dark"]', theme.dark, 800) +
 		"@media (prefers-color-scheme: dark) {" +
-		dark_block(':root:not([data-theme="light"])') +
+		block(':root:not([data-theme="light"])', theme.dark, 800) +
 		"}";
 
 	window.NARJES_BRAND.fern = theme.light.fern;
