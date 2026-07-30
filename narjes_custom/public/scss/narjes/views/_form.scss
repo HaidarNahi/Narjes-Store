@@ -198,6 +198,86 @@ body.narjes-ledger {
 	.custom-gallery-container {
 		margin-block-start: var(--n-space-6);
 	}
+
+	// ---- read-only "Customer" tab on Sales Order ----
+	.narjes-customer-info {
+		padding-block: var(--n-space-2);
+	}
+
+	.narjes-customer-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--n-space-4);
+		flex-wrap: wrap;
+		padding-block-end: var(--n-space-3);
+		margin-block-end: var(--n-space-5);
+		border-block-end: 1px solid var(--n-border);
+	}
+
+	.narjes-customer-name {
+		font-family: var(--n-font-display);
+		font-size: 20px;
+		font-weight: 600;
+		color: var(--n-text);
+		unicode-bidi: plaintext;
+	}
+
+	.narjes-customer-open {
+		font-size: 12px;
+		color: var(--n-link);
+	}
+
+	.narjes-customer-group {
+		margin-block-end: var(--n-space-6);
+
+		h5 {
+			font-family: var(--n-font-mono);
+			font-size: 11px;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--n-text-3);
+			margin-block-end: var(--n-space-3);
+		}
+	}
+
+	.narjes-customer-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: var(--n-space-4);
+	}
+
+	.narjes-customer-field {
+		min-width: 0;
+	}
+
+	.narjes-customer-label {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--n-text-2);
+		margin-block-end: 2px;
+	}
+
+	// Reads as a filled-but-locked field: same shape as a read-only control,
+	// so it is obvious these values are informational and not editable here.
+	.narjes-customer-value {
+		background: var(--n-sunken);
+		border-radius: var(--n-radius-sm);
+		padding-block: 6px;
+		padding-inline: 10px;
+		color: var(--n-text);
+		font-size: 13px;
+		min-height: 32px;
+		overflow-wrap: anywhere;
+		unicode-bidi: plaintext;
+	}
+
+	.narjes-customer-empty {
+		color: var(--n-text-3);
+		padding-block: var(--n-space-6);
+		text-align: center;
+	}
 }
 
 [data-theme="dark"] body.narjes-ledger {

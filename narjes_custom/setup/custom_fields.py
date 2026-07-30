@@ -310,6 +310,29 @@ CUSTOM_FIELDS = {
             "description": "Packaging costs added to the order total. Defaults from Narjes Settings if left blank.",
             "insert_after": "total_with_delivery_fees",
         },
+        # --- "Customer" tab: this order's customer, in full, read-only ---
+        # Rendered from the live Customer record by sales_order.js rather than
+        # mirrored into ~44 fetch_from columns on tabSales Order. That keeps
+        # the schema (and every Sales Order row) from carrying a duplicate of
+        # the customer master, means the tab can never show a stale copy, and
+        # picks up new Customer fields automatically. If a specific value is
+        # ever needed in a print format or report, add that ONE field as a
+        # normal fetch_from custom field here.
+        {
+            # Anchored to the last field of the Details tab (`pricing_rules`,
+            # immediately before ERPNext's `contact_info` tab break), so this
+            # lands as the SECOND tab — right next to Details.
+            "fieldname": "custom_customer_tab",
+            "fieldtype": "Tab Break",
+            "label": "Customer",
+            "insert_after": "pricing_rules",
+        },
+        {
+            "fieldname": "custom_customer_info_html",
+            "fieldtype": "HTML",
+            "label": "Customer Information",
+            "insert_after": "custom_customer_tab",
+        },
     ],
     "Purchase Order": [
         {

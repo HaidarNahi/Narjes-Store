@@ -20,6 +20,8 @@ frappe.ui.form.on('Sales Order', {
             render_custom_gallery(frm);
         }
 
+        render_customer_info(frm);
+
         // Filter main items table to exclude flowers (and preserve standard ERPNext item query)
         frm.set_query("item_code", "items", function() {
             return {
@@ -50,6 +52,9 @@ frappe.ui.form.on('Sales Order', {
         
         setTimeout(() => calculate_custom_totals(frm), 500);
     },
+    customer: function(frm) {
+        render_customer_info(frm);
+    },
     governorate_of_delivery: function(frm) {
         setTimeout(() => calculate_custom_totals(frm), 500);
     },
@@ -66,6 +71,65 @@ frappe.ui.form.on('Sales Order', {
         setTimeout(() => calculate_custom_totals(frm), 500);
     }
 });
+
+// Renders the read-only "Customer" tab: every field of the linked Customer,
+// grouped the way the Customer form groups them. Values come from the live
+// record (api.get_customer_info) rather than from mirrored fields on the Sales
+// Order, so the tab is never a stale copy of the customer master.
+function render_customer_info(frm) {
+    const field = frm.get_field('custom_customer_info_html');
+    if (!field) return;   // custom field not synced on this site yet
+
+    const empty = (msg) =>
+        `<div class="narjes-customer-empty">${frappe.utils.escape_html(msg)}</div>`;
+
+    if (!frm.doc.customer) {
+        field.$wrapper.html(empty(__('Select a customer to see their details here.')));
+        return;
+    }
+
+    // Avoid refetching the same customer on every refresh of the same form.
+    if (field.$wrapper.data('narjes-loaded-for') === frm.doc.customer) return;
+    field.$wrapper.data('narjes-loaded-for', frm.doc.customer);
+
+    frappe.call({
+        method: 'narjes_custom.api.get_customer_info',
+        args: { customer: frm.doc.customer },
+    }).then((r) => {
+        const data = r && r.message;
+        if (!data || !data.groups || !data.groups.length) {
+            field.$wrapper.html(empty(__('No customer details to show.')));
+            return;
+        }
+
+        const esc = frappe.utils.escape_html;
+        const groups = data.groups.map((group) => {
+            const rows = group.fields.map((f) => `
+                <div class="narjes-customer-field">
+                    <div class="narjes-customer-label">${esc(f.label)}</div>
+                    <div class="narjes-customer-value">${f.value || '&mdash;'}</div>
+                </div>`).join('');
+            return `
+                <section class="narjes-customer-group">
+                    ${group.label ? `<h5>${esc(group.label)}</h5>` : ''}
+                    <div class="narjes-customer-grid">${rows}</div>
+                </section>`;
+        }).join('');
+
+        field.$wrapper.html(`
+            <div class="narjes-customer-info">
+                <div class="narjes-customer-head">
+                    <span class="narjes-customer-name">${esc(data.customer_name || data.customer)}</span>
+                    <a href="/app/customer/${encodeURIComponent(data.customer)}"
+                       class="narjes-customer-open">${__('Open customer')} &rarr;</a>
+                </div>
+                ${groups}
+            </div>`);
+    }).catch(() => {
+        field.$wrapper.data('narjes-loaded-for', null);
+        field.$wrapper.html(empty(__('Could not load customer details.')));
+    });
+}
 
 function update_weekday_label(frm, fieldname) {
     let $wrapper = frm.get_field(fieldname).$wrapper;
@@ -106,6 +170,22 @@ function set_if_changed(frm, fieldname, value) {
 
 function calculate_custom_totals(frm) {
     if (frm.doc.docstatus !== 0) return;
+
+    // Never recalculate a document the user hasn't started editing.
+    //
+    // This is what fixes the save -> "Draft" -> "Not Saved" flip that forced a
+    // double-save before an order could be submitted. These totals are also
+    // computed server-side (api.sales_order_validate), and the two sides do
+    // not always agree — e.g. an order with flower items persists
+    // total=40,000 (items + flowers) alongside net_total=30,000 (items only),
+    // so this function would compute grand_total=36,000, see the stored
+    // 26,000, and write it. Running on `refresh` meant that happened ~500ms
+    // after every save, marking the just-saved document dirty again; it also
+    // meant a freshly opened order was already dirty before anyone touched it.
+    //
+    // While the user IS editing, the live preview still runs as before. The
+    // server stays authoritative for what actually gets stored.
+    if (!frm.is_new() && !frm.is_dirty()) return;
 
     // 1. Calculate Delivery Fees based on Governorate.
     // Read live from Narjes Settings (exposed via frappe.boot.narjes_settings

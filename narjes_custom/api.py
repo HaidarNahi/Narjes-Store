@@ -435,6 +435,156 @@ def sales_order_validate(doc, method):
     # --- Combined Total ---
     doc.custom_total_painting_cost = canvas_cost + sheet_cost
 
+    warn_insufficient_stock(doc)
+
+
+def warn_insufficient_stock(doc):
+    """Warn about short stock while the order is still a Draft.
+
+    ERPNext only surfaces "Insufficient Stock" when the stock ledger is
+    actually written — on submit — which is far too late for the shop: by then
+    the order has been agreed with the customer. This runs on every save, so
+    the shortage shows up as soon as the item is added.
+
+    Deliberately a warning, not a throw: a draft must still be saveable with
+    short stock (that is the normal case for made-to-order work). The hard
+    block at submit is ERPNext's and is left untouched.
+    """
+    if doc.docstatus != 0:
+        return
+
+    rows = [
+        item for item in doc.get("items", [])
+        if item.item_code and (item.warehouse or doc.get("set_warehouse"))
+    ]
+    if not rows:
+        return
+
+    # Batched lookups — this runs on every save, so no per-row queries
+    # (same reasoning as the item-flags batching above).
+    item_codes = list({item.item_code for item in rows})
+    stock_items = {
+        r.name
+        for r in frappe.db.get_all(
+            "Item",
+            filters={"name": ["in", item_codes], "is_stock_item": 1},
+            fields=["name"],
+        )
+    }
+    if not stock_items:
+        return
+
+    pairs = {
+        (item.item_code, item.warehouse or doc.get("set_warehouse"))
+        for item in rows
+        if item.item_code in stock_items
+    }
+    balances = {
+        (b.item_code, b.warehouse): b.actual_qty
+        for b in frappe.db.get_all(
+            "Bin",
+            filters={
+                "item_code": ["in", list({p[0] for p in pairs})],
+                "warehouse": ["in", list({p[1] for p in pairs})],
+            },
+            fields=["item_code", "warehouse", "actual_qty"],
+        )
+    }
+
+    # Several rows can draw on the same item+warehouse — check the demand in
+    # aggregate, otherwise two rows of 3 against a stock of 5 both look fine.
+    required = {}
+    for item in rows:
+        if item.item_code not in stock_items:
+            continue
+        key = (item.item_code, item.warehouse or doc.get("set_warehouse"))
+        required[key] = required.get(key, 0) + (item.qty or 0)
+
+    messages = []
+    for (item_code, warehouse), needed in sorted(required.items()):
+        available = balances.get((item_code, warehouse)) or 0
+        if needed > available:
+            messages.append(
+                frappe._("{0} more unit(s) of {1} needed in {2} — {3} required, {4} in stock.").format(
+                    frappe.utils.flt(needed - available),
+                    frappe.get_desk_link("Item", item_code),
+                    frappe.get_desk_link("Warehouse", warehouse),
+                    frappe.utils.flt(needed),
+                    frappe.utils.flt(available),
+                )
+            )
+
+    if messages:
+        frappe.msgprint(
+            "<br>".join(messages),
+            title=frappe._("Insufficient Stock"),
+            indicator="orange",
+        )
+
+
+@frappe.whitelist()
+def get_customer_info(customer):
+	"""Every field of a Customer, grouped as the Customer form groups them, for
+	the read-only "Customer" tab on Sales Order.
+
+	Read from the live record on demand rather than mirrored into fetch_from
+	columns on Sales Order: no duplicated master data, never stale, and new
+	Customer fields appear here without a schema change.
+
+	Permission-checked: `has_permission` is enforced explicitly because a
+	whitelisted method is directly callable, and a user who may open a Sales
+	Order does not automatically have read access to Customer.
+	"""
+	if not customer:
+		return {"groups": []}
+
+	if not frappe.has_permission("Customer", "read", doc=customer):
+		frappe.throw(
+			frappe._("You do not have permission to view this customer."),
+			frappe.PermissionError,
+		)
+
+	doc = frappe.get_doc("Customer", customer)
+	meta = frappe.get_meta("Customer")
+
+	# Layout-only and container fieldtypes carry no value worth showing.
+	skip_types = {
+		"Section Break", "Column Break", "Tab Break", "HTML", "Table",
+		"Table MultiSelect", "Button", "Fold", "Heading", "Image",
+	}
+
+	groups = []
+	current = {"label": frappe._("Details"), "fields": []}
+
+	for field in meta.fields:
+		if field.fieldtype in ("Section Break", "Tab Break"):
+			if current["fields"]:
+				groups.append(current)
+			current = {"label": field.label or "", "fields": []}
+			continue
+
+		if field.fieldtype in skip_types or field.hidden:
+			continue
+
+		value = doc.get(field.fieldname)
+		if value in (None, "", 0) and field.fieldtype not in ("Check", "Currency", "Float", "Int"):
+			continue
+
+		current["fields"].append({
+			"label": field.label or field.fieldname,
+			"value": frappe.format_value(value, field, doc) if value not in (None, "") else "",
+			"fieldtype": field.fieldtype,
+		})
+
+	if current["fields"]:
+		groups.append(current)
+
+	return {
+		"customer": doc.name,
+		"customer_name": doc.customer_name,
+		"groups": [g for g in groups if g["fields"]],
+	}
+
 
 def item_validate(doc, method):
     """Prevent an item from being both Canvas and Sheet at the same time."""
