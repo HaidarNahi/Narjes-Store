@@ -23,8 +23,9 @@
   {
    "fieldname": "icon",
    "fieldtype": "Data",
-   "label": "Emoji Icon",
-   "default": "🔗",
+   "label": "Icon",
+   "description": "A Phosphor icon name (e.g. truck, package, sparkle) or a single emoji.",
+   "default": "link-simple",
    "in_list_view": 1,
    "columns": 2
   },

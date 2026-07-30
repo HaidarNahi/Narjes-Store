@@ -5,18 +5,52 @@ DEFAULT_SIDEBAR_LINKS = [
 ]
 
 DEFAULT_SHORTCUTS = [
-    {"label": "Sales Orders", "icon": "📋", "route": "/app/sales-order"},
-    {"label": "Customers", "icon": "👤", "route": "/app/customer"},
-    {"label": "Item Master", "icon": "📦", "route": "/app/item"},
-    {"label": "Revenue Report", "icon": "📊", "route": "/app/query-report/Sales Revenue Report"},
+    {"label": "Sales Orders", "icon": "list-bullets", "route": "/app/sales-order"},
+    {"label": "Customers", "icon": "user", "route": "/app/customer"},
+    {"label": "Item Master", "icon": "package", "route": "/app/item"},
+    {"label": "Revenue Report", "icon": "chart-bar", "route": "/app/query-report/Sales Revenue Report"},
     # Previously had no shortcut, sidebar entry, or Workspace reference
     # anywhere — reachable only by typing the report's URL directly. See
     # NARJES_STORE_SYSTEM.md §5.1/§15 (Recommended Enhancement 3).
-    {"label": "Items Balance", "icon": "📉", "route": "/app/query-report/Items Balance"},
-    {"label": "Delivery Notes", "icon": "🚚", "route": "/app/delivery-note"},
-    {"label": "Purchase Orders", "icon": "🛒", "route": "/app/purchase-order"},
-    {"label": "AI Order Intake", "icon": "✨", "route": "/app/ai-intake"},
+    {"label": "Items Balance", "icon": "trend-down", "route": "/app/query-report/Items Balance"},
+    {"label": "Delivery Notes", "icon": "truck", "route": "/app/delivery-note"},
+    {"label": "Purchase Orders", "icon": "shopping-cart-simple", "route": "/app/purchase-order"},
+    {"label": "AI Order Intake", "icon": "sparkle", "route": "/app/ai-intake"},
 ]
+
+# Maps the emoji this app used to seed before the Phosphor icon reskin to
+# their Phosphor equivalents, so sites that already ran run()/ensure_defaults()
+# (and so have these emoji baked into real Quick Shortcut rows already) self-heal
+# on the next migrate instead of needing a by-hand data fix. Anything NOT in
+# this map (a custom emoji/value an admin typed in themselves) is left alone —
+# narjes_home.js's is_emoji() check renders either kind of value correctly.
+EMOJI_TO_PHOSPHOR_ICON = {
+    "📋": "list-bullets",
+    "👤": "user",
+    "📦": "package",
+    "📊": "chart-bar",
+    "📉": "trend-down",
+    "🚚": "truck",
+    "🛒": "shopping-cart-simple",
+    "✨": "sparkle",
+    "🔗": "link-simple",
+}
+
+
+def migrate_shortcut_icons_to_phosphor():
+    """Idempotent: only touches rows whose icon is one of the exact emoji
+    this app used to seed; safe to run on every migrate."""
+    settings = frappe.get_single("Narjes Settings")
+    changed = False
+    for row in settings.quick_shortcuts:
+        new_icon = EMOJI_TO_PHOSPHOR_ICON.get(row.icon)
+        if new_icon:
+            row.icon = new_icon
+            changed = True
+    if changed:
+        settings.save(ignore_permissions=True)
+        frappe.db.commit()
+        print("Migrated Quick Shortcut icons from emoji to Phosphor icon names")
 
 
 def run():

@@ -8,7 +8,7 @@
 }
 
 .custom-gallery-container.dragover {
-    border: 2px dashed var(--primary, #2490ef);
+    border: 2px dashed var(--primary, var(--narjes-fern, #2E5C46));
     background-color: var(--highlight-color, #f0f8ff);
 }
 
@@ -84,8 +84,9 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-.custom-gallery-item-selector i {
-    font-size: 28px;
+.custom-gallery-item-selector .narjes-icon {
+    width: 28px;
+    height: 28px;
 }
 
 .custom-gallery-item:hover .custom-gallery-item-selector,
@@ -94,13 +95,13 @@
 }
 
 .custom-gallery-item.selected .custom-gallery-item-selector {
-    color: var(--primary, #2490ef);
+    color: var(--primary, var(--narjes-fern, #2E5C46));
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .custom-gallery-item.selected {
-    border-color: var(--primary, #2490ef);
-    box-shadow: 0 0 0 2px var(--primary, #2490ef);
+    border-color: var(--primary, var(--narjes-fern, #2E5C46));
+    box-shadow: 0 0 0 2px var(--primary, var(--narjes-fern, #2E5C46));
 }
 
 .custom-gallery-item-overlay {

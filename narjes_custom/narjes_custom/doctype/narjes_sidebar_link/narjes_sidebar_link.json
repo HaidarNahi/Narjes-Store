@@ -34,11 +34,12 @@
    "fieldname": "link_type",
    "fieldtype": "Select",
    "label": "Link Type",
-   "options": "Page\nDocType\nReport",
+   "options": "Page\nDocType\nReport\nSection Header",
    "default": "Page",
    "in_list_view": 1,
    "reqd": 1,
-   "columns": 2
+   "columns": 2,
+   "description": "'Section Header' renders as a group label (e.g. \"Insights\") instead of a clickable link — leave Link To blank for it."
   },
   {
    "fieldname": "link_to",
@@ -47,7 +48,8 @@
    "options": "link_type",
    "description": "Pulls a live list from the selected Link Type (Page / DocType / Report).",
    "in_list_view": 1,
-   "reqd": 1,
+   "mandatory_depends_on": "eval:doc.link_type!=\"Section Header\"",
+   "depends_on": "eval:doc.link_type!=\"Section Header\"",
    "columns": 2
   },
   {

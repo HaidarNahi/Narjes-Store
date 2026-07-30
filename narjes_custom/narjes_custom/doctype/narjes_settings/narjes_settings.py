@@ -28,10 +28,13 @@ def sync_sidebar_links(doc):
 		workspace = frappe.get_doc("Workspace", workspace_name)
 		workspace.set("links", [])
 		for row in rows:
-			workspace.append("links", {
-				"type": "Link",
-				"label": row.label,
-				"link_to": row.link_to,
-				"link_type": row.link_type,
-			})
+			if row.link_type == "Section Header":
+				workspace.append("links", {"type": "Card Break", "label": row.label})
+			else:
+				workspace.append("links", {
+					"type": "Link",
+					"label": row.label,
+					"link_to": row.link_to,
+					"link_type": row.link_type,
+				})
 		workspace.save(ignore_permissions=True)

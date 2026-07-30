@@ -70,7 +70,7 @@ frappe.ui.form.on('Sales Order', {
 function update_weekday_label(frm, fieldname) {
     let $wrapper = frm.get_field(fieldname).$wrapper;
     if ($wrapper.find('.weekday-label').length === 0) {
-        $wrapper.find('.control-input').after('<div class="weekday-label text-muted small" style="margin-top: 4px; font-weight: 600; color: #8D99A6;"></div>');
+        $wrapper.find('.control-input').after('<div class="weekday-label text-muted small" style="margin-top: 4px; font-weight: 600;"></div>');
     }
     
     let val = frm.doc[fieldname];
@@ -171,16 +171,16 @@ function render_custom_gallery(frm) {
                     <h4>Image Gallery</h4>
                     <div class="custom-gallery-actions">
                         <button class="btn btn-xs btn-default btn-bulk-download hidden" title="Download Selected">
-                            <i class="fa fa-download"></i> <span class="hidden-xs">Download</span>
+                            ${narjes_icon('download-simple', {size: 'xs'})} <span class="hidden-xs">Download</span>
                         </button>
                         <button class="btn btn-xs btn-danger btn-bulk-delete hidden" title="Delete Selected">
-                            <i class="fa fa-trash"></i> <span class="hidden-xs">Delete</span>
+                            ${narjes_icon('trash', {size: 'xs'})} <span class="hidden-xs">Delete</span>
                         </button>
                         <button class="btn btn-xs btn-default btn-select-all" title="Select All">
-                            <i class="fa fa-check-square-o"></i> <span class="hidden-xs">Select All</span>
+                            ${narjes_icon('check-square', {size: 'xs'})} <span class="hidden-xs">Select All</span>
                         </button>
                         <button class="btn btn-xs btn-primary btn-upload" title="Upload Image">
-                            <i class="fa fa-upload"></i> <span class="hidden-xs">Upload</span>
+                            ${narjes_icon('upload-simple', {size: 'xs'})} <span class="hidden-xs">Upload</span>
                         </button>
                     </div>
                 </div>
@@ -210,10 +210,10 @@ function render_custom_gallery(frm) {
             let allSelected = items.length > 0 && items.length === items.filter('.selected').length;
             if (allSelected) {
                 items.removeClass('selected');
-                items.find('.custom-gallery-item-selector i').removeClass('fa-check-square').addClass('fa-square-o');
+                items.find('.custom-gallery-item-selector use').attr('href', '#ph-square');
             } else {
                 items.addClass('selected');
-                items.find('.custom-gallery-item-selector i').removeClass('fa-square-o').addClass('fa-check-square');
+                items.find('.custom-gallery-item-selector use').attr('href', '#ph-check-square');
             }
             let checked = $gallery.find('.custom-gallery-item.selected').length;
             $gallery.find('.btn-bulk-delete, .btn-bulk-download').toggleClass('hidden', checked === 0);
@@ -271,11 +271,11 @@ function render_custom_gallery(frm) {
         images.forEach((img, idx) => {
             let $item = $(`
                 <div class="custom-gallery-item" data-name="${img.name}" data-url="${img.file_url}" data-idx="${idx}">
-                    <div class="custom-gallery-item-selector" title="Select"><i class="fa fa-square-o"></i></div>
+                    <div class="custom-gallery-item-selector" title="Select">${narjes_icon('square', {size: 'lg'})}</div>
                     <img src="${img.file_url}" />
                     <div class="custom-gallery-item-overlay">
-                        <button class="btn btn-xs btn-default btn-gallery-download" title="Download"><i class="fa fa-download"></i></button>
-                        <button class="btn btn-xs btn-danger btn-gallery-delete" title="Delete"><i class="fa fa-trash"></i></button>
+                        <button class="btn btn-xs btn-default btn-gallery-download" title="Download">${narjes_icon('download-simple', {size: 'xs'})}</button>
+                        <button class="btn btn-xs btn-danger btn-gallery-delete" title="Delete">${narjes_icon('trash', {size: 'xs'})}</button>
                     </div>
                 </div>
             `);
@@ -296,12 +296,7 @@ function bind_gallery_item_events(frm, $gallery, images) {
         e.stopPropagation();
         let $item = $(this).closest('.custom-gallery-item');
         $item.toggleClass('selected');
-        let $icon = $(this).find('i');
-        if ($item.hasClass('selected')) {
-            $icon.removeClass('fa-square-o').addClass('fa-check-square');
-        } else {
-            $icon.removeClass('fa-check-square').addClass('fa-square-o');
-        }
+        $(this).find('use').attr('href', $item.hasClass('selected') ? '#ph-check-square' : '#ph-square');
         update_bulk_actions();
     });
 
@@ -382,10 +377,10 @@ function open_previewer(images, current_idx) {
 
     let $previewer = $(`
         <div id="custom-gallery-previewer">
-            <button class="btn-close-preview" title="Close"><i class="fa fa-times"></i></button>
-            <button class="btn-prev-preview" title="Previous"><i class="fa fa-chevron-left"></i></button>
+            <button class="btn-close-preview" title="Close">${narjes_icon('x', {size: 'md'})}</button>
+            <button class="btn-prev-preview" title="Previous">${narjes_icon('caret-left', {size: 'lg'})}</button>
             <img class="preview-image" src="${images[current_idx].file_url}" />
-            <button class="btn-next-preview" title="Next"><i class="fa fa-chevron-right"></i></button>
+            <button class="btn-next-preview" title="Next">${narjes_icon('caret-right', {size: 'lg'})}</button>
             <div class="preview-counter">${current_idx + 1} / ${images.length}</div>
         </div>
     `);

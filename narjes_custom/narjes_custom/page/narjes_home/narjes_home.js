@@ -66,7 +66,7 @@ var NarjesHomeDashboard = class {
                     </div>
                     <div class="narjes-header-actions">
                         <button class="btn-narjes-customize" id="btn-customize-home">
-                            ⚙️ Customize Home
+                            ${narjes_icon('gear-six')} Customize Home
                         </button>
                     </div>
                 </div>
@@ -75,7 +75,7 @@ var NarjesHomeDashboard = class {
                 ${this.config.show_ai_intake ? `
                 <div class="narjes-section-card" id="section-ai-intake">
                     <div class="narjes-section-header">
-                        <h3>✨ AI Fast Order Intake</h3>
+                        <h3>${narjes_icon('sparkle')} AI Fast Order Intake</h3>
                         <span style="font-size:12px;color:var(--narjes-muted);">Paste customer message below to extract order instantly</span>
                     </div>
                     <div class="narjes-ai-box">
@@ -88,7 +88,7 @@ var NarjesHomeDashboard = class {
                         <div class="narjes-ai-actions">
                             <button class="btn btn-default btn-sm" id="btn-clear-home-ai">Clear</button>
                             <button class="btn-narjes-primary" id="btn-process-home-ai">
-                                ✨ Extract & Process Order
+                                ${narjes_icon('sparkle')} Extract & Process Order
                             </button>
                         </div>
                     </div>
@@ -99,10 +99,10 @@ var NarjesHomeDashboard = class {
                 ${this.config.show_shortcuts ? `
                 <div class="narjes-section-card" id="section-shortcuts">
                     <div class="narjes-section-header">
-                        <h3>🔗 Quick Shortcuts</h3>
+                        <h3>${narjes_icon('link-simple')} Quick Shortcuts</h3>
                         ${frappe.user_roles.includes('System Manager') ? `
                         <button class="btn btn-xs btn-default" id="btn-manage-shortcuts">
-                            ✏️ Edit Shortcuts
+                            ${narjes_icon('pencil-simple')} Edit Shortcuts
                         </button>
                         ` : ''}
                     </div>
@@ -118,43 +118,43 @@ var NarjesHomeDashboard = class {
                             <p>Today's Revenue</p>
                             <h4 id="kpi-today-rev">0 IQD</h4>
                         </div>
-                        <div class="narjes-kpi-icon kpi-icon-mint">💰</div>
+                        <div class="narjes-kpi-icon kpi-icon-mint">${narjes_icon('currency-circle-dollar', {size: 'lg'})}</div>
                     </div>
                     <div class="narjes-kpi-card">
                         <div class="narjes-kpi-info">
                             <p>Today's Orders</p>
                             <h4 id="kpi-today-orders">0</h4>
                         </div>
-                        <div class="narjes-kpi-icon kpi-icon-coral">📦</div>
+                        <div class="narjes-kpi-icon kpi-icon-coral">${narjes_icon('package', {size: 'lg'})}</div>
                     </div>
                     <div class="narjes-kpi-card">
                         <div class="narjes-kpi-info">
                             <p>Pending Deliveries</p>
                             <h4 id="kpi-pending-del">0</h4>
                         </div>
-                        <div class="narjes-kpi-icon kpi-icon-navy">🚚</div>
+                        <div class="narjes-kpi-icon kpi-icon-navy">${narjes_icon('truck', {size: 'lg'})}</div>
                     </div>
                     <div class="narjes-kpi-card">
                         <div class="narjes-kpi-info">
                             <p>Total Customers</p>
                             <h4 id="kpi-customers">0</h4>
                         </div>
-                        <div class="narjes-kpi-icon kpi-icon-purple">👥</div>
+                        <div class="narjes-kpi-icon kpi-icon-purple">${narjes_icon('users-three', {size: 'lg'})}</div>
                     </div>
                 </div>
 
                 <!-- 4. Financial Charts Grid -->
                 <div class="narjes-charts-grid" id="section-charts">
                     <div class="narjes-chart-card">
-                        <h4>📈 Income Trend (Sales)</h4>
+                        <h4>${narjes_icon('chart-line-up')} Income Trend (Sales)</h4>
                         <div class="narjes-chart-wrapper" id="chart-income"></div>
                     </div>
                     <div class="narjes-chart-card">
-                        <h4>📉 Outcome Trend (Purchases)</h4>
+                        <h4>${narjes_icon('trend-down')} Outcome Trend (Purchases)</h4>
                         <div class="narjes-chart-wrapper" id="chart-outcome"></div>
                     </div>
                     <div class="narjes-chart-card">
-                        <h4>💵 Net Revenue Trend</h4>
+                        <h4>${narjes_icon('currency-circle-dollar')} Net Revenue Trend</h4>
                         <div class="narjes-chart-wrapper" id="chart-revenue"></div>
                     </div>
                 </div>
@@ -212,9 +212,15 @@ var NarjesHomeDashboard = class {
 
         $grid.empty();
         this.shortcuts.forEach((sc, idx) => {
+            // Icon values are either a raw emoji (legacy / freely-typed by an
+            // admin) or a Phosphor icon name (the new default seed data) —
+            // is_emoji() tells us which rendering path to take so both keep
+            // working without forcing a hard data migration.
+            const icon_value = sc.icon || 'link-simple';
+            const icon_html = frappe.utils.is_emoji(icon_value) ? icon_value : narjes_icon(icon_value, {size: 'md'});
             const $card = $(`
                 <div class="narjes-shortcut-card" data-route="${sc.route}">
-                    <div class="narjes-shortcut-icon">${sc.icon || '🔗'}</div>
+                    <div class="narjes-shortcut-icon">${icon_html}</div>
                     <div class="narjes-shortcut-label" title="${frappe.utils.escape_html(sc.label)}">${frappe.utils.escape_html(sc.label)}</div>
                 </div>
             `);
@@ -226,7 +232,7 @@ var NarjesHomeDashboard = class {
 
     show_customize_dialog() {
         const d = new frappe.ui.Dialog({
-            title: '⚙️ Customize Home Layout',
+            title: 'Customize Home Layout',
             fields: [
                 {
                     fieldtype: 'Check',
@@ -271,9 +277,9 @@ var NarjesHomeDashboard = class {
                 $('#kpi-customers').text(kpis.total_customers);
 
                 // Render Charts
-                this.render_chart('#chart-income', 'Income', charts.labels, charts.income, '#0D9488', 'bar');
-                this.render_chart('#chart-outcome', 'Outcome', charts.labels, charts.outcome, '#FF8559', 'bar');
-                this.render_chart('#chart-revenue', 'Net Revenue', charts.labels, charts.net_revenue, '#0F172A', 'line');
+                this.render_chart('#chart-income', 'Income', charts.labels, charts.income, NARJES_BRAND.fern, 'bar');
+                this.render_chart('#chart-outcome', 'Outcome', charts.labels, charts.outcome, NARJES_BRAND.saffron, 'bar');
+                this.render_chart('#chart-revenue', 'Net Revenue', charts.labels, charts.net_revenue, NARJES_BRAND.ink, 'line');
             }
         });
     }

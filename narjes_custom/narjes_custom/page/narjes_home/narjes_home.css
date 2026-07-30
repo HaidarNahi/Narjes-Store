@@ -1,36 +1,47 @@
-/* Narjes Store Custom Home Dashboard Styling */
+/* Narjes Store Custom Home Dashboard Styling — Narjes Ledger palette,
+   sourced from the global tokens in narjes_custom/public/css/theme/tokens.css
+   (loaded app-wide before this file). Keeping local --narjes-* aliases (mint/
+   navy/coral/bg/card-bg) but repointing their values at the ledger tokens
+   means every rule below that already referenced them picks up the new
+   palette with no further edits needed; these aliases are also fully
+   theme-aware (light/dark) for free, since the ledger tokens they point at
+   already flip per data-theme. */
 :root {
-    --narjes-mint: #A6D3C7;
-    --narjes-mint-dark: #82b8aa;
-    --narjes-mint-light: #eef7f4;
-    --narjes-navy: #0F172A;
-    --narjes-navy-card: #1E293B;
-    --narjes-coral: #FF8559;
-    --narjes-bg: #F8FAFC;
-    --narjes-card-bg: #FFFFFF;
-    --narjes-text: #1E293B;
-    --narjes-muted: #64748B;
-    --narjes-border: #E2E8F0;
-    --narjes-radius: 12px;
-    --narjes-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+    --narjes-mint: var(--narjes-fern);
+    --narjes-mint-dark: var(--narjes-fern-strong);
+    --narjes-mint-light: var(--narjes-fern-tint);
+    --narjes-navy: var(--narjes-ink);
+    --narjes-navy-card: var(--narjes-ink);
+    --narjes-coral: var(--narjes-saffron);
+    --narjes-bg: var(--narjes-paper-sunken);
+    --narjes-card-bg: var(--narjes-paper-raised);
+    --narjes-text: var(--narjes-ink);
+    --narjes-muted: var(--narjes-ink-muted);
+    --narjes-border: var(--narjes-border);
+    --narjes-radius: var(--narjes-radius-md);
+    --narjes-shadow: 0 4px 20px -2px rgba(var(--narjes-shadow-rgb), 0.06), 0 2px 6px -1px rgba(var(--narjes-shadow-rgb), 0.04);
 }
 
 .narjes-home-wrapper {
     max-width: 1280px;
     margin: 20px auto 40px auto;
     padding: 0 20px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--narjes-font-body);
     color: var(--narjes-text);
 }
 
-/* Header Banner */
+/* Header Banner — a deliberate, permanently-dark brand moment (ink meeting
+   deep fern), the same in both light and dark desk mode. Fixed literals on
+   purpose, not theme tokens: --narjes-ink/--narjes-fern-strong flip to LIGHT
+   values in dark mode, which would turn this into an illegible light banner
+   with white text if referenced directly here. */
 .narjes-hero-banner {
-    background: linear-gradient(135deg, var(--narjes-navy) 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #1b211d 0%, #234433 100%);
     border-radius: var(--narjes-radius);
     padding: 24px 30px;
     color: #ffffff;
     margin-bottom: 24px;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+    box-shadow: 0 10px 25px -5px rgba(38, 34, 32, 0.3);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -45,14 +56,15 @@
     right: -10%;
     width: 300px;
     height: 300px;
-    background: radial-gradient(circle, rgba(166, 211, 199, 0.15) 0%, rgba(255,255,255,0) 70%);
+    background: radial-gradient(circle, rgba(127, 192, 176, 0.18) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
     pointer-events: none;
 }
 
 .narjes-hero-title h2 {
-    font-size: 22px;
-    font-weight: 700;
+    font-family: var(--narjes-font-display);
+    font-size: 24px;
+    font-weight: 600;
     margin: 0 0 6px 0;
     color: #ffffff;
     display: flex;
@@ -64,13 +76,13 @@
     display: inline-block;
     width: 10px;
     height: 10px;
-    background-color: var(--narjes-mint);
+    background-color: #a2d4c9;
     border-radius: 50%;
 }
 
 .narjes-hero-title p {
     margin: 0;
-    color: #94A3B8;
+    color: #b9afa6;
     font-size: 13px;
 }
 
@@ -137,26 +149,26 @@
     width: 100%;
     min-height: 120px;
     padding: 14px 16px;
-    border: 1.5px solid #CBD5E1;
+    border: 1.5px solid var(--narjes-border);
     border-radius: 10px;
     font-size: 14px;
     line-height: 1.5;
     color: var(--narjes-text);
-    background: #F8FAFC;
+    background: var(--narjes-paper-sunken);
     resize: vertical;
     transition: all 0.2s ease;
     box-sizing: border-box;
 }
 
 .narjes-ai-textarea:hover {
-    border-color: #B9C4D0;
+    border-color: var(--narjes-border-strong);
 }
 
 .narjes-ai-textarea:focus {
     outline: none;
     border-color: var(--narjes-mint-dark);
-    background: #FFFFFF;
-    box-shadow: 0 0 0 3px rgba(166, 211, 199, 0.3);
+    background: var(--narjes-paper-raised);
+    box-shadow: 0 0 0 3px rgba(46, 92, 70, 0.2);
 }
 
 .narjes-ai-actions {
@@ -168,7 +180,7 @@
 
 .btn-narjes-primary {
     background: var(--narjes-mint);
-    color: var(--narjes-navy);
+    color: var(--narjes-fern-on);
     border: none;
     border-radius: 8px;
     padding: 9px 22px;
@@ -183,13 +195,14 @@
 
 .btn-narjes-primary:hover {
     background: var(--narjes-mint-dark);
+    color: var(--narjes-fern-on);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(166, 211, 199, 0.4);
+    box-shadow: 0 4px 12px rgba(46, 92, 70, 0.35);
 }
 
 .btn-narjes-primary:active {
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(166, 211, 199, 0.4);
+    box-shadow: 0 2px 6px rgba(46, 92, 70, 0.35);
     filter: brightness(0.97);
 }
 
@@ -199,8 +212,8 @@
 }
 
 .narjes-ai-actions #btn-clear-home-ai:hover {
-    background: #F1F5F9;
-    border-color: #CBD5E1;
+    background: var(--narjes-paper-sunken);
+    border-color: var(--narjes-border);
 }
 
 .narjes-ai-actions #btn-clear-home-ai:active {
@@ -215,7 +228,7 @@
 }
 
 .narjes-shortcut-card {
-    background: #F8FAFC;
+    background: var(--narjes-paper-sunken);
     border: 1px solid var(--narjes-border);
     border-radius: 10px;
     padding: 16px 14px;
@@ -232,10 +245,10 @@
 }
 
 .narjes-shortcut-card:hover {
-    background: #FFFFFF;
+    background: var(--narjes-paper-raised);
     border-color: var(--narjes-mint);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 6px 16px rgba(var(--narjes-shadow-rgb), 0.1);
 }
 
 .narjes-shortcut-icon {
@@ -243,17 +256,23 @@
     height: 42px;
     border-radius: 10px;
     background: var(--narjes-mint-light);
-    color: var(--narjes-navy);
+    color: var(--narjes-mint-dark);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.narjes-shortcut-icon .narjes-icon {
+    width: 20px;
+    height: 20px;
 }
 
 .narjes-shortcut-card:hover .narjes-shortcut-icon {
     transform: scale(1.1);
     background: var(--narjes-mint);
+    color: var(--narjes-fern-on);
 }
 
 .narjes-shortcut-label {
@@ -316,10 +335,18 @@
     font-size: 22px;
 }
 
-.kpi-icon-mint { background: var(--narjes-mint-light); color: #0D9488; }
-.kpi-icon-coral { background: #FFF7ED; color: var(--narjes-coral); }
-.kpi-icon-navy { background: #F1F5F9; color: var(--narjes-navy); }
-.kpi-icon-purple { background: #FAF5FF; color: #9333EA; }
+.narjes-kpi-icon .narjes-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* Refined, muted accent hues per KPI — deliberately not saturated
+   Tailwind-style defaults, tuned to sit alongside the fern brand color
+   instead of fighting it. */
+.kpi-icon-mint { background: var(--narjes-fern-tint); color: var(--narjes-mint-dark); }
+.kpi-icon-coral { background: var(--narjes-saffron-tint); color: var(--narjes-coral); }
+.kpi-icon-navy { background: var(--narjes-paper-sunken); color: var(--narjes-navy); }
+.kpi-icon-purple { background: #f6eef0; color: #a8677a; }
 
 /* Analytics Charts Section */
 .narjes-charts-grid {
@@ -344,6 +371,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.narjes-chart-card h4 .narjes-icon {
+    width: 18px;
+    height: 18px;
 }
 
 .narjes-chart-wrapper {

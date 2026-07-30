@@ -5,6 +5,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "appearance_section",
+  "theme_accent",
+  "column_break_appearance_1",
+  "appearance_note",
+  "custom_accent_section",
+  "custom_accent_color",
   "home_dashboard_section",
   "default_show_ai_intake",
   "column_break_home_1",
@@ -29,6 +35,42 @@
   "sidebar_links"
  ],
  "fields": [
+  {
+   "fieldname": "appearance_section",
+   "fieldtype": "Section Break",
+   "label": "Appearance"
+  },
+  {
+   "fieldname": "theme_accent",
+   "fieldtype": "Select",
+   "label": "Accent Color",
+   "options": "Fern\nPlum\nTeal\nOchre\nCustom",
+   "default": "Fern",
+   "reqd": 1,
+   "description": "The Narjes Ledger theme's accent — drives every primary button, link, active sidebar item, and \"done\" status color across the whole system, in both light and dark mode."
+  },
+  {
+   "fieldname": "column_break_appearance_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "appearance_note",
+   "fieldtype": "HTML",
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Takes effect on next page refresh — no rebuild needed. Light/dark mode itself is switched from the user menu (top right) and follows the system theme by default; this setting only controls the accent color used in whichever mode is active.</p>"
+  },
+  {
+   "fieldname": "custom_accent_section",
+   "fieldtype": "Section Break",
+   "label": "Custom Accent",
+   "depends_on": "eval:doc.theme_accent==\"Custom\""
+  },
+  {
+   "fieldname": "custom_accent_color",
+   "fieldtype": "Color",
+   "label": "Accent Color",
+   "depends_on": "eval:doc.theme_accent==\"Custom\"",
+   "description": "Pick one color — a matching hover shade, tint, and dark-mode variant are derived automatically and contrast-checked."
+  },
   {
    "fieldname": "home_dashboard_section",
    "fieldtype": "Section Break",

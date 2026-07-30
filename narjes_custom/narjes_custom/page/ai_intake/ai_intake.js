@@ -53,7 +53,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         box-shadow: 0 0 0 3px var(--primary-light);
     }
     .ai-btn-gradient {
-        background: linear-gradient(135deg, var(--primary), var(--blue-600));
+        background: linear-gradient(135deg, var(--primary), var(--narjes-fern-strong));
         color: white;
         border: none;
         transition: transform 0.1s, box-shadow 0.2s;
@@ -82,11 +82,11 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
-    .ai-match-phone { background: #d1fae5; color: #065f46; }
-    .ai-match-fuzzy { background: #fef3c7; color: #92400e; }
-    .ai-match-none { background: #f3f4f6; color: #6b7280; }
-    .ai-status-Draft { background: #f3f4f6; color: #374151; }
-    .ai-status-Review { background: #e0e7ff; color: #3730a3; }
+    .ai-match-phone { background: var(--narjes-fern-tint); color: var(--narjes-fern-strong); }
+    .ai-match-fuzzy { background: var(--narjes-warning-tint); color: var(--narjes-warning); }
+    .ai-match-none { background: var(--narjes-paper-sunken); color: var(--narjes-ink-muted); }
+    .ai-status-Draft { background: var(--narjes-paper-sunken); color: var(--narjes-ink); }
+    .ai-status-Review { background: #e7e5fb; color: #4c46a3; }
     
     .ai-notes-box {
         background: #fffbeb;
@@ -213,7 +213,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $main.html(`
                 <div class="ai-intake-wrap">
                     <div class="ai-intake-card">
-                        <h4><span style="font-size:18px">📋</span> Paste Order Text</h4>
+                        <h4>${narjes_icon('clipboard-text', {size: 'md'})} Paste Order Text</h4>
                         <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
                             Paste the customer's WhatsApp message or any informal order text below.
                             Arabic, English, or mixed — all formats work.
@@ -226,7 +226,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                         ></textarea>
                         <br/>
                         <button class="btn ai-btn-gradient ai-intake-btn-process" id="ai-process-btn">
-                            ✨ Extract & Match
+                            ${narjes_icon('sparkle')} Extract & Match
                         </button>
                         <button class="btn btn-default" id="ai-clear-btn" style="margin-top:14px;margin-right:10px;">
                             Clear
@@ -289,9 +289,9 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             }[match.method] || "ai-match-none";
 
             const matchBadgeText = {
-                "Phone": `📞 Phone match (${match.confidence}%)`,
-                "Fuzzy Name": `🔤 Name match (${match.confidence}%)`,
-                "None": "➕ No match — new customer will be created",
+                "Phone": `${narjes_icon('phone', {size: 'xs'})} Phone match (${match.confidence}%)`,
+                "Fuzzy Name": `${narjes_icon('text-aa', {size: 'xs'})} Name match (${match.confidence}%)`,
+                "None": `${narjes_icon('plus-circle', {size: 'xs'})} No match — new customer will be created`,
             }[match.method] || "No match";
 
             const statusClass = "ai-status-" + (data.status === "Needs Review" ? "Review" : "Draft");
@@ -301,7 +301,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 <div class="ai-intake-wrap">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;justify-content:space-between;">
                         <div style="display:flex;align-items:center;gap:12px;">
-                            <button class="btn btn-default btn-sm" id="ai-back-btn">← Back</button>
+                            <button class="btn btn-default btn-sm" id="ai-back-btn">${narjes_icon('arrow-left', {size: 'xs'})} Back</button>
                             <h3 style="margin:0;font-size:16px;">Review Extracted Order</h3>
                             <span class="ai-status-pill ${statusClass}">${data.status}</span>
                         </div>
@@ -311,15 +311,15 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     ${notes.length ? `
                     <div class="ai-notes-box">
                         <div style="display:flex;justify-content:space-between;cursor:pointer;" id="ai-toggle-notes">
-                            <strong>⚠️ AI Extraction Notes (review these)</strong>
-                            <span id="ai-notes-icon">▼</span>
+                            <strong>${narjes_icon('warning', {size: 'sm'})} AI Extraction Notes (review these)</strong>
+                            <span id="ai-notes-icon">${narjes_icon('caret-down', {size: 'sm'})}</span>
                         </div>
                         <ul id="ai-notes-list">${notes.map(n => `<li>${frappe.utils.escape_html(n)}</li>`).join("")}</ul>
                     </div><br/>` : ""}
 
                     <!-- Customer Section -->
                     <div class="ai-intake-card">
-                        <h4><span style="font-size:16px">👤</span> Customer Details</h4>
+                        <h4>${narjes_icon('user', {size: 'md'})} Customer Details</h4>
                         <div class="ai-field-row" style="align-items:center;">
                             <div>
                                 <span class="ai-match-badge ${matchBadgeClass}">${matchBadgeText}</span>
@@ -381,7 +381,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
 
                     <!-- Order Details -->
                     <div class="ai-intake-card">
-                        <h4><span style="font-size:16px">📦</span> Order Information</h4>
+                        <h4>${narjes_icon('package', {size: 'md'})} Order Information</h4>
                         <div class="ai-field-row">
                             <div class="ai-field-group">
                                 <label>Delivery Date</label>
@@ -422,13 +422,13 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
                             <input type="checkbox" id="ai-gift" ${ex.gift ? "checked" : ""}/>
-                            <label for="ai-gift" style="font-size:14px;cursor:pointer;font-weight:600;">🎁 Mark as Gift Order</label>
+                            <label for="ai-gift" style="font-size:14px;cursor:pointer;font-weight:600;">${narjes_icon('gift', {size: 'xs'})} Mark as Gift Order</label>
                         </div>
                     </div>
 
                     <!-- Items Table -->
                     <div class="ai-intake-card">
-                        <h4><span style="font-size:16px">🛍️</span> Items</h4>
+                        <h4>${narjes_icon('shopping-bag', {size: 'md'})} Items</h4>
                         <table class="ai-items-table" id="ai-items-table">
                             <thead>
                                 <tr>
@@ -457,7 +457,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     <!-- Confirm -->
                     <div style="display:flex;gap:12px;margin-top:4px;margin-bottom:40px;">
                         <button class="btn ai-btn-gradient btn-lg" id="ai-confirm-btn">
-                            ✅ Confirm &amp; Create Order
+                            ${narjes_icon('check-circle')} Confirm &amp; Create Order
                         </button>
                         <button class="btn btn-default btn-lg" id="ai-cancel-btn">Cancel</button>
                     </div>
@@ -472,7 +472,9 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $("#ai-toggle-notes").on("click", function() {
                 $("#ai-notes-list").slideToggle(200);
                 const icon = $("#ai-notes-icon");
-                icon.text(icon.text() === "▼" ? "▲" : "▼");
+                const collapsed = icon.data("collapsed") || false;
+                icon.html(narjes_icon(collapsed ? "caret-down" : "caret-up", {size: "sm"}));
+                icon.data("collapsed", !collapsed);
             });
 
             // Event handlers
@@ -520,7 +522,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                                     `<option value="found:${name}" selected>Selected: ${name}</option>`
                                 ).val(`found:${name}`);
                                 $("#ai-customer-search-results").html(
-                                    `<div style="font-size:13px;padding:4px 0;color:var(--primary);">✓ Selected: <strong>${name}</strong></div>`
+                                    `<div style="font-size:13px;padding:4px 0;color:var(--primary);">${narjes_icon('check', {size: 'xs'})} Selected: <strong>${name}</strong></div>`
                                 );
                             });
                         },
@@ -556,7 +558,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     <td><input type="number" class="ai-item-price" value="${item.unit_price || item.rate || 0}" min="0"/></td>
                     <td class="ai-item-amount" style="text-align:right;">0.00</td>
                     <td><input type="text" class="ai-item-notes" value="${frappe.utils.escape_html(item.notes || "")}" placeholder="Notes…" dir="auto"/></td>
-                    <td><button class="btn-remove ai-remove-row" title="Remove">×</button></td>
+                    <td><button class="btn-remove ai-remove-row" title="Remove">${narjes_icon('x', {size: 'xs'})}</button></td>
                 </tr>
             `);
 
@@ -654,7 +656,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             ).join('');
 
             const d = new frappe.ui.Dialog({
-                title: '⚠️ Item Not Found',
+                title: 'Item Not Found',
                 fields: [
                     {
                         fieldtype: 'HTML',
@@ -793,22 +795,22 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             const $main = $(this.wrapper).find(".layout-main-section");
             $main.html(`
                 <div class="ai-intake-wrap">
-                    <div class="ai-intake-card" style="text-align:center;border-color:#6ee7b7;background:#d1fae5;">
-                        <h3 style="color:#065f46;margin-bottom:12px;">🎉 Order Created Successfully!</h3>
-                        <p style="color:#065f46;">
+                    <div class="ai-intake-card" style="text-align:center;border-color:var(--narjes-sage);background:var(--narjes-fern-tint);">
+                        <h3 style="color:var(--narjes-fern-strong);margin-bottom:12px;">${narjes_icon('confetti', {size: 'md'})} Order Created Successfully!</h3>
+                        <p style="color:var(--narjes-fern-strong);">
                             ${result.created_new_customer ? "A new customer was created and a " : "A "}
                             Sales Order has been created.
                         </p>
                         <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
                             <a href="/app/sales-order/${result.sales_order}" target="_blank" class="btn btn-primary">
-                                📄 View Sales Order: ${result.sales_order}
+                                ${narjes_icon('file-text', {size: 'xs'})} View Sales Order: ${result.sales_order}
                             </a>
                             <a href="/app/customer/${encodeURIComponent(result.customer)}" target="_blank" class="btn btn-default">
-                                👤 View Customer: ${result.customer}
+                                ${narjes_icon('user', {size: 'xs'})} View Customer: ${result.customer}
                             </a>
                         </div>
                     </div>
-                    <button class="btn btn-default" id="ai-new-intake-btn" style="margin-top:10px;">➕ Process another order</button>
+                    <button class="btn btn-default" id="ai-new-intake-btn" style="margin-top:10px;">${narjes_icon('plus-circle', {size: 'xs'})} Process another order</button>
                 </div>
             `);
             $("#ai-new-intake-btn").on("click", () => this.render_intake_screen());
@@ -859,9 +861,9 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $main.html(`
                 <div class="ai-intake-wrap">
                     <div class="ai-intake-card" style="border-color:var(--red);">
-                        <h4><span style="font-size:18px">❌</span> Error</h4>
+                        <h4>${narjes_icon('x-circle', {size: 'md'})} Error</h4>
                         <pre style="white-space:pre-wrap;font-size:13px;color:var(--red);background:#fef2f2;padding:12px;border-radius:4px;">${frappe.utils.escape_html(String(msg))}</pre>
-                        <button class="btn btn-default" id="ai-retry-btn" style="margin-top:14px;">← Back to intake</button>
+                        <button class="btn btn-default" id="ai-retry-btn" style="margin-top:14px;">${narjes_icon('arrow-left', {size: 'xs'})} Back to intake</button>
                     </div>
                 </div>
             `);
@@ -874,13 +876,13 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $main.html(`
                 <div class="ai-intake-wrap">
                     <div class="ai-intake-card" style="border-color:#f59e0b;background:#fffbeb;">
-                        <h4 style="color:#d97706;"><span style="font-size:18px">⚠️</span> Duplicate Detected</h4>
+                        <h4 style="color:#d97706;">${narjes_icon('warning', {size: 'md'})} Duplicate Detected</h4>
                         <p style="color:#92400e;font-size:14px;margin-bottom:20px;">${frappe.utils.escape_html(data.message)}</p>
                         <a href="/app/sales-order/${data.created_sales_order}" target="_blank" class="btn btn-primary">
                             View existing Sales Order: ${data.created_sales_order}
                         </a>
                         <br/><br/>
-                        <button class="btn btn-default" id="ai-back-dup-btn">← Process a different order</button>
+                        <button class="btn btn-default" id="ai-back-dup-btn">${narjes_icon('arrow-left', {size: 'xs'})} Process a different order</button>
                     </div>
                 </div>
             `);
@@ -893,13 +895,13 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $main.html(`
                 <div class="ai-intake-wrap">
                     <div class="ai-intake-card" style="border-color:var(--red);">
-                        <h4><span style="font-size:18px">❌</span> Extraction Failed</h4>
+                        <h4>${narjes_icon('x-circle', {size: 'md'})} Extraction Failed</h4>
                         <p style="color:var(--red);font-size:13px;background:#fef2f2;padding:12px;border-radius:4px;">${frappe.utils.escape_html(data.error_message || "Unknown error")}</p>
                         <p style="font-size:13px;color:var(--text-muted);margin-top:14px;">
                             The attempt has been saved as <strong>${data.intake_name}</strong> (status: Failed).
                             Please enter the order manually or fix the issue and try again.
                         </p>
-                        <button class="btn btn-default" id="ai-back-fail-btn" style="margin-top:14px;">← Back to intake</button>
+                        <button class="btn btn-default" id="ai-back-fail-btn" style="margin-top:14px;">${narjes_icon('arrow-left', {size: 'xs'})} Back to intake</button>
                     </div>
                 </div>
             `);
