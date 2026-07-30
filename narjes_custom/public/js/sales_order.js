@@ -83,9 +83,30 @@ function update_weekday_label(frm, fieldname) {
     }
 }
 
+// Writes a computed value ONLY when it genuinely differs from what's already
+// on the doc.
+//
+// This guard is what stops the save→"Draft"→"Not Saved" flip that used to
+// force a double-save before an order could be submitted. The old code
+// compared with `!==` against raw field values, but an unset Currency/Float
+// field arrives from the server as `null` (or `undefined` on a fresh doc),
+// and `null !== 0` is true — so every post-save `refresh` re-set these fields
+// to 0, marking the freshly-saved document dirty again ~500ms later. It only
+// "worked" on the second save because by then the zeros were persisted.
+// flt() normalises null/undefined/"" to 0, and rounding to the field's own
+// precision also stops float dust (0.1+0.2) from re-dirtying the form.
+function set_if_changed(frm, fieldname, value) {
+    const precision = frm.precision(fieldname) ?? 2;
+    if (flt(frm.doc[fieldname], precision) !== flt(value, precision)) {
+        frappe.model.set_value(frm.doctype, frm.docname, fieldname, value);
+        return true;
+    }
+    return false;
+}
+
 function calculate_custom_totals(frm) {
     if (frm.doc.docstatus !== 0) return;
-    
+
     // 1. Calculate Delivery Fees based on Governorate.
     // Read live from Narjes Settings (exposed via frappe.boot.narjes_settings
     // — see extend_bootinfo in api.py) instead of hardcoding 4000/6000 here,
@@ -101,9 +122,8 @@ function calculate_custom_totals(frm) {
         }
     }
     
-    if (frm.doc.delivery_fees !== fee) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'delivery_fees', fee);
-    }
+    set_if_changed(frm, 'delivery_fees', fee);
+
     // Calculate Flower Total and Qty
     let flower_total = 0;
     let flower_qty = 0;
@@ -112,10 +132,8 @@ function calculate_custom_totals(frm) {
         flower_qty += (row.qty || 0);
     });
 
-    if (frm.doc.custom_flower_total !== flower_total) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'custom_flower_total', flower_total);
-    }
-    
+    set_if_changed(frm, 'custom_flower_total', flower_total);
+
     // Refresh totals if needed
     frm.refresh_field('custom_flower_total');
 
@@ -126,22 +144,17 @@ function calculate_custom_totals(frm) {
     let standard_qty = frm.doc.items ? frm.doc.items.reduce((sum, row) => sum + (row.qty || 0), 0) : 0;
     let combined_qty = standard_qty + flower_qty;
 
-    if (frm.doc.total !== combined_total) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'total', combined_total);
-        frappe.model.set_value(frm.doctype, frm.docname, 'net_total', combined_total);
+    if (set_if_changed(frm, 'total', combined_total)) {
+        set_if_changed(frm, 'net_total', combined_total);
     }
-    
-    if (frm.doc.total_qty !== combined_qty) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'total_qty', combined_qty);
-    }
+
+    set_if_changed(frm, 'total_qty', combined_qty);
 
     // 2. Calculate Total with Delivery Fees
     let total_with_fee = combined_total + fee;
-    
-    if (frm.doc.total_with_delivery_fees !== total_with_fee) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'total_with_delivery_fees', total_with_fee);
-    }
-    
+
+    set_if_changed(frm, 'total_with_delivery_fees', total_with_fee);
+
     // 3. Calculate Grand Total
     let discount = frm.doc.discount_amount || 0;
     if (frm.doc.additional_discount_percentage && !frm.doc.discount_amount) {
@@ -149,9 +162,7 @@ function calculate_custom_totals(frm) {
     }
     
     let grand_total = total_with_fee - discount;
-    if (frm.doc.grand_total !== grand_total) {
-        frappe.model.set_value(frm.doctype, frm.docname, 'grand_total', grand_total);
-    }
+    set_if_changed(frm, 'grand_total', grand_total);
 }
 
 function render_custom_gallery(frm) {

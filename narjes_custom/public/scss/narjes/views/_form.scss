@@ -91,6 +91,27 @@ body.narjes-ledger {
 		}
 	}
 
+	// Form sidebar hidden by default — assignments/attachments/tags/share are
+	// reference material, not part of filling in an order, and the reclaimed
+	// width matters on the shop's laptops. "Toggle Sidebar" in the ⋯ menu
+	// still reveals it: Frappe's handler is a jQuery .toggle(), which writes
+	// an inline `display` that outranks this stylesheet rule, so the control
+	// keeps working in both directions.
+	//
+	// Two things this rule must not break, both verified against v16:
+	//   * `.right` is what distinguishes the FORM sidebar from the list-view
+	//     sidebar (`.layout-side-section`, no modifier) — don't drop it.
+	//   * Below 991px Frappe switches to `setup_overlay_sidebar()`, which
+	//     opens `.overlay-sidebar` INSIDE this wrapper; hiding the wrapper
+	//     there would make the mobile sidebar unopenable. The breakpoint
+	//     mirrors frappe.utils.is_xs()/is_sm() (< 991), so the default-hide
+	//     applies only where the plain toggle is used.
+	@media (min-width: 991px) {
+		.layout-side-section.right {
+			display: none;
+		}
+	}
+
 	// ---- form sidebar ----
 	.form-sidebar {
 		.sidebar-menu,

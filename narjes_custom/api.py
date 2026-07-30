@@ -260,16 +260,28 @@ def automate_so_flow(doc, method):
 #                 # ERPNext will automatically recalculate the total amounts
 
 def sales_order_before_validate(doc, method):
+    # has_flower drives the flower icon on the Sales Order kanban card.
+    # It is read from the dedicated `custom_flower_items` child table — the
+    # actual place flowers are entered — rather than by sniffing for the
+    # substring "flower" in the main `items` table, which both missed flowers
+    # named in Arabic and false-positived on any non-flower item that happened
+    # to contain the word.
     has_flower = 0
+    if doc.meta.has_field("custom_flower_items"):
+        has_flower = 1 if any(
+            row.get("flower_item") for row in doc.get("custom_flower_items", [])
+        ) else 0
+
+    # has_stand still scans the main items table: stands are ordinary items
+    # there, with no child table of their own.
     has_stand = 0
     for item in doc.get("items", []):
         name = (item.get("item_name") or "").lower()
         code = (item.get("item_code") or "").lower()
-        if "flower" in name or "flower" in code:
-            has_flower = 1
         if "stand" in name or "stand" in code:
             has_stand = 1
-            
+            break
+
     if doc.meta.has_field("has_flower"):
         doc.has_flower = has_flower
     if doc.meta.has_field("has_stand"):
