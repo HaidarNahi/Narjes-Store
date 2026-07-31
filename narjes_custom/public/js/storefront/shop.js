@@ -5,6 +5,8 @@
 // that saturates the 1-vCPU VPS. Everything here is small, dependency-free,
 // and progressive — the pages render and are navigable with JS disabled.
 
+import { initTilt } from "./tilt";
+
 const CART_KEY = "narjes.cart.v1";
 const FAV_KEY = "narjes.favorites.v1";
 const THEME_KEY = "narjes.theme";
@@ -289,6 +291,7 @@ function boot() {
 	initReveals();
 	initDrawers();
 	initActions();
+	initTilt();
 	sync();
 }
 

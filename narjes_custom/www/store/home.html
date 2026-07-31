@@ -25,13 +25,27 @@
 			</div>
 		</div>
 
+		{#- The hero artwork tilts toward the cursor. The stage owns the
+		    perspective and the pointer tracking; the frame is the only thing
+		    that transforms, so the effect stays on the compositor. -#}
 		<div class="s-hero-art" data-reveal>
-			{%- if s.hero_image %}
-			<img src="{{ s.hero_image }}" alt="" width="800" height="600">
-			{%- else %}
-			<img src="{{ placeholder }}" alt="" width="800" height="600"
-				style="object-fit:contain;padding:8%">
-			{%- endif %}
+			<div class="s-tilt-stage" data-tilt>
+				<figure class="s-tilt-frame">
+					{%- if s.hero_image %}
+					<img src="{{ s.hero_image }}" alt="" width="920" height="1442">
+					{%- else %}
+					<picture>
+						<source srcset="/assets/narjes_custom/images/storefront/hero-artwork.webp" type="image/webp">
+						<img src="/assets/narjes_custom/images/storefront/hero-artwork.jpg"
+							width="920" height="1442" fetchpriority="high"
+							alt="{{ 'قطعة فنية مطبوعة من نرجس — القبة الخضراء والقبة الذهبية'
+								if lang == 'ar' else
+								'A printed piece by Narjes — the Green Dome and the Golden Dome' }}">
+					</picture>
+					{%- endif %}
+					<span class="s-tilt-gloss" aria-hidden="true"></span>
+				</figure>
+			</div>
 		</div>
 	</div>
 </section>
