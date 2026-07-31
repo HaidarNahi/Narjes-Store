@@ -75,3 +75,27 @@ rm -f "$TARBALL"
 echo "==> done. verifying:"
 sleep 6
 curl -sk -o /dev/null -w "    ping: %{http_code} in %{time_total}s\n" --max-time 30 "https://admin.narjes.store/api/method/ping"
+
+# Asset check. The app is synced INTO running containers, so anything that
+# recreates a container (`docker compose up -d`, a compose/label change, an
+# image pull) silently reverts it to the baked image: assets.json then points
+# at hashes the frontend no longer has, every bundle 404s, and both the store
+# and the desk render unstyled. That failed silently once — never again.
+echo "==> asset check"
+fail=0
+for url in \
+  "https://narjes.store/ar" \
+  "https://admin.narjes.store/login"; do
+  for asset in $(curl -s --max-time 25 "$url" | grep -oE '/assets/narjes_custom/dist/(css|js)/[a-z-]+\.bundle\.[A-Z0-9]+\.(css|js)' | sort -u); do
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "https://narjes.store$asset")
+    if [ "$code" != "200" ]; then
+      echo "    MISSING $code  $asset"
+      fail=1
+    fi
+  done
+done
+if [ "$fail" = "1" ]; then
+  echo "    ASSETS BROKEN — re-run this script; a container was probably recreated."
+  exit 1
+fi
+echo "    all bundles 200"
