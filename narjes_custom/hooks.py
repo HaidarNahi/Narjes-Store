@@ -78,10 +78,6 @@ website_route_rules = [
 	for route, target in _STOREFRONT_ROUTES.items()
 ]
 
-# The site root serves the storefront (home_page above), but that hook is
-# global — on admin.narjes.store the desk must still win. See route_by_host.
-before_request = ["narjes_custom.storefront.core.route_by_host"]
-
 # navbar/splash brand mark (theme plan P4.2/P8.1)
 app_logo_url = "/assets/narjes_custom/images/narjes-logo.svg"
 

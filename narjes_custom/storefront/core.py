@@ -333,33 +333,3 @@ def translations(lang):
 		"no_results": "No results", "explore": "Explore",
 	}
 	return ar if lang == "ar" else en
-
-
-# ------------------------------------------------------- host-based routing
-
-# Storefront entry paths. On the admin hostname these must not shadow the desk.
-_STOREFRONT_ROOTS = {"", "/", "/ar", "/en", "/ar/", "/en/"}
-
-
-def route_by_host():
-	"""Keep the two faces of this one site separate.
-
-	`home_page = "ar"` makes "/" serve the storefront, which is right for
-	narjes.store but wrong for admin.narjes.store — staff opening the admin
-	hostname were landing on the shop. Frappe's home_page is global with no
-	host awareness, so the split is made here, per request: on the admin host,
-	the storefront roots redirect to the desk instead.
-
-	Registered as a `before_request` hook. Only redirects; never renders.
-	"""
-	request = getattr(frappe.local, "request", None)
-	if not request:
-		return
-
-	host = (request.host or "").split(":")[0].lower()
-	if not host.startswith("admin."):
-		return
-
-	if (request.path or "/") in _STOREFRONT_ROOTS:
-		frappe.local.flags.redirect_location = "/app"
-		raise frappe.Redirect
