@@ -14,24 +14,32 @@
  ],
  "fields": [
   {
+   "columns": 2,
    "fieldname": "name1",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Name"
   },
   {
+   "columns": 1,
    "fieldname": "position",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Position",
-   "options": "Owner\nWorker\nPartner\nOther"
+   "options": "Owner\nWorker\nPartner\nDeliveryman\nOther"
   },
   {
+   "columns": 2,
    "fieldname": "main_phone_number",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Main Phone Number"
   },
   {
+   "columns": 2,
    "fieldname": "secondary__phone_number",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Secondary  Phone Number"
   }
  ],
@@ -39,7 +47,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-06-26 03:58:33.250075",
+ "modified": "2026-07-31 03:20:00.000000",
  "modified_by": "Administrator",
  "module": "Narjes Custom",
  "name": "Supplier Contacts",

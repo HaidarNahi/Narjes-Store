@@ -79,7 +79,8 @@ page_js = {
 # include js in doctype views
 doctype_js = {
 	"Sales Order" : "public/js/sales_order.js",
-	"Purchase Order" : "public/js/purchase_order.js"
+	"Purchase Order" : "public/js/purchase_order.js",
+	"Supplier" : "public/js/supplier.js"
 }
 doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -145,6 +146,7 @@ after_migrate = [
 	"narjes_custom.setup.workspace_visibility.run",
 	"narjes_custom.setup.sidebar_layout.run",
 	"narjes_custom.setup.workspace_sidebar.run",
+	"narjes_custom.setup.fix_legacy_ui.run",
 	"narjes_custom.setup_narjes_settings_defaults.migrate_shortcut_icons_to_phosphor",
 ]
 

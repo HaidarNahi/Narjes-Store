@@ -348,33 +348,80 @@ def sales_order_before_validate(doc, method):
                 flower.delivery_date = doc.delivery_date
             flower.amount = (flower.qty or 0) * (flower.rate or 0)
             flower_total += flower.amount
-        
+
         doc.custom_flower_total = flower_total
-            
+        _sync_flower_charge(doc, flower_total)
+
     # Set the discount apply setting so standard Frappe calculates discount from the full total correctly
     doc.apply_discount_on = "Grand Total"
+
+
+FLOWER_CHARGE_DESCRIPTION = "Flower Items"
+
+
+def _sync_flower_charge(doc, flower_total):
+    """Carry the flower-items total into the order total as an "Actual" row in
+    Sales Taxes and Charges, mirroring how the delivery fee is handled above.
+
+    Flowers live in their own child table (`custom_flower_items`) rather than
+    in `items`, so ERPNext's own totals never see them. Writing them straight
+    into total/net_total/grand_total does not work — ERPNext recalculates
+    those after this hook — which is why flower amounts were silently dropped
+    from what the customer was charged. A charges row is the supported way to
+    add an amount to grand_total, and it keeps the GL entries balanced.
+
+    The row is kept in sync (updated, or removed when the flowers are), so
+    editing or clearing the flower table never leaves a stale charge behind.
+    """
+    if getattr(doc, "taxes", None) is None:
+        return
+
+    existing = [
+        tax for tax in doc.taxes
+        if (tax.description or "") == FLOWER_CHARGE_DESCRIPTION
+    ]
+
+    if not flower_total:
+        for tax in existing:
+            doc.taxes.remove(tax)
+        return
+
+    if existing:
+        existing[0].tax_amount = flower_total
+        for extra in existing[1:]:
+            doc.taxes.remove(extra)
+        return
+
+    doc.append("taxes", {
+        "charge_type": "Actual",
+        "account_head": _get_account("Service", doc.company),
+        "cost_center": _get_cost_center(doc.company),
+        "description": FLOWER_CHARGE_DESCRIPTION,
+        "tax_amount": flower_total,
+    })
 
 def sales_order_validate(doc, method):
     if doc.doctype != "Sales Order":
         return
         
-    # --- Add flower qty and amounts to standard totals ---
+    # --- Add flower qty to the standard qty total ---
     flower_qty = sum([fl.qty or 0 for fl in (doc.get("custom_flower_items") or [])])
     if flower_qty > 0:
         doc.total_qty = (doc.total_qty or 0) + flower_qty
-        
-    flower_total = getattr(doc, "custom_flower_total", 0)
-    if flower_total > 0:
-        doc.total = (doc.total or 0) + flower_total
-        doc.net_total = (doc.net_total or 0) + flower_total
-        doc.base_total = (doc.base_total or 0) + flower_total
-        doc.base_net_total = (doc.base_net_total or 0) + flower_total
-        
-        # Calculate new grand_total after adding to net_total
-        taxes_total = sum([t.tax_amount for t in (doc.get("taxes") or [])])
-        doc.grand_total = doc.net_total + taxes_total - (doc.discount_amount or 0)
-        doc.base_grand_total = doc.grand_total # Assuming 1:1 conversion for IQD/USD standard
-        
+
+    # Flower amounts are carried into the order total as a Sales Taxes and
+    # Charges row (see _sync_flower_charge), NOT by assigning to total /
+    # net_total / grand_total here.
+    #
+    # That is what this code used to do, and those assignments did not
+    # survive: ERPNext recalculates net_total and grand_total after this hook,
+    # so orders ended up storing total=40,000 (items + flowers) next to
+    # net_total=30,000 (items only) and a grand_total computed from the
+    # flower-less figure — i.e. the flowers were never actually charged to the
+    # customer. Routing the amount through the charges table is the same
+    # ERPNext-compliant mechanism already used for the delivery fee below, and
+    # it survives recalculation because ERPNext derives grand_total from it.
+
     # --- Canvas + Sheet Items ---
     # Item flags are batched into one query instead of one `get_value` call
     # per item row — this runs on every single Sales Order/Sales Invoice/
@@ -453,16 +500,31 @@ def warn_insufficient_stock(doc):
     if doc.docstatus != 0:
         return
 
-    rows = [
-        item for item in doc.get("items", [])
-        if item.item_code and (item.warehouse or doc.get("set_warehouse"))
-    ]
+    default_warehouse = doc.get("set_warehouse")
+
+    # Both tables matter, and `packed_items` is the important one:
+    #
+    #   * `items` holds what was sold. For a Product Bundle (e.g. "MDF 40*60")
+    #     that row is is_stock_item=0 and consumes nothing itself.
+    #   * `packed_items` holds the bundle's exploded components ("mdf 40*60
+    #     row", "Roll Paper 60cm") — these are the real stock movements, and
+    #     they are what ERPNext throws "Insufficient Stock" over on submit.
+    #
+    # Checking only `items` meant every bundle order silently passed here and
+    # then failed at submit, which is exactly the case this warning exists for.
+    rows = []
+    for item in doc.get("items", []):
+        if item.item_code and (item.warehouse or default_warehouse):
+            rows.append((item.item_code, item.warehouse or default_warehouse, item.qty or 0))
+    for packed in doc.get("packed_items", []):
+        if packed.item_code and (packed.warehouse or default_warehouse):
+            rows.append((packed.item_code, packed.warehouse or default_warehouse, packed.qty or 0))
     if not rows:
         return
 
     # Batched lookups — this runs on every save, so no per-row queries
     # (same reasoning as the item-flags batching above).
-    item_codes = list({item.item_code for item in rows})
+    item_codes = list({code for code, _, _ in rows})
     stock_items = {
         r.name
         for r in frappe.db.get_all(
@@ -474,11 +536,7 @@ def warn_insufficient_stock(doc):
     if not stock_items:
         return
 
-    pairs = {
-        (item.item_code, item.warehouse or doc.get("set_warehouse"))
-        for item in rows
-        if item.item_code in stock_items
-    }
+    pairs = {(code, wh) for code, wh, _ in rows if code in stock_items}
     balances = {
         (b.item_code, b.warehouse): b.actual_qty
         for b in frappe.db.get_all(
@@ -494,11 +552,10 @@ def warn_insufficient_stock(doc):
     # Several rows can draw on the same item+warehouse — check the demand in
     # aggregate, otherwise two rows of 3 against a stock of 5 both look fine.
     required = {}
-    for item in rows:
-        if item.item_code not in stock_items:
+    for code, warehouse, qty in rows:
+        if code not in stock_items:
             continue
-        key = (item.item_code, item.warehouse or doc.get("set_warehouse"))
-        required[key] = required.get(key, 0) + (item.qty or 0)
+        required[(code, warehouse)] = required.get((code, warehouse), 0) + qty
 
     messages = []
     for (item_code, warehouse), needed in sorted(required.items()):
