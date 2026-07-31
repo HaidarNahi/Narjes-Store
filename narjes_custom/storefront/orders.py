@@ -35,6 +35,27 @@ def _clean(value, limit=140):
 	return (str(value or "").strip())[:limit]
 
 
+class as_system:
+	"""Run a guest-initiated write as a system user.
+
+	`ignore_permissions` on insert is not enough: ERPNext's own validation
+	reads linked masters with permission checks — the delivery-fee charge row,
+	for instance, resolves an Account, which a Guest may not select ("User
+	don't have permissions to select/read this account"). Everything written
+	inside this block is server-derived, never caller-supplied, so raising the
+	privilege here is scoped and safe.
+	"""
+
+	def __enter__(self):
+		self.previous = frappe.session.user
+		frappe.set_user("Administrator")
+		return self
+
+	def __exit__(self, *exc):
+		frappe.set_user(self.previous)
+		return False
+
+
 # ---------------------------------------------------------------- cart pricing
 
 
@@ -211,9 +232,11 @@ def place_order(payload):
 	if not rows:
 		_fail(frappe._("Your cart is empty."))
 
-	# guest submissions run with elevated rights deliberately: a visitor has no
-	# permission to write Customer or Sales Order, and everything written here
-	# is server-derived rather than caller-supplied
+	with as_system():
+		return _create_order(rows, name, phone, governorate, address, notes, lang, dropped)
+
+
+def _create_order(rows, name, phone, governorate, address, notes, lang, dropped):
 	customer = _resolve_customer(name, phone, governorate, address)
 
 	order = frappe.new_doc("Sales Order")
@@ -303,6 +326,11 @@ def submit_design_request(payload):
 	if not name or not phone:
 		_fail(frappe._("Please fill in your name and phone."))
 
+	with as_system():
+		return _create_design_request(data, name, phone, governorate)
+
+
+def _create_design_request(data, name, phone, governorate):
 	doc = frappe.new_doc("Narjes Design Request")
 	doc.customer_name = name
 	doc.phone = normalize_phone(phone) or phone

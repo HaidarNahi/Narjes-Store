@@ -49,7 +49,11 @@ echo "==> 4/6 patching assets.json bundle map"
 python3 - "$BENCH_DIR" <<'PY' > /tmp/narjes_bundle_map.json
 import json, sys
 a = json.load(open(sys.argv[1] + "/sites/assets/assets.json"))
-json.dump({k: v for k, v in a.items() if k.startswith("narjes")}, sys.stdout)
+# every bundle this app owns — "storefront.*" does not start with
+# "narjes", and filtering on that prefix silently shipped the
+# storefront CSS/JS without its assets.json entry
+own = ("narjes", "storefront")
+json.dump({k: v for k, v in a.items() if k.startswith(own)}, sys.stdout)
 PY
 cat /tmp/narjes_bundle_map.json | $SSH "$VPS" "cat > /tmp/narjes_bundle_map.json && docker cp /tmp/narjes_bundle_map.json narjes-backend-1:/tmp/ >/dev/null && docker exec -u frappe narjes-backend-1 python3 -c '
 import json
@@ -57,7 +61,7 @@ p = \"/home/frappe/frappe-bench/sites/assets/assets.json\"
 a = json.load(open(p))
 a.update(json.load(open(\"/tmp/narjes_bundle_map.json\")))
 json.dump(a, open(p, \"w\"), indent=1)
-print(\"    bundle map:\", \" \".join(sorted(k for k in a if k.startswith(\"narjes\"))))
+print(\"    bundle map:\", \" \".join(sorted(k for k in a if k.startswith((\"narjes\", \"storefront\")))))
 '"
 
 echo "==> 5/6 migrate + clear cache"
