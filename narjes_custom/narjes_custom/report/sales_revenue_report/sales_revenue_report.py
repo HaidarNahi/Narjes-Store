@@ -60,6 +60,15 @@ def get_columns():
             "width": 120
         },
         {
+            # Broken out because it is the part of Selling Rate that comes
+            # from the Flower Items table rather than from Items — the two
+            # used to be impossible to tell apart in this report.
+            "fieldname": "flower_sales",
+            "label": _("of which Flowers"),
+            "fieldtype": "Currency",
+            "width": 130
+        },
+        {
             "fieldname": "buying_rate",
             "label": _("Buying Rate"),
             "fieldtype": "Currency",
@@ -119,6 +128,8 @@ def get_data(filters):
     # filtered date range (see NARJES_STORE_SYSTEM.md §5.2).
     order_names = [row.sales_order for row in orders]
     buying_rates = {}
+    flower_costs = {}
+    flower_sales = {}
     if order_names:
         buying_rows = frappe.db.sql("""
             SELECT soi.parent, IFNULL(SUM(soi.valuation_rate * soi.qty), 0) AS total_buying
@@ -128,13 +139,30 @@ def get_data(filters):
         """, {"order_names": order_names}, as_dict=True)
         buying_rates = {r.parent: r.total_buying for r in buying_rows}
 
+        # Flowers live in their own child table, so they are absent from
+        # `tabSales Order Item` entirely. Their revenue reaches this report
+        # through grand_total, but their COST did not — every flower sold was
+        # counted as pure profit. Cost them the same way stock items are.
+        flower_rows = frappe.db.sql("""
+            SELECT parent, flower_item, IFNULL(SUM(qty), 0) AS qty,
+                   IFNULL(SUM(amount), 0) AS amount
+            FROM `tabFlower Item`
+            WHERE parent IN %(order_names)s AND parenttype = 'Sales Order'
+            GROUP BY parent, flower_item
+        """, {"order_names": order_names}, as_dict=True)
+
+        unit_costs = get_item_unit_costs({r.flower_item for r in flower_rows if r.flower_item})
+        for r in flower_rows:
+            flower_costs[r.parent] = flower_costs.get(r.parent, 0) + unit_costs.get(r.flower_item, 0) * (r.qty or 0)
+            flower_sales[r.parent] = flower_sales.get(r.parent, 0) + (r.amount or 0)
+
     data = []
     for row in orders:
         # Selling Rate = Grand Total - Delivery Fees
         delivery_fees = row.delivery_fees or 0
         selling_rate = (row.grand_total or 0) - delivery_fees
 
-        buying_rate = buying_rates.get(row.sales_order, 0)
+        buying_rate = buying_rates.get(row.sales_order, 0) + flower_costs.get(row.sales_order, 0)
 
         # Packaging + Painting costs
         packaging_costs = row.packaging_costs or 0
@@ -154,12 +182,54 @@ def get_data(filters):
             "selling_rate": selling_rate,
             "buying_rate": buying_rate,
             "packaging_and_painting": packaging_and_painting,
+            "flower_sales": flower_sales.get(row.sales_order, 0),
             "profit": profit,
             "profit_percentage": profit_percentage,
             "items_detail": row.sales_order
         })
 
     return data
+
+
+def get_item_unit_costs(item_codes):
+    """Best available unit cost per item, in order of reliability:
+    stock valuation, then the buying price list, then the last purchase rate.
+
+    Flower items are typically bought per order and often carry no stock
+    valuation, which is why the price-list fallback matters — without it their
+    cost reads as 0 and the whole flower amount is booked as profit.
+    """
+    item_codes = {code for code in (item_codes or []) if code}
+    if not item_codes:
+        return {}
+
+    costs = {}
+    for item in frappe.db.get_all(
+        "Item",
+        filters={"name": ["in", list(item_codes)]},
+        fields=["name", "valuation_rate", "last_purchase_rate"],
+    ):
+        costs[item.name] = {
+            "valuation_rate": item.valuation_rate or 0,
+            "last_purchase_rate": item.last_purchase_rate or 0,
+            "buying_price": 0,
+        }
+
+    buying_lists = frappe.db.get_all("Price List", filters={"buying": 1}, pluck="name")
+    if buying_lists:
+        for price in frappe.db.get_all(
+            "Item Price",
+            filters={"item_code": ["in", list(item_codes)], "price_list": ["in", buying_lists]},
+            fields=["item_code", "price_list_rate"],
+            order_by="valid_from asc, modified asc",
+        ):
+            if price.item_code in costs:
+                costs[price.item_code]["buying_price"] = price.price_list_rate or 0
+
+    return {
+        code: (c["valuation_rate"] or c["buying_price"] or c["last_purchase_rate"] or 0)
+        for code, c in costs.items()
+    }
 
 
 def get_conditions(filters):
@@ -202,4 +272,36 @@ def get_order_items(sales_order):
         WHERE soi.parent = %s
         ORDER BY soi.idx
     """, sales_order, as_dict=True)
+
+    for row in items:
+        row["source"] = _("Item")
+
+    # Flower items are a separate child table, so they never appeared in this
+    # popup even though they are part of what the customer bought and are
+    # counted in the order's revenue.
+    flowers = frappe.db.sql("""
+        SELECT fi.flower_item AS item_code, fi.qty, fi.rate AS selling_rate
+        FROM `tabFlower Item` fi
+        WHERE fi.parent = %s AND fi.parenttype = 'Sales Order'
+        ORDER BY fi.idx
+    """, sales_order, as_dict=True)
+
+    if flowers:
+        unit_costs = get_item_unit_costs({f.item_code for f in flowers})
+        item_names = {
+            r.name: r.item_name
+            for r in frappe.db.get_all(
+                "Item",
+                filters={"name": ["in", list({f.item_code for f in flowers if f.item_code})]},
+                fields=["name", "item_name"],
+            )
+        }
+        for f in flowers:
+            buying_rate = unit_costs.get(f.item_code, 0)
+            f["item_name"] = item_names.get(f.item_code, f.item_code)
+            f["buying_rate"] = buying_rate
+            f["profit"] = ((f.selling_rate or 0) - buying_rate) * (f.qty or 0)
+            f["source"] = _("Flower")
+        items.extend(flowers)
+
     return items

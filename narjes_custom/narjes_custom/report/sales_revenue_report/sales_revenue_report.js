@@ -70,6 +70,7 @@ function show_items_dialog(sales_order) {
                 <table class="table table-bordered table-striped" style="margin: 0;">
                     <thead style="position: sticky; top: 0; background: var(--bg-color);">
                         <tr>
+                            <th>${__("Type")}</th>
                             <th>${__("Item Code")}</th>
                             <th>${__("Item Name")}</th>
                             <th style="text-align: right;">${__("Qty")}</th>
@@ -90,8 +91,12 @@ function show_items_dialog(sales_order) {
                 total_buying += (item.buying_rate || 0) * (item.qty || 0);
                 total_profit += profit;
 
+                let is_flower = item.source && item.source !== __("Item");
                 table_html += `
                     <tr>
+                        <td>${is_flower
+                            ? `<span class="indicator-pill green">${frappe.utils.escape_html(item.source)}</span>`
+                            : `<span class="text-muted">${frappe.utils.escape_html(item.source || __("Item"))}</span>`}</td>
                         <td>${item.item_code || ""}</td>
                         <td>${item.item_name || ""}</td>
                         <td style="text-align: right;">${item.qty || 0}</td>
@@ -107,7 +112,7 @@ function show_items_dialog(sales_order) {
                     </tbody>
                     <tfoot>
                         <tr style="font-weight: bold; background: var(--bg-color);">
-                            <td colspan="3">${__("Total")}</td>
+                            <td colspan="4">${__("Total")}</td>
                             <td style="text-align: right;">${format_currency(total_selling)}</td>
                             <td style="text-align: right;">${format_currency(total_buying)}</td>
                             <td style="text-align: right; color: ${total_color};">${format_currency(total_profit)}</td>
