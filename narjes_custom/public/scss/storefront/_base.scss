@@ -187,6 +187,16 @@
 	}
 }
 
+// The Phosphor sprite's symbols declare no fill, so SVG's initial value —
+// black — applied. Legible enough on Paper, effectively invisible on the Ink
+// header, which is why only dark mode looked broken. Following `color` fixes
+// both modes at once and lets every icon inherit its button's token.
+// The loader sets fill/stroke on its own paths, so it is unaffected.
+.narjes-shop svg {
+	fill: currentColor;
+	stroke: none;
+}
+
 .narjes-shop .s-icon-btn {
 	position: relative;
 	display: inline-flex;

@@ -34,8 +34,8 @@ ITEM_WEB_FIELDS = [
 # --------------------------------------------------------------- language
 
 def resolve_lang(path_lang=None):
-	"""Pick the display language: the URL's own prefix wins, then the visitor's
-	Accept-Language, then the configured default.
+	"""Pick the display language: the URL's own prefix wins, otherwise the
+	shop's default (Arabic).
 
 	The prefix is read from the request path rather than a route-rule default —
 	Frappe's `website_route_rules` only pass `<param>` captures into form_dict,
@@ -51,12 +51,10 @@ def resolve_lang(path_lang=None):
 	except Exception:
 		pass
 
-	header = (frappe.request.headers.get("Accept-Language") or "") if frappe.request else ""
-	for chunk in header.split(","):
-		code = chunk.split(";")[0].strip().lower()[:2]
-		if code in LANGS:
-			return code
-
+	# Accept-Language is deliberately not consulted. The shop's default is
+	# Arabic for everyone; an English browser visiting "/" should still get the
+	# Arabic store, and "/en" remains the explicit, shareable way to switch.
+	# Negotiating here also made "/" ambiguous to cache.
 	return settings().get("default_language") or DEFAULT_LANG
 
 
@@ -335,3 +333,33 @@ def translations(lang):
 		"no_results": "No results", "explore": "Explore",
 	}
 	return ar if lang == "ar" else en
+
+
+# ------------------------------------------------------- host-based routing
+
+# Storefront entry paths. On the admin hostname these must not shadow the desk.
+_STOREFRONT_ROOTS = {"", "/", "/ar", "/en", "/ar/", "/en/"}
+
+
+def route_by_host():
+	"""Keep the two faces of this one site separate.
+
+	`home_page = "ar"` makes "/" serve the storefront, which is right for
+	narjes.store but wrong for admin.narjes.store — staff opening the admin
+	hostname were landing on the shop. Frappe's home_page is global with no
+	host awareness, so the split is made here, per request: on the admin host,
+	the storefront roots redirect to the desk instead.
+
+	Registered as a `before_request` hook. Only redirects; never renders.
+	"""
+	request = getattr(frappe.local, "request", None)
+	if not request:
+		return
+
+	host = (request.host or "").split(":")[0].lower()
+	if not host.startswith("admin."):
+		return
+
+	if (request.path or "/") in _STOREFRONT_ROOTS:
+		frappe.local.flags.redirect_location = "/app"
+		raise frappe.Redirect

@@ -89,9 +89,13 @@ function sync() {
 /* ------------------------------------------------------------------ theme */
 
 function initTheme() {
+	// Light is the shop's chosen default. The OS preference is deliberately
+	// NOT consulted: the brand's photography and palette are built around
+	// Paper, so a visitor whose laptop happens to be in dark mode should still
+	// meet the store the way it was designed. Dark remains one tap away and is
+	// remembered once chosen.
 	const saved = localStorage.getItem(THEME_KEY);
-	const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-	apply(saved || (prefersDark ? "dark" : "light"));
+	apply(saved === "dark" || saved === "light" ? saved : "light");
 
 	document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
 		btn.addEventListener("click", () => {
