@@ -1,0 +1,58 @@
+{%- set t = t or {} -%}
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ text_direction }}" data-theme="light">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>{% block title %}{{ storefront_title }}{% endblock %}</title>
+	<meta name="description" content="{% block description %}{{ storefront_description }}{% endblock %}">
+	{%- if noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+	<meta name="theme-color" content="#FBFCFA" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#0F1411" media="(prefers-color-scheme: dark)">
+	<link rel="icon" href="/assets/narjes_custom/images/favicon.svg" type="image/svg+xml">
+	<link rel="canonical" href="{{ frappe.utils.get_url() }}/{{ lang }}{{ canonical_path or '' }}">
+	<link rel="alternate" hreflang="ar" href="{{ frappe.utils.get_url() }}/ar{{ canonical_path or '' }}">
+	<link rel="alternate" hreflang="en" href="{{ frappe.utils.get_url() }}/en{{ canonical_path or '' }}">
+	<link rel="alternate" hreflang="x-default" href="{{ frappe.utils.get_url() }}/ar{{ canonical_path or '' }}">
+
+	<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+	<meta property="og:title" content="{{ self.title() }}">
+	<meta property="og:description" content="{{ self.description() }}">
+	{%- if s.og_image %}<meta property="og:image" content="{{ frappe.utils.get_url() }}{{ s.og_image }}">{% endif %}
+	<meta name="twitter:card" content="summary_large_image">
+
+	{{ include_style('storefront.bundle.css') }}
+	{% block head %}{% endblock %}
+</head>
+<body class="narjes-shop" dir="{{ text_direction }}">
+
+<div class="s-loader" aria-hidden="true">
+	<svg viewBox="-40 -40 80 80">
+		<path class="s-loader-petal" d="M0 4 C -6 -8, -3 -22, 0 -30 C 3 -22, 6 -8, 0 4 Z"/>
+		<path class="s-loader-petal" d="M0 4 C -6 -8, -3 -22, 0 -30 C 3 -22, 6 -8, 0 4 Z" transform="rotate(120)"/>
+		<path class="s-loader-petal" d="M0 4 C -6 -8, -3 -22, 0 -30 C 3 -22, 6 -8, 0 4 Z" transform="rotate(-120)"/>
+		<circle class="s-loader-core" cx="0" cy="0" r="3.5"/>
+	</svg>
+</div>
+
+{% include "templates/storefront/includes/icons.html" %}
+
+{%- if announcement %}
+<div class="s-announce">{{ announcement }}</div>
+{%- endif %}
+
+{% include "templates/storefront/includes/header.html" %}
+
+<main id="main">
+	{% block content %}{% endblock %}
+</main>
+
+{% include "templates/storefront/includes/footer.html" %}
+
+<div class="s-scrim" data-drawer-close></div>
+{% include "templates/storefront/includes/cart_drawer.html" %}
+
+{{ include_script('storefront.bundle.js') }}
+{% block scripts %}{% endblock %}
+</body>
+</html>

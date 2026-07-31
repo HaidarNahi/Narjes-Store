@@ -1,0 +1,138 @@
+// Storefront motion: the narcissus loader, scroll reveals, page transitions.
+// Transform/opacity only. Everything collapses under prefers-reduced-motion.
+
+// ---- the loader: the mark self-draws, then the petals bloom and settle ----
+.s-loader {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: grid;
+	place-items: center;
+	background: var(--s-bg);
+	transition: opacity 400ms var(--n-ease), visibility 400ms;
+
+	&.is-done {
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	svg { width: 84px; height: 84px; overflow: visible; }
+
+	.s-loader-petal {
+		fill: none;
+		stroke: var(--s-hero);
+		stroke-width: 2.5;
+		stroke-linecap: round;
+		stroke-dasharray: 90;
+		stroke-dashoffset: 90;
+		transform-origin: center;
+		animation: s-draw 620ms var(--n-ease) forwards,
+			s-bloom 520ms var(--n-ease) 560ms forwards;
+	}
+
+	.s-loader-petal:nth-child(2) { animation-delay: 90ms, 650ms; }
+	.s-loader-petal:nth-child(3) { animation-delay: 180ms, 740ms; }
+
+	.s-loader-core {
+		fill: var(--s-hero);
+		opacity: 0;
+		animation: s-core 400ms var(--n-ease) 820ms forwards;
+	}
+}
+
+@keyframes s-draw {
+	to { stroke-dashoffset: 0; }
+}
+
+@keyframes s-bloom {
+	0% { transform: scale(1); }
+	55% { transform: scale(1.13); }
+	100% { transform: scale(1); }
+}
+
+@keyframes s-core {
+	from { opacity: 0; transform: scale(0.4); }
+	to { opacity: 1; transform: scale(1); }
+}
+
+// ---- scroll reveal ----
+.narjes-shop [data-reveal] {
+	opacity: 0;
+	transform: translateY(14px);
+	transition: opacity 620ms var(--n-ease), transform 620ms var(--n-ease);
+
+	&.is-in {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+// stagger children of a revealed group
+.narjes-shop [data-reveal-group].is-in > * {
+	animation: s-rise 560ms var(--n-ease) both;
+}
+
+@for $i from 1 through 12 {
+	.narjes-shop [data-reveal-group].is-in > *:nth-child(#{$i}) {
+		animation-delay: #{$i * 45}ms;
+	}
+}
+
+@keyframes s-rise {
+	from { opacity: 0; transform: translateY(16px); }
+	to { opacity: 1; transform: none; }
+}
+
+// ---- add-to-cart flight ----
+.s-fly {
+	position: fixed;
+	z-index: 200;
+	pointer-events: none;
+	border-radius: 12px;
+	object-fit: cover;
+	box-shadow: var(--s-e2);
+	transition: transform 700ms cubic-bezier(0.45, 0, 0.2, 1), opacity 700ms ease-in;
+}
+
+// ---- page transitions (progressive: no-op where unsupported) ----
+@view-transition {
+	navigation: auto;
+}
+
+::view-transition-old(root) {
+	animation: s-fade-out 160ms var(--n-ease) both;
+}
+
+::view-transition-new(root) {
+	animation: s-fade-in 260ms var(--n-ease) both;
+}
+
+@keyframes s-fade-out {
+	to { opacity: 0; }
+}
+
+@keyframes s-fade-in {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.s-loader svg * {
+		animation: none !important;
+		stroke-dashoffset: 0 !important;
+		opacity: 1 !important;
+	}
+
+	.narjes-shop [data-reveal] {
+		opacity: 1 !important;
+		transform: none !important;
+		transition: none !important;
+	}
+
+	.narjes-shop [data-reveal-group].is-in > * { animation: none !important; }
+
+	.s-fly { display: none !important; }
+
+	::view-transition-old(root),
+	::view-transition-new(root) { animation: none !important; }
+}

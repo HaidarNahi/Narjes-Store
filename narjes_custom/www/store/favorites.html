@@ -1,0 +1,56 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block title %}{{ t.favorites }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+
+{% block content %}
+<div class="s-wrap s-section">
+	<h1 data-reveal>{{ t.favorites }}</h1>
+
+	<div id="s-fav-grid" class="s-grid" style="margin-top:26px"></div>
+
+	<div class="s-empty" id="s-fav-empty">
+		<svg style="width:56px;height:56px;opacity:.4;margin:0 auto 14px;display:block" aria-hidden="true">
+			<use href="#ph-heart"></use>
+		</svg>
+		<h3>{{ t.no_results }}</h3>
+		<p style="margin-top:10px">
+			<a class="s-btn s-btn--ghost" href="/{{ lang }}/shop">{{ t.browse }}</a>
+		</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Favourites live in localStorage (no accounts in v1), so the list is
+// resolved client-side against a small public endpoint.
+(function () {
+	var LANG = {{ lang | tojson }};
+	var grid = document.getElementById("s-fav-grid");
+	var empty = document.getElementById("s-fav-empty");
+
+	function render() {
+		var codes = [];
+		try { codes = JSON.parse(localStorage.getItem("narjes.favorites.v1")) || []; } catch (e) {}
+		if (!codes.length) { grid.innerHTML = ""; empty.style.display = ""; return; }
+		empty.style.display = "none";
+		grid.innerHTML = '<div class="s-skel" style="height:300px"></div>'.repeat(Math.min(codes.length, 4));
+
+		frappe.call({
+			method: "narjes_custom.storefront.api.get_items",
+			args: { item_codes: JSON.stringify(codes), lang: LANG },
+			callback: function (r) {
+				grid.innerHTML = (r.message || []).map(function (p) { return p.html; }).join("");
+				if (!(r.message || []).length) empty.style.display = "";
+				document.dispatchEvent(new CustomEvent("narjes:store-changed"));
+			}
+		});
+	}
+
+	document.addEventListener("narjes:store-changed", function (e) {
+		if (e.detail && e.detail.silent) return;
+	});
+	render();
+})();
+</script>
+{% endblock %}

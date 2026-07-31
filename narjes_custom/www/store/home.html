@@ -1,0 +1,113 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block content %}
+<section class="s-hero">
+	<div class="s-wrap s-hero-in">
+		<div class="s-hero-copy" data-reveal>
+			<span class="s-eyebrow">{{ "لوحات النرجس" if lang == "ar" else "Narjes Studio" }}</span>
+			<h1>
+				{{ (s.get("hero_title_ar") or "كل شيء جميل، مصمّم لك") if lang == "ar"
+				   else (s.get("hero_title_en") or "Everything beautiful, designed for you") }}
+			</h1>
+			<p style="font-size:17px;color:var(--s-text-2)">
+				{{ (s.get("hero_subtitle_ar") or "لوحات وإطارات وهدايا تُصنع بعناية — نحوّل أفكاركم إلى قطع فنية فريدة.") if lang == "ar"
+				   else (s.get("hero_subtitle_en") or "Framed pieces, canvases and gifts made with care — we turn your ideas into unique works of art.") }}
+			</p>
+			<div class="s-hero-actions">
+				<a class="s-btn s-btn--primary" href="/{{ lang }}/shop">
+					<svg aria-hidden="true"><use href="#ph-shopping-bag"></use></svg>
+					{{ t.browse }}
+				</a>
+				<a class="s-btn s-btn--ghost" href="/{{ lang }}/custom-design">
+					<svg aria-hidden="true"><use href="#ph-flower-lotus"></use></svg>
+					{{ t.custom_design }}
+				</a>
+			</div>
+		</div>
+
+		<div class="s-hero-art" data-reveal>
+			{%- if s.hero_image %}
+			<img src="{{ s.hero_image }}" alt="" width="800" height="600">
+			{%- else %}
+			<img src="{{ placeholder }}" alt="" width="800" height="600"
+				style="object-fit:contain;padding:8%">
+			{%- endif %}
+		</div>
+	</div>
+</section>
+
+{%- if categories %}
+<section class="s-section">
+	<div class="s-wrap">
+		<div class="s-section-head" data-reveal>
+			<h2>{{ t.categories }}</h2>
+			<a class="s-btn s-btn--quiet" href="/{{ lang }}/shop">{{ t.all_products }} →</a>
+		</div>
+		<div class="s-grid" data-reveal-group>
+			{%- for c in categories %}
+			<a class="s-card" href="{{ c.route }}">
+				<div class="s-card-img {{ 'is-placeholder' if not c.image }}">
+					<img src="{{ c.image or placeholder }}" alt="{{ c.title }}" loading="lazy"
+						width="400" height="400">
+				</div>
+				<div class="s-card-body">
+					<h3 class="s-card-title">{{ c.title }}</h3>
+					{%- if c.description %}<p class="s-card-meta">{{ c.description }}</p>{% endif %}
+				</div>
+			</a>
+			{%- endfor %}
+		</div>
+	</div>
+</section>
+{%- endif %}
+
+{%- if featured %}
+<section class="s-section" style="background:var(--s-sunken)">
+	<div class="s-wrap">
+		<div class="s-section-head" data-reveal>
+			<h2>{{ t.featured }}</h2>
+		</div>
+		<div class="s-grid" data-reveal-group>
+			{%- for p in featured %}
+				{% include "templates/storefront/includes/product_card.html" %}
+			{%- endfor %}
+		</div>
+	</div>
+</section>
+{%- endif %}
+
+<section class="s-section">
+	<div class="s-wrap">
+		<div class="s-section-head" data-reveal>
+			<h2>{{ t.new_arrivals }}</h2>
+			<a class="s-btn s-btn--quiet" href="/{{ lang }}/shop">{{ t.all_products }} →</a>
+		</div>
+		{%- if latest %}
+		<div class="s-grid" data-reveal-group>
+			{%- for p in latest %}
+				{% include "templates/storefront/includes/product_card.html" %}
+			{%- endfor %}
+		</div>
+		{%- else %}
+		<div class="s-empty">
+			<img src="{{ placeholder }}" alt="">
+			<h3>{{ t.no_results }}</h3>
+		</div>
+		{%- endif %}
+	</div>
+</section>
+
+<section class="s-section" style="padding-block-start:0">
+	<div class="s-wrap">
+		<div class="s-facts" data-reveal
+			style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));padding:22px">
+			<div><svg aria-hidden="true"><use href="#ph-truck"></use></svg>
+				{{ "توصيل إلى جميع المحافظات" if lang == "ar" else "Delivery across Iraq" }}</div>
+			<div><svg aria-hidden="true"><use href="#ph-check-circle"></use></svg>
+				{{ t.cod }}</div>
+			<div><svg aria-hidden="true"><use href="#ph-flower-lotus"></use></svg>
+				{{ "تصاميم خاصة حسب الطلب" if lang == "ar" else "Custom designs on request" }}</div>
+		</div>
+	</div>
+</section>
+{% endblock %}

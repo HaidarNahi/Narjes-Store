@@ -1,0 +1,22 @@
+{% extends "templates/storefront/base.html" %}
+{% block title %}{{ t.about }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+{% block content %}
+<div class="s-wrap s-section">
+	<div style="max-width:62ch">
+		<h1 data-reveal>{{ t.about }}</h1>
+		<div class="s-rte" style="margin-top:20px" data-reveal>
+			{%- if lang == "ar" %}
+			<p>نرجس — متجر لتصميم كل شيء جميل. نحوّل أفكاركم إلى قطع فنية فريدة: لوحات، إطارات، هدايا، وتصاميم خاصة للتخرج والأعراس والحج.</p>
+			<p>كل قطعة تُصنع بعناية، ويمكنكم طلب تصميم خاص يناسب مناسبتكم تماماً.</p>
+			{%- else %}
+			<p>Narjes is a studio for designing everything beautiful. We turn your ideas into unique pieces of art — canvases, frames, gifts, and custom designs for graduations, weddings and Hajj.</p>
+			<p>Every piece is made with care, and you can request a custom design tailored to your occasion.</p>
+			{%- endif %}
+		</div>
+		<div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap" data-reveal>
+			<a class="s-btn s-btn--primary" href="/{{ lang }}/shop">{{ t.browse }}</a>
+			<a class="s-btn s-btn--ghost" href="/{{ lang }}/contact">{{ t.contact }}</a>
+		</div>
+	</div>
+</div>
+{% endblock %}

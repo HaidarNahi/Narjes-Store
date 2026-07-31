@@ -1,0 +1,395 @@
+// Storefront components: buttons, product cards, badges, forms, drawer, toasts.
+
+.narjes-shop {
+	// ---- buttons ----
+	.s-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 12px 22px;
+		border: 1px solid transparent;
+		border-radius: 999px;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background 180ms var(--n-ease), border-color 180ms var(--n-ease),
+			color 180ms var(--n-ease), transform 140ms var(--n-ease),
+			box-shadow 180ms var(--n-ease);
+
+		svg { width: 18px; height: 18px; }
+
+		&:active { transform: scale(0.975); }
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+			transform: none;
+		}
+	}
+
+	.s-btn--primary {
+		background: var(--s-action);
+		color: var(--s-action-text);
+
+		&:hover:not(:disabled) {
+			background: var(--s-action-hover);
+			box-shadow: var(--s-e2);
+		}
+	}
+
+	.s-btn--ghost {
+		background: transparent;
+		border-color: var(--s-border-strong);
+		color: var(--s-text);
+
+		&:hover:not(:disabled) {
+			background: var(--s-sunken);
+			border-color: var(--s-action);
+			color: var(--s-action);
+		}
+	}
+
+	.s-btn--quiet {
+		background: transparent;
+		color: var(--s-text-2);
+		padding-inline: 10px;
+
+		&:hover:not(:disabled) { color: var(--s-action); }
+	}
+
+	.s-btn--block { width: 100%; }
+
+	// ---- badges ----
+	.s-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px 10px;
+		border-radius: 999px;
+		font-family: var(--n-font-mono);
+		font-size: 10px;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.09em;
+		background: var(--s-sunken);
+		color: var(--s-text-2);
+
+		&.is-new { background: var(--s-hero-soft); color: var(--n-fern-700); }
+		&.is-sale { background: var(--n-stamp-50); color: var(--n-stamp-600); }
+		&.is-offer { background: var(--s-offer-bg); color: var(--s-offer-text); }
+		&.is-made { background: var(--s-sunken); color: var(--s-text-2); }
+	}
+
+	// ---- product card ----
+	.s-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		background: var(--s-card-bg);
+		border: 1px solid var(--s-border);
+		border-radius: var(--s-card-radius);
+		overflow: hidden;
+		transition: transform 220ms var(--n-ease), box-shadow 220ms var(--n-ease),
+			border-color 220ms var(--n-ease);
+
+		&:hover {
+			transform: translateY(-3px);
+			box-shadow: var(--s-e2);
+			border-color: var(--s-border-strong);
+
+			.s-card-img img { transform: scale(1.04); }
+		}
+	}
+
+	.s-card-img {
+		position: relative;
+		aspect-ratio: 1 / 1;
+		background: var(--s-img-bg);
+		overflow: hidden;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			transition: transform 500ms var(--n-ease);
+		}
+
+		// un-photographed items get the shared placeholder, contained not
+		// cropped, so the mark stays centred and legible (plan W4.1)
+		&.is-placeholder img {
+			object-fit: contain;
+			padding: 12%;
+		}
+	}
+
+	.s-card-badges {
+		position: absolute;
+		top: 10px;
+		inset-inline-start: 10px;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		z-index: 2;
+	}
+
+	.s-card-fav {
+		position: absolute;
+		top: 8px;
+		inset-inline-end: 8px;
+		z-index: 2;
+		width: 36px;
+		height: 36px;
+		border-radius: 999px;
+		border: none;
+		background: color-mix(in srgb, var(--s-surface) 82%, transparent);
+		backdrop-filter: blur(6px);
+		color: var(--s-text-2);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: color 160ms var(--n-ease), transform 160ms var(--n-ease),
+			background 160ms var(--n-ease);
+
+		svg { width: 18px; height: 18px; }
+
+		&:hover { transform: scale(1.1); background: var(--s-surface); }
+
+		&[aria-pressed="true"] { color: var(--s-sale); }
+	}
+
+	.s-card-body {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 14px 15px 16px;
+		flex: 1;
+	}
+
+	.s-card-title {
+		font-family: var(--n-font-display);
+		font-size: 16px;
+		font-weight: 600;
+		line-height: 1.3;
+		unicode-bidi: plaintext;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.s-card-meta {
+		font-size: 12.5px;
+		color: var(--s-text-3);
+		unicode-bidi: plaintext;
+	}
+
+	.s-card-foot {
+		margin-block-start: auto;
+		padding-block-start: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.s-price {
+		font-size: 15px;
+		font-weight: 600;
+		color: var(--s-text);
+		white-space: nowrap;
+	}
+
+	.s-price-was {
+		font-size: 12.5px;
+		color: var(--s-text-3);
+		text-decoration: line-through;
+		margin-inline-end: 6px;
+	}
+
+	// items with no price yet: the amount is replaced by a contact prompt,
+	// never an empty gap or a zero (plan W4.2)
+	.s-price-ask {
+		font-family: var(--n-font-body);
+		font-size: 13px;
+		font-weight: 500;
+		color: var(--s-offer-text);
+		line-height: 1.35;
+	}
+
+	// ---- forms ----
+	.s-field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+
+		label {
+			font-size: 13px;
+			font-weight: 500;
+			color: var(--s-text-2);
+		}
+
+		.s-hint { font-size: 12px; color: var(--s-text-3); }
+
+		.s-error {
+			font-size: 12.5px;
+			color: var(--s-sale);
+			display: none;
+		}
+
+		&.has-error {
+			.s-error { display: block; }
+
+			input,
+			select,
+			textarea { border-color: var(--s-sale); }
+		}
+	}
+
+	input[type="text"],
+	input[type="tel"],
+	input[type="email"],
+	input[type="number"],
+	input[type="search"],
+	select,
+	textarea {
+		width: 100%;
+		font: inherit;
+		font-size: 15px;
+		color: var(--s-text);
+		background: var(--s-surface);
+		border: 1px solid var(--s-border-strong);
+		border-radius: 12px;
+		padding: 11px 14px;
+		transition: border-color 160ms var(--n-ease), box-shadow 160ms var(--n-ease);
+
+		&::placeholder { color: var(--s-text-3); }
+
+		&:focus {
+			outline: none;
+			border-color: var(--s-action);
+			box-shadow: 0 0 0 3px color-mix(in srgb, var(--s-hero) 35%, transparent);
+		}
+	}
+
+	textarea { min-height: 120px; resize: vertical; }
+
+	// ---- drawer (cart / filters) ----
+	.s-scrim {
+		position: fixed;
+		inset: 0;
+		background: var(--s-veil);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 240ms var(--n-ease);
+		z-index: 90;
+
+		&.is-open { opacity: 1; pointer-events: auto; }
+	}
+
+	.s-drawer {
+		position: fixed;
+		inset-block: 0;
+		inset-inline-end: 0;
+		width: min(420px, 100vw);
+		background: var(--s-surface);
+		border-inline-start: 1px solid var(--s-border);
+		box-shadow: var(--s-e3);
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+		transform: translateX(100%);
+		transition: transform 300ms var(--n-ease);
+
+		&.is-open { transform: translateX(0); }
+
+		.s-drawer-head {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			padding: 18px 20px;
+			border-block-end: 1px solid var(--s-border);
+		}
+
+		.s-drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+		.s-drawer-foot {
+			padding: 18px 20px;
+			border-block-start: 1px solid var(--s-border);
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+	}
+
+	// RTL: the drawer must slide from the correct edge
+	&[dir="rtl"] .s-drawer { transform: translateX(-100%); }
+	&[dir="rtl"] .s-drawer.is-open { transform: translateX(0); }
+
+	// ---- toast ----
+	.s-toasts {
+		position: fixed;
+		inset-block-end: 20px;
+		inset-inline-end: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		z-index: 120;
+		pointer-events: none;
+	}
+
+	.s-toast {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		background: var(--s-surface);
+		border: 1px solid var(--s-border);
+		border-inline-start: 3px solid var(--s-action);
+		border-radius: 12px;
+		box-shadow: var(--s-e2);
+		padding: 12px 16px;
+		font-size: 14px;
+		max-width: 340px;
+
+		svg { width: 18px; height: 18px; color: var(--s-action); flex-shrink: 0; }
+	}
+
+	// ---- empty states ----
+	.s-empty {
+		text-align: center;
+		padding-block: clamp(40px, 8vw, 80px);
+		color: var(--s-text-2);
+
+		img {
+			width: 120px;
+			margin-inline: auto;
+			opacity: 0.65;
+			margin-block-end: 18px;
+		}
+
+		h3 { margin-block-end: 8px; }
+	}
+
+	// ---- skeletons ----
+	.s-skel {
+		background: linear-gradient(
+			90deg,
+			var(--s-sunken) 25%,
+			color-mix(in srgb, var(--s-sunken) 60%, var(--s-surface)) 50%,
+			var(--s-sunken) 75%
+		);
+		background-size: 200% 100%;
+		animation: s-shimmer 1.4s linear infinite;
+		border-radius: 10px;
+	}
+}
+
+@keyframes s-shimmer {
+	from { background-position: 200% 0; }
+	to { background-position: -200% 0; }
+}

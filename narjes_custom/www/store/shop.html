@@ -1,0 +1,50 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block title %}{{ heading }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+
+{% block content %}
+<div class="s-wrap">
+	<div class="s-section" style="padding-block-end:0">
+		<h1 data-reveal>{{ heading }}</h1>
+		{%- if category and category.description %}
+		<p style="margin-top:10px;color:var(--s-text-2);max-width:60ch" data-reveal>{{ category.description }}</p>
+		{%- endif %}
+	</div>
+
+	<div class="s-toolbar">
+		<div class="s-chips">
+			<a class="s-chip" href="/{{ lang }}/shop" {{ 'aria-pressed=true' if not category }}>
+				{{ t.all_products }}
+			</a>
+			{%- for c in categories %}
+			<a class="s-chip" href="{{ c.route }}"
+				{% if category and category.slug == c.slug %}aria-pressed="true"{% endif %}>
+				{{ c.title }}
+			</a>
+			{%- endfor %}
+		</div>
+
+		<form action="/{{ lang }}/shop" method="get" style="display:flex;gap:8px;min-width:210px">
+			<input type="search" name="q" value="{{ search or '' }}" placeholder="{{ t.search }}"
+				aria-label="{{ t.search }}">
+		</form>
+	</div>
+
+	{%- if products %}
+	<p style="color:var(--s-text-3);font-size:13.5px;margin-bottom:18px">
+		{{ products | length }} {{ "منتج" if lang == "ar" else "products" }}
+	</p>
+	<div class="s-grid" data-reveal-group>
+		{%- for p in products %}
+			{% include "templates/storefront/includes/product_card.html" %}
+		{%- endfor %}
+	</div>
+	{%- else %}
+	<div class="s-empty">
+		<img src="{{ placeholder }}" alt="">
+		<h3>{{ t.no_results }}</h3>
+		<p style="margin-top:10px"><a class="s-btn s-btn--ghost" href="/{{ lang }}/shop">{{ t.all_products }}</a></p>
+	</div>
+	{%- endif %}
+</div>
+{% endblock %}

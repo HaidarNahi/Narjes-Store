@@ -1,0 +1,37 @@
+{% extends "templates/storefront/base.html" %}
+{% block title %}{{ t.contact }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+{% block content %}
+<div class="s-wrap s-section">
+	<h1 data-reveal>{{ t.contact }}</h1>
+	<div class="s-grid" style="margin-top:26px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))" data-reveal-group>
+		{%- if whatsapp %}
+		<a class="s-panel" href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">
+			<svg style="width:26px;height:26px;color:var(--s-action)" aria-hidden="true"><use href="#ph-whatsapp-logo"></use></svg>
+			<h3>WhatsApp</h3>
+			<p class="s-num" style="color:var(--s-text-2)">{{ s.whatsapp }}</p>
+		</a>
+		{%- endif %}
+		{%- if s.phone %}
+		<a class="s-panel" href="tel:{{ s.phone }}">
+			<svg style="width:26px;height:26px;color:var(--s-action)" aria-hidden="true"><use href="#ph-truck"></use></svg>
+			<h3>{{ "هاتف" if lang == "ar" else "Phone" }}</h3>
+			<p class="s-num" style="color:var(--s-text-2)">{{ s.phone }}</p>
+		</a>
+		{%- endif %}
+		{%- if s.instagram %}
+		<a class="s-panel" href="{{ s.instagram }}" target="_blank" rel="noopener">
+			<svg style="width:26px;height:26px;color:var(--s-action)" aria-hidden="true"><use href="#ph-instagram-logo"></use></svg>
+			<h3>Instagram</h3>
+			<p style="color:var(--s-text-2)">@narjes_iq</p>
+		</a>
+		{%- endif %}
+	</div>
+	{%- set addr = s.get("address_ar") if lang == "ar" else s.get("address_en") %}
+	{%- if addr or s.working_hours %}
+	<div class="s-facts" style="margin-top:24px;max-width:520px">
+		{%- if addr %}<div><svg aria-hidden="true"><use href="#ph-truck"></use></svg>{{ addr }}</div>{% endif %}
+		{%- if s.working_hours %}<div><svg aria-hidden="true"><use href="#ph-check-circle"></use></svg>{{ s.working_hours }}</div>{% endif %}
+	</div>
+	{%- endif %}
+</div>
+{% endblock %}

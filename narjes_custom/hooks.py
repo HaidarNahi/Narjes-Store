@@ -39,9 +39,40 @@ app_include_icons = [
     "/assets/narjes_custom/icons/phosphor/icons.svg"
 ]
 
-# login/website surfaces (theme plan P4.1)
-web_include_css = "narjes-web.bundle.css"
-web_include_js = "narjes-web.bundle.js"
+# login/website surfaces (theme plan P4.1) + the public storefront.
+# The storefront CSS is scoped under .narjes-shop, so it cannot bleed into the
+# login page or any other website route.
+web_include_css = ["narjes-web.bundle.css", "storefront.bundle.css"]
+web_include_js = ["narjes-web.bundle.js", "storefront.bundle.js"]
+
+# The site root serves the Arabic storefront. Language negotiation on "/" was
+# considered and dropped: Arabic is the default for an Iraqi shop, and a fixed
+# root is cacheable and cannot loop. Visitors switch with the globe button, and
+# /ar and /en remain the canonical, shareable URLs.
+home_page = "ar"
+
+# ---- storefront routing (storefront plan W0/W3) ----
+# Language lives in the URL (/ar/..., /en/...) rather than a cookie: prefixes
+# are shareable, cacheable and give correct hreflang. Routes are enumerated per
+# language instead of using a `/<lang>/...` wildcard, which would swallow
+# /app, /api, /login and every other first-segment route on the site.
+_STOREFRONT_LANGS = ("ar", "en")
+_STOREFRONT_ROUTES = {
+	"": "store/home",
+	"shop": "store/shop",
+	"search": "store/shop",
+	"favorites": "store/favorites",
+	"about": "store/about",
+	"contact": "store/contact",
+	"p/<slug>": "store/product",
+	"c/<slug>": "store/shop",
+}
+
+website_route_rules = [
+	{"from_route": f"/{lang}" + (f"/{route}" if route else ""), "to_route": target}
+	for lang in _STOREFRONT_LANGS
+	for route, target in _STOREFRONT_ROUTES.items()
+]
 
 # navbar/splash brand mark (theme plan P4.2/P8.1)
 app_logo_url = "/assets/narjes_custom/images/narjes-logo.svg"
@@ -141,6 +172,7 @@ after_install = [
 # holding a pre-Phosphor-reskin emoji value.
 after_migrate = [
 	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.storefront.run",
 	"narjes_custom.setup.branding.run",
 	"narjes_custom.setup.theme_branding.run",
 	"narjes_custom.setup.workspace_visibility.run",

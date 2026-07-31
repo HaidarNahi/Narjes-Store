@@ -1,0 +1,144 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block og_type %}product{% endblock %}
+
+{% block head %}
+<script type="application/ld+json">
+{{ {
+	"@context": "https://schema.org",
+	"@type": "Product",
+	"name": p.title,
+	"image": [frappe.utils.get_url() + p.image],
+	"description": p.short or "",
+	"sku": p.item_code,
+	"brand": {"@type": "Brand", "name": "Narjes"},
+	"offers": {
+		"@type": "Offer",
+		"price": p.rate,
+		"priceCurrency": "IQD",
+		"availability": "https://schema.org/InStock" if p.in_stock else "https://schema.org/OutOfStock"
+	} if p.has_price else None
+} | tojson }}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="s-wrap">
+	<nav class="s-eyebrow" style="padding-block:18px" aria-label="breadcrumb">
+		<a href="/{{ lang }}">{{ t.home }}</a> ·
+		<a href="/{{ lang }}/shop">{{ t.shop }}</a>
+	</nav>
+
+	<div class="s-product">
+		<div class="s-gallery" data-reveal>
+			<div class="s-gallery-main {{ 'is-placeholder' if not p.has_image }}">
+				<img id="s-main-img" src="{{ p.gallery[0].image }}" alt="{{ p.title }}"
+					width="800" height="800">
+			</div>
+			{%- if p.gallery | length > 1 %}
+			<div class="s-thumbs">
+				{%- for shot in p.gallery %}
+				<button type="button" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+					onclick="document.getElementById('s-main-img').src=this.querySelector('img').src;
+						document.querySelectorAll('.s-thumbs button').forEach(function(b){b.setAttribute('aria-pressed','false')});
+						this.setAttribute('aria-pressed','true')">
+					<img src="{{ shot.image }}" alt="{{ shot.alt_text or p.title }}" loading="lazy">
+				</button>
+				{%- endfor %}
+			</div>
+			{%- endif %}
+		</div>
+
+		<div class="s-product-info" data-reveal>
+			<div style="display:flex;gap:8px;flex-wrap:wrap">
+				{%- if p.badge %}<span class="s-badge is-new">{{ p.badge }}</span>{% endif %}
+				{%- if p.made_to_order %}<span class="s-badge is-made">{{ t.made_to_order }}</span>{% endif %}
+			</div>
+
+			<h1>{{ p.title }}</h1>
+			{%- if p.short %}
+			<p style="font-size:16px;color:var(--s-text-2)">{{ p.short }}</p>
+			{%- endif %}
+
+			<div class="s-product-price">
+				{%- if p.has_price %}
+				<span class="s-price">{{ "{:,.0f}".format(p.rate) }} <small>{{ t.currency }}</small></span>
+				{%- else %}
+				<span class="s-price-ask" style="font-size:16px">{{ t.no_price }}</span>
+				{%- endif %}
+			</div>
+
+			{%- if p.orderable and orders_enabled %}
+			<div class="s-buybox">
+				<div class="s-qty">
+					<button type="button" data-qty-step="-1" aria-label="−">−</button>
+					<input type="number" value="1" min="1" data-qty-input aria-label="{{ t.quantity }}">
+					<button type="button" data-qty-step="1" aria-label="+">+</button>
+				</div>
+				<button class="s-btn s-btn--primary" type="button"
+					data-add-to-cart="{{ p.item_code }}" data-name="{{ p.title }}"
+					data-rate="{{ p.rate }}" data-image="{{ p.image }}" data-route="{{ p.route }}"
+					data-added="{{ t.added }}">
+					<svg aria-hidden="true"><use href="#ph-shopping-bag"></use></svg>
+					{{ t.add_to_cart }}
+				</button>
+				<button class="s-btn s-btn--ghost" type="button" data-fav-toggle="{{ p.item_code }}"
+					aria-pressed="false">
+					<svg aria-hidden="true"><use href="#ph-heart"></use></svg>
+				</button>
+			</div>
+			{%- else %}
+			{#- No price, out of stock, or ordering paused: route to a real human
+			    instead of showing a dead button (plan W4.2). -#}
+			<div class="s-buybox">
+				{%- if whatsapp %}
+				<a class="s-btn s-btn--primary" target="_blank" rel="noopener"
+					href="https://wa.me/{{ whatsapp }}?text={{ ('أهلاً، أستفسر عن: ' if lang == 'ar' else 'Hello, I would like to ask about: ') | urlencode }}{{ p.title | urlencode }}">
+					<svg aria-hidden="true"><use href="#ph-whatsapp-logo"></use></svg>
+					{{ t.ask_price }}
+				</a>
+				{%- endif %}
+				{%- if s.instagram %}
+				<a class="s-btn s-btn--ghost" href="{{ s.instagram }}" target="_blank" rel="noopener">
+					<svg aria-hidden="true"><use href="#ph-instagram-logo"></use></svg>
+					Instagram
+				</a>
+				{%- endif %}
+				<button class="s-btn s-btn--ghost" type="button" data-fav-toggle="{{ p.item_code }}"
+					aria-pressed="false">
+					<svg aria-hidden="true"><use href="#ph-heart"></use></svg>
+				</button>
+			</div>
+			{%- if not p.in_stock and p.has_price %}
+			<p style="color:var(--s-text-3);font-size:13.5px">{{ t.out_of_stock }}</p>
+			{%- endif %}
+			{%- endif %}
+
+			<div class="s-facts">
+				<div><svg aria-hidden="true"><use href="#ph-truck"></use></svg>
+					{{ "توصيل إلى جميع المحافظات" if lang == "ar" else "Delivery across Iraq" }}</div>
+				<div><svg aria-hidden="true"><use href="#ph-check-circle"></use></svg>{{ t.cod }}</div>
+				{%- if p.made_to_order and p.lead_time %}
+				<div><svg aria-hidden="true"><use href="#ph-flower-lotus"></use></svg>
+					{{ t.made_to_order }} — {{ p.lead_time }} {{ t.days }}</div>
+				{%- endif %}
+			</div>
+
+			{%- if p.long %}
+			<div class="s-rte">{{ p.long }}</div>
+			{%- endif %}
+		</div>
+	</div>
+
+	{%- if related %}
+	<section class="s-section">
+		<div class="s-section-head"><h2>{{ t.explore }}</h2></div>
+		<div class="s-grid" data-reveal-group>
+			{%- for p in related %}
+				{% include "templates/storefront/includes/product_card.html" %}
+			{%- endfor %}
+		</div>
+	</section>
+	{%- endif %}
+</div>
+{% endblock %}

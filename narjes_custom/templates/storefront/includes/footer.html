@@ -1,0 +1,55 @@
+<footer class="s-footer">
+	<div class="s-wrap s-footer-in">
+		<div>
+			<a class="s-brand" href="/{{ lang }}">
+				<img src="/assets/narjes_custom/images/narjes-logo.svg" alt="" width="30" height="30">
+				<span>{{ "نرجس" if lang == "ar" else "Narjes" }}</span>
+			</a>
+			<p style="margin-top:12px;color:var(--s-text-3);font-size:14px;max-width:32ch">
+				{{ s.get("hero_subtitle_ar") if lang == "ar" else s.get("hero_subtitle_en") }}
+			</p>
+		</div>
+
+		<div>
+			<h4>{{ t.categories }}</h4>
+			<ul>
+				<li><a href="/{{ lang }}/shop">{{ t.all_products }}</a></li>
+				{%- for c in categories[:5] %}
+				<li><a href="{{ c.route }}">{{ c.title }}</a></li>
+				{%- endfor %}
+			</ul>
+		</div>
+
+		<div>
+			<h4>{{ t.about }}</h4>
+			<ul>
+				<li><a href="/{{ lang }}/about">{{ t.about }}</a></li>
+				<li><a href="/{{ lang }}/custom-design">{{ t.custom_design }}</a></li>
+				<li><a href="/{{ lang }}/contact">{{ t.contact }}</a></li>
+			</ul>
+		</div>
+
+		<div>
+			<h4>{{ t.contact }}</h4>
+			<ul>
+				{%- if s.phone %}<li><a href="tel:{{ s.phone }}" class="s-num">{{ s.phone }}</a></li>{% endif %}
+				{%- if whatsapp %}
+				<li><a href="https://wa.me/{{ whatsapp }}" target="_blank" rel="noopener">WhatsApp</a></li>
+				{%- endif %}
+				{%- if s.instagram %}
+				<li><a href="{{ s.instagram }}" target="_blank" rel="noopener">Instagram</a></li>
+				{%- endif %}
+				{%- set addr = s.get("address_ar") if lang == "ar" else s.get("address_en") %}
+				{%- if addr %}<li style="color:var(--s-text-3)">{{ addr }}</li>{% endif %}
+				{%- if s.working_hours %}<li style="color:var(--s-text-3)">{{ s.working_hours }}</li>{% endif %}
+			</ul>
+		</div>
+	</div>
+
+	<div class="s-wrap">
+		<div class="s-footer-bottom">
+			<span>© {{ frappe.utils.now_datetime().year }} {{ "نرجس ستور" if lang == "ar" else "Narjes Store" }}</span>
+			<span>{{ t.cod }}</span>
+		</div>
+	</div>
+</footer>

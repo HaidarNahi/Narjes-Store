@@ -1,0 +1,44 @@
+<header class="s-header">
+	<div class="s-wrap s-header-in">
+		<a class="s-brand" href="/{{ lang }}">
+			<img src="/assets/narjes_custom/images/narjes-logo.svg" alt="" width="30" height="30">
+			<span>{{ "نرجس" if lang == "ar" else "Narjes" }}</span>
+		</a>
+
+		<nav class="s-nav" aria-label="{{ t.shop }}">
+			<span class="s-nav-links" style="display:contents">
+				<a href="/{{ lang }}/shop">{{ t.shop }}</a>
+				<a href="/{{ lang }}/custom-design">{{ t.custom_design }}</a>
+				<a href="/{{ lang }}/about">{{ t.about }}</a>
+				<a href="/{{ lang }}/contact">{{ t.contact }}</a>
+			</span>
+
+			<span class="s-tools">
+				<a class="s-icon-btn" href="/{{ lang }}/search" aria-label="{{ t.search }}">
+					<svg aria-hidden="true"><use href="#ph-magnifying-glass"></use></svg>
+				</a>
+
+				<a class="s-icon-btn" href="/{{ lang }}/favorites" aria-label="{{ t.favorites }}">
+					<svg aria-hidden="true"><use href="#ph-heart"></use></svg>
+					<span class="s-count" data-fav-count>0</span>
+				</a>
+
+				<button class="s-icon-btn" type="button" data-drawer-open=".s-drawer--cart"
+					data-cart-open aria-label="{{ t.cart }}">
+					<svg aria-hidden="true"><use href="#ph-shopping-bag"></use></svg>
+					<span class="s-count" data-cart-count>0</span>
+				</button>
+
+				<button class="s-icon-btn" type="button" data-theme-toggle aria-label="{{ t.theme }}">
+					<svg aria-hidden="true" class="s-icon-sun"><use href="#ph-sun"></use></svg>
+					<svg aria-hidden="true" class="s-icon-moon"><use href="#ph-moon"></use></svg>
+				</button>
+
+				<a class="s-icon-btn" href="/{{ alt_lang }}{{ canonical_path or '' }}"
+					aria-label="{{ t.language }}" title="{{ t.language }}">
+					<svg aria-hidden="true"><use href="#ph-globe"></use></svg>
+				</a>
+			</span>
+		</nav>
+	</div>
+</header>

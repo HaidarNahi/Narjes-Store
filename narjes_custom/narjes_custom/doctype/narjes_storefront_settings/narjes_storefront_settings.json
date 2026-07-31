@@ -1,0 +1,241 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-07-31 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_status",
+  "storefront_enabled",
+  "noindex",
+  "cb_status",
+  "default_language",
+  "orders_enabled",
+  "sb_brand",
+  "hero_title_en",
+  "hero_title_ar",
+  "hero_subtitle_en",
+  "hero_subtitle_ar",
+  "cb_brand",
+  "hero_image",
+  "announcement_en",
+  "announcement_ar",
+  "sb_contact",
+  "phone",
+  "whatsapp",
+  "email",
+  "cb_contact",
+  "instagram",
+  "address_en",
+  "address_ar",
+  "working_hours",
+  "sb_seo",
+  "meta_title_en",
+  "meta_title_ar",
+  "cb_seo",
+  "meta_description_en",
+  "meta_description_ar",
+  "og_image"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "storefront_enabled",
+   "fieldtype": "Check",
+   "label": "Storefront Enabled",
+   "default": "1",
+   "description": "Turn the public store on or off. When off, visitors see a maintenance page."
+  },
+  {
+   "fieldname": "noindex",
+   "fieldtype": "Check",
+   "label": "Discourage Search Engines",
+   "default": "1",
+   "description": "Keep on until launch. Adds a noindex tag to every page."
+  },
+  {
+   "fieldname": "cb_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_language",
+   "fieldtype": "Select",
+   "label": "Default Language",
+   "options": "ar\nen",
+   "default": "ar"
+  },
+  {
+   "fieldname": "orders_enabled",
+   "fieldtype": "Check",
+   "label": "Accept Orders",
+   "default": "1",
+   "description": "Turn off to keep the catalogue browsable but disable checkout."
+  },
+  {
+   "fieldname": "sb_brand",
+   "fieldtype": "Section Break",
+   "label": "Brand & Hero"
+  },
+  {
+   "fieldname": "hero_title_en",
+   "fieldtype": "Data",
+   "label": "Hero Title (English)"
+  },
+  {
+   "fieldname": "hero_title_ar",
+   "fieldtype": "Data",
+   "label": "Hero Title (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "hero_subtitle_en",
+   "fieldtype": "Small Text",
+   "label": "Hero Subtitle (English)"
+  },
+  {
+   "fieldname": "hero_subtitle_ar",
+   "fieldtype": "Small Text",
+   "label": "Hero Subtitle (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "cb_brand",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hero_image",
+   "fieldtype": "Attach Image",
+   "label": "Hero Image"
+  },
+  {
+   "fieldname": "announcement_en",
+   "fieldtype": "Data",
+   "label": "Announcement Bar (English)"
+  },
+  {
+   "fieldname": "announcement_ar",
+   "fieldtype": "Data",
+   "label": "Announcement Bar (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "sb_contact",
+   "fieldtype": "Section Break",
+   "label": "Contact Details"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "whatsapp",
+   "fieldtype": "Data",
+   "label": "WhatsApp Number",
+   "description": "International format without +, e.g. 9647701234567"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "cb_contact",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "instagram",
+   "fieldtype": "Data",
+   "label": "Instagram URL"
+  },
+  {
+   "fieldname": "address_en",
+   "fieldtype": "Small Text",
+   "label": "Address (English)"
+  },
+  {
+   "fieldname": "address_ar",
+   "fieldtype": "Small Text",
+   "label": "Address (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "working_hours",
+   "fieldtype": "Data",
+   "label": "Working Hours"
+  },
+  {
+   "fieldname": "sb_seo",
+   "fieldtype": "Section Break",
+   "label": "SEO"
+  },
+  {
+   "fieldname": "meta_title_en",
+   "fieldtype": "Data",
+   "label": "Meta Title (English)"
+  },
+  {
+   "fieldname": "meta_title_ar",
+   "fieldtype": "Data",
+   "label": "Meta Title (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "cb_seo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "meta_description_en",
+   "fieldtype": "Small Text",
+   "label": "Meta Description (English)"
+  },
+  {
+   "fieldname": "meta_description_ar",
+   "fieldtype": "Small Text",
+   "label": "Meta Description (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+  },
+  {
+   "fieldname": "og_image",
+   "fieldtype": "Attach Image",
+   "label": "Share Image",
+   "description": "Shown when a link is pasted into Instagram or WhatsApp. 1200\u00d7630."
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "Narjes Storefront Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1
+}

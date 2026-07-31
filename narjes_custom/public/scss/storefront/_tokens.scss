@@ -1,0 +1,83 @@
+// Storefront token layer (plan W1).
+//
+// Extends the Narjes Ledger desk tokens (--n-*, generated from tokens.json)
+// rather than replacing them: same brand, retail register. The desk is a dense
+// ledger; the shop is airy and soft — which is what the brand's own product
+// photography looks like (white/pastel, floral).
+//
+// The one deliberate promotion: MINT, the logo's own colour, becomes the hero
+// accent here. On the desk it is a dark-mode-only link colour because it
+// washes out on Paper; on the storefront it is used on large tinted surfaces
+// and washes, where it sings.
+
+:root,
+[data-theme="light"] {
+	// grounds — warmer and lighter than the desk's #F2F4F1
+	--s-bg: #fbfcfa;
+	--s-surface: #ffffff;
+	--s-sunken: #f4f7f3;
+	--s-veil: rgba(27, 33, 29, 0.45); // drawer/modal scrim
+
+	// brand
+	--s-hero: var(--n-mint);
+	--s-hero-soft: #d6ece5;
+	--s-hero-wash: linear-gradient(135deg, #dff0ea 0%, #f2f7f3 55%, #fbfcfa 100%);
+
+	// actions inherit the desk primary so an accent change in Narjes
+	// Settings restyles the shop too
+	--s-action: var(--n-primary);
+	--s-action-hover: var(--n-primary-hover);
+	--s-action-text: var(--n-primary-text-on);
+
+	--s-text: var(--n-text);
+	--s-text-2: var(--n-text-2);
+	--s-text-3: var(--n-text-3);
+	--s-border: #e6ebe5;
+	--s-border-strong: #d3dbd2;
+
+	--s-sale: var(--n-stamp-500);
+	--s-offer: var(--n-saffron-500);
+	--s-offer-text: var(--n-saffron-700);
+	--s-offer-bg: var(--n-saffron-50);
+
+	// product surfaces
+	--s-card-bg: #ffffff;
+	--s-card-radius: 18px;
+	--s-img-bg: #f4f7f3;
+
+	--s-e1: 0 1px 2px rgba(27, 33, 29, 0.05);
+	--s-e2: 0 6px 20px -6px rgba(27, 33, 29, 0.12);
+	--s-e3: 0 18px 48px -12px rgba(27, 33, 29, 0.20);
+
+	--s-header-h: 68px;
+	--s-max: 1240px;
+}
+
+[data-theme="dark"] {
+	--s-bg: #0f1411;
+	--s-surface: #171d19;
+	--s-sunken: #121714;
+	--s-veil: rgba(0, 0, 0, 0.62);
+
+	--s-hero: var(--n-mint);
+	--s-hero-soft: #1e2e28;
+	--s-hero-wash: linear-gradient(135deg, #16261f 0%, #131a16 55%, #0f1411 100%);
+
+	--s-text: var(--n-text);
+	--s-text-2: var(--n-text-2);
+	--s-text-3: var(--n-text-3);
+	--s-border: #262d27;
+	--s-border-strong: #333c34;
+
+	--s-sale: var(--n-stamp-300);
+	--s-offer: var(--n-saffron-300);
+	--s-offer-text: var(--n-saffron-300);
+	--s-offer-bg: #2a2114;
+
+	--s-card-bg: #171d19;
+	--s-img-bg: #131a16;
+
+	--s-e1: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--s-e2: 0 6px 20px -6px rgba(0, 0, 0, 0.55);
+	--s-e3: 0 18px 48px -12px rgba(0, 0, 0, 0.65);
+}

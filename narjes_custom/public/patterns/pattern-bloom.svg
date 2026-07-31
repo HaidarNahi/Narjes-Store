@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 520 520">
+  <!-- Sparse narcissus blooms. Full-opacity strokes; strength set in CSS. -->
+  <defs>
+    <g id="bloom-unit" fill="none" stroke="#2E5C46" stroke-width="1.2" stroke-linecap="round">
+      <path d="M0 0 C -5 -10, -2 -20, 0 -26 C 2 -20, 5 -10, 0 0 Z"/>
+      <path d="M0 0 C -5 -10, -2 -20, 0 -26 C 2 -20, 5 -10, 0 0 Z" transform="rotate(120)"/>
+      <path d="M0 0 C -5 -10, -2 -20, 0 -26 C 2 -20, 5 -10, 0 0 Z" transform="rotate(-120)"/>
+      <circle cx="0" cy="0" r="2.5"/>
+    </g>
+  </defs>
+    <use href="#bloom-unit" transform="translate(90 110) rotate(0) scale(1.5)"/>
+    <use href="#bloom-unit" transform="translate(300 80) rotate(35) scale(1.0)"/>
+    <use href="#bloom-unit" transform="translate(200 250) rotate(-20) scale(1.8)"/>
+    <use href="#bloom-unit" transform="translate(400 330) rotate(15) scale(1.2)"/>
+    <use href="#bloom-unit" transform="translate(110 400) rotate(-40) scale(1.1)"/>
+    <use href="#bloom-unit" transform="translate(330 460) rotate(25) scale(1.6)"/>
+</svg>

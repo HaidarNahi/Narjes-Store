@@ -1,0 +1,86 @@
+<aside class="s-drawer s-drawer--cart" aria-label="{{ t.cart }}" aria-hidden="true">
+	<div class="s-drawer-head">
+		<h3>{{ t.cart }}</h3>
+		<button class="s-icon-btn" type="button" data-drawer-close aria-label="{{ t.cart }}">
+			<svg aria-hidden="true"><use href="#ph-x"></use></svg>
+		</button>
+	</div>
+
+	<div class="s-drawer-body" data-cart-lines>
+		<div class="s-empty" data-cart-empty>
+			<svg style="width:56px;height:56px;opacity:.4;margin:0 auto 14px;display:block" aria-hidden="true">
+				<use href="#ph-shopping-bag"></use>
+			</svg>
+			<h3>{{ t.empty_cart }}</h3>
+			<p style="margin-top:8px"><a class="s-btn s-btn--ghost" href="/{{ lang }}/shop">{{ t.browse }}</a></p>
+		</div>
+	</div>
+
+	<div class="s-drawer-foot" data-cart-foot hidden>
+		<div class="s-totals">
+			<div class="is-grand">
+				<span>{{ t.subtotal }}</span>
+				<span class="s-price" data-cart-subtotal>0 {{ t.currency }}</span>
+			</div>
+		</div>
+		<p style="font-size:12.5px;color:var(--s-text-3);margin:0">{{ t.cod }}</p>
+		<a class="s-btn s-btn--primary s-btn--block" href="/{{ lang }}/checkout">{{ t.checkout }}</a>
+	</div>
+</aside>
+
+<script>
+// Renders the cart drawer from localStorage. Kept inline and tiny so the
+// drawer is correct on first paint without waiting for the bundle.
+(function () {
+	var CURRENCY = {{ t.currency | tojson }};
+	var PLACEHOLDER = {{ placeholder | tojson }};
+
+	function render() {
+		var host = document.querySelector("[data-cart-lines]");
+		var foot = document.querySelector("[data-cart-foot]");
+		if (!host) return;
+		var lines = [];
+		try { lines = JSON.parse(localStorage.getItem("narjes.cart.v1")) || []; } catch (e) {}
+
+		var empty = host.querySelector("[data-cart-empty]");
+		host.querySelectorAll(".s-line").forEach(function (n) { n.remove(); });
+
+		if (!lines.length) {
+			if (empty) empty.style.display = "";
+			if (foot) foot.hidden = true;
+			return;
+		}
+		if (empty) empty.style.display = "none";
+		if (foot) foot.hidden = false;
+
+		var subtotal = 0;
+		lines.forEach(function (l) {
+			subtotal += (l.rate || 0) * l.qty;
+			var el = document.createElement("div");
+			el.className = "s-line";
+			var img = l.image || PLACEHOLDER;
+			el.innerHTML =
+				'<div class="s-line-img' + (l.image ? '' : ' is-placeholder') + '"><img alt="" src="' + img + '"></div>' +
+				'<div><div class="s-line-title"></div><div class="s-line-meta"></div></div>' +
+				'<button class="s-icon-btn" type="button" aria-label="remove"><svg aria-hidden="true"><use href="#ph-x"></use></svg></button>';
+			el.querySelector(".s-line-title").textContent = l.name || l.item_code;
+			el.querySelector(".s-line-meta").textContent =
+				l.qty + " × " + (l.rate || 0).toLocaleString() + " " + CURRENCY;
+			el.querySelector("button").addEventListener("click", function () {
+				window.narjesShop.cart.remove(l.item_code);
+			});
+			host.appendChild(el);
+		});
+
+		var total = document.querySelector("[data-cart-subtotal]");
+		if (total) total.textContent = subtotal.toLocaleString() + " " + CURRENCY;
+	}
+
+	document.addEventListener("narjes:store-changed", render);
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", render);
+	} else {
+		render();
+	}
+})();
+</script>

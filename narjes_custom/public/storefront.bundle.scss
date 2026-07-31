@@ -1,0 +1,11 @@
+// Narjes storefront — public website bundle (narjes.store).
+// Loaded via web_include_css. Independent of the desk bundle, but shares the
+// generated design tokens and self-hosted fonts so brand changes propagate.
+
+@import "./scss/narjes/tokens";
+@import "./scss/narjes/fonts";
+@import "./scss/storefront/tokens";
+@import "./scss/storefront/base";
+@import "./scss/storefront/components";
+@import "./scss/storefront/pages";
+@import "./scss/storefront/motion";

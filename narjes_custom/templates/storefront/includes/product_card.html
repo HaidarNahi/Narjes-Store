@@ -1,0 +1,54 @@
+{#- One product tile. `p` is a decorated item from storefront.core.decorate.
+    Two states matter here (plan W4): no photo -> shared placeholder, and no
+    price -> a contact prompt instead of the amount, with the buy button
+    replaced by a link to the product page where the contact CTA lives. -#}
+<article class="s-card" data-product-card>
+	<a class="s-card-img {{ 'is-placeholder' if not p.has_image }}" href="{{ p.route }}"
+		aria-label="{{ p.title }}">
+		<img src="{{ p.image }}" alt="{{ p.title }}" loading="lazy" decoding="async"
+			width="400" height="400">
+	</a>
+
+	<div class="s-card-badges">
+		{%- if p.badge %}
+		<span class="s-badge {{ 'is-sale' if p.badge == 'Sale' else 'is-new' }}">{{ p.badge }}</span>
+		{%- endif %}
+		{%- if p.made_to_order %}
+		<span class="s-badge is-made">{{ t.made_to_order }}</span>
+		{%- endif %}
+	</div>
+
+	<button class="s-card-fav" type="button" data-fav-toggle="{{ p.item_code }}"
+		aria-pressed="false" aria-label="{{ t.favorites }}"
+		data-fav-on="{{ t.favorites }}" data-fav-off="{{ t.favorites }}">
+		<svg aria-hidden="true"><use href="#ph-heart"></use></svg>
+	</button>
+
+	<div class="s-card-body">
+		<a href="{{ p.route }}"><h3 class="s-card-title">{{ p.title }}</h3></a>
+		{%- if p.short %}<p class="s-card-meta">{{ p.short }}</p>{% endif %}
+
+		<div class="s-card-foot">
+			{%- if p.has_price %}
+			<span class="s-price">{{ "{:,.0f}".format(p.rate) }} <small>{{ t.currency }}</small></span>
+			{%- else %}
+			<span class="s-price-ask">{{ t.no_price }}</span>
+			{%- endif %}
+
+			{%- if p.orderable and orders_enabled %}
+			<button class="s-btn s-btn--primary" type="button" style="padding:9px 15px"
+				data-add-to-cart="{{ p.item_code }}"
+				data-name="{{ p.title }}" data-rate="{{ p.rate }}"
+				data-image="{{ p.image }}" data-route="{{ p.route }}"
+				data-added="{{ t.added }}"
+				aria-label="{{ t.add_to_cart }}">
+				<svg aria-hidden="true"><use href="#ph-shopping-bag"></use></svg>
+			</button>
+			{%- else %}
+			<a class="s-btn s-btn--ghost" href="{{ p.route }}" style="padding:9px 15px">
+				{{ t.view }}
+			</a>
+			{%- endif %}
+		</div>
+	</div>
+</article>
