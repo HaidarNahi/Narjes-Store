@@ -1,0 +1,56 @@
+{% extends "templates/storefront/base.html" %}
+{% block title %}{{ t.cart }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+{% block content %}
+<div class="s-wrap s-section">
+	<h1 data-reveal>{{ t.cart }}</h1>
+	<div id="s-cart-page" style="margin-top:22px;max-width:720px"></div>
+	<div id="s-cart-foot" style="margin-top:22px;max-width:720px"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+	var AR = {{ (lang == "ar") | tojson }};
+	var LANG = {{ lang | tojson }};
+	var box = document.getElementById("s-cart-page");
+	var foot = document.getElementById("s-cart-foot");
+	function money(v){ return (Math.round(v||0)).toLocaleString("en-US") + " IQD"; }
+
+	function render() {
+		var cart = window.NarjesCart ? NarjesCart.lines() : [];
+		if (!cart.length) {
+			box.innerHTML = '<div class="s-empty"><h3>' + (AR ? "سلتك فارغة" : "Your cart is empty") +
+				'</h3><p style="margin-top:12px"><a class="s-btn s-btn--ghost" href="/' + LANG + '/shop">' +
+				(AR ? "تصفح المتجر" : "Browse the shop") + "</a></p></div>";
+			foot.innerHTML = "";
+			return;
+		}
+		frappe.call({
+			method: "narjes_custom.storefront.orders.quote",
+			args: { lines: JSON.stringify(cart), lang: LANG },
+			callback: function (r) {
+				var q = r.message || {};
+				box.innerHTML = (q.lines || []).map(function (l) {
+					return '<div class="s-line"><div class="s-line-img' + (l.has_image ? "" : " is-placeholder") +
+						'"><img src="' + l.image + '" alt="" loading="lazy"></div>' +
+						'<div><a class="s-line-title" href="' + l.route + '">' + frappe.utils.escape_html(l.title) + "</a>" +
+						'<div class="s-line-meta">' + money(l.rate) + "</div>" +
+						'<button class="s-btn s-btn--quiet" data-rm="' + frappe.utils.escape_html(l.item_code) + '" style="padding-inline:0">' +
+						(AR ? "إزالة" : "Remove") + "</button></div>" +
+						'<div class="s-num">' + l.qty + " × " + money(l.rate) + "</div></div>";
+				}).join("");
+				foot.innerHTML = '<div class="s-totals"><div class="is-grand"><span>' + (AR ? "المجموع" : "Subtotal") +
+					'</span><span class="s-num">' + money(q.subtotal) + "</span></div></div>" +
+					'<a class="s-btn s-btn--primary s-btn--block" style="margin-top:16px" href="/' + LANG + '/checkout">' +
+					(AR ? "إتمام الطلب" : "Checkout") + "</a>";
+				box.querySelectorAll("[data-rm]").forEach(function (b) {
+					b.addEventListener("click", function () { NarjesCart.remove(b.dataset.rm); });
+				});
+			}
+		});
+	}
+	document.addEventListener("narjes:cart-changed", render);
+	render();
+})();
+</script>
+{% endblock %}

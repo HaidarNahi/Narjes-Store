@@ -14,6 +14,10 @@ DEFAULT_LANG = "ar"
 PRICE_LIST = "Standard Selling"
 PLACEHOLDER = "/assets/narjes_custom/images/storefront/placeholder-product.svg"
 
+# Single canonical list, shared with the desk (setup/custom_fields.py) so the
+# storefront can never offer a governorate the delivery-fee logic rejects.
+from narjes_custom.setup.custom_fields import IRAQ_GOVERNORATES as GOVERNORATES
+
 # Fields safe to read from Item for a public page. Anything not listed here is
 # never queried, so a future core field can't silently start leaking.
 ITEM_WEB_FIELDS = [

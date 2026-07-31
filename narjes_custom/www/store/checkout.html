@@ -1,0 +1,186 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block title %}{{ t.checkout }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+
+{% block content %}
+<div class="s-wrap">
+	<h1 style="margin-block:26px 0" data-reveal>{{ t.checkout }}</h1>
+
+	<form class="s-form-grid" id="s-checkout" novalidate>
+		<div class="s-panel">
+			<h3>{{ "معلومات التوصيل" if lang == "ar" else "Delivery details" }}</h3>
+
+			<div class="s-fields">
+				<div class="s-field">
+					<label for="f-name">{{ "الاسم" if lang == "ar" else "Full name" }} *</label>
+					<input id="f-name" name="name" type="text" required autocomplete="name">
+					<span class="s-error">{{ "الرجاء إدخال الاسم" if lang == "ar" else "Please enter your name" }}</span>
+				</div>
+
+				<div class="s-field">
+					<label for="f-phone">{{ "رقم الهاتف" if lang == "ar" else "Phone" }} *</label>
+					<input id="f-phone" name="phone" type="tel" required inputmode="tel"
+						autocomplete="tel" placeholder="07XX XXX XXXX" dir="ltr">
+					<span class="s-error">{{ "رقم هاتف غير صحيح" if lang == "ar" else "Enter a valid phone number" }}</span>
+				</div>
+
+				<div class="s-field">
+					<label for="f-gov">{{ "المحافظة" if lang == "ar" else "Governorate" }} *</label>
+					<select id="f-gov" name="governorate" required>
+						<option value="">{{ "اختر المحافظة" if lang == "ar" else "Select governorate" }}</option>
+						{%- for g in governorates %}
+						<option value="{{ g }}">{{ g }}</option>
+						{%- endfor %}
+					</select>
+					<span class="s-error">{{ "الرجاء اختيار المحافظة" if lang == "ar" else "Please choose a governorate" }}</span>
+				</div>
+
+				<div class="s-field s-field--wide">
+					<label for="f-address">{{ "العنوان" if lang == "ar" else "Address" }}</label>
+					<input id="f-address" name="address" type="text" autocomplete="street-address"
+						placeholder="{{ 'المنطقة، الشارع، أقرب نقطة دالة' if lang == 'ar' else 'Area, street, nearest landmark' }}">
+				</div>
+
+				<div class="s-field s-field--wide">
+					<label for="f-notes">{{ "ملاحظات" if lang == "ar" else "Notes" }}</label>
+					<textarea id="f-notes" name="notes" rows="3"
+						placeholder="{{ 'أي تفاصيل إضافية' if lang == 'ar' else 'Anything else we should know' }}"></textarea>
+				</div>
+			</div>
+
+			<div class="s-cod">
+				<svg aria-hidden="true"><use href="#ph-truck"></use></svg>
+				<div>
+					<strong>{{ "الدفع عند الاستلام" if lang == "ar" else "Cash on delivery" }}</strong><br>
+					{{ "تدفع نقداً عند وصول الطلب. لا حاجة لبطاقة." if lang == "ar"
+						else "You pay in cash when your order arrives. No card needed." }}
+				</div>
+			</div>
+		</div>
+
+		<aside class="s-panel s-panel--summary">
+			<h3>{{ "ملخص الطلب" if lang == "ar" else "Order summary" }}</h3>
+			<div id="s-sum-lines"></div>
+			<div class="s-totals" id="s-sum-totals"></div>
+			<button type="submit" class="s-btn s-btn--primary s-btn--block" id="s-place">
+				<svg aria-hidden="true"><use href="#ph-check-circle"></use></svg>
+				{{ "تأكيد الطلب" if lang == "ar" else "Place order" }}
+			</button>
+			<p class="s-card-meta" style="text-align:center">
+				<a href="/{{ lang }}/shop">{{ t.browse }}</a>
+			</p>
+		</aside>
+	</form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+	var LANG = {{ lang | tojson }};
+	var AR = LANG === "ar";
+	var form = document.getElementById("s-checkout");
+	var linesEl = document.getElementById("s-sum-lines");
+	var totalsEl = document.getElementById("s-sum-totals");
+	var btn = document.getElementById("s-place");
+	var gov = document.getElementById("f-gov");
+
+	function money(v) {
+		return (Math.round(v || 0)).toLocaleString("en-US") + " IQD";
+	}
+
+	function refresh() {
+		var cart = window.NarjesCart ? NarjesCart.lines() : [];
+		if (!cart.length) {
+			linesEl.innerHTML = '<p class="s-card-meta">' + (AR ? "سلتك فارغة" : "Your cart is empty") + "</p>";
+			totalsEl.innerHTML = "";
+			btn.disabled = true;
+			return;
+		}
+		frappe.call({
+			method: "narjes_custom.storefront.orders.quote",
+			args: { lines: JSON.stringify(cart), governorate: gov.value || "", lang: LANG },
+			callback: function (r) {
+				var q = r.message || {};
+				var rows = q.lines || [];
+				btn.disabled = !rows.length;
+
+				linesEl.innerHTML = rows.map(function (l) {
+					return '<div class="s-line"><div class="s-line-img' + (l.has_image ? "" : " is-placeholder") +
+						'"><img src="' + l.image + '" alt="" loading="lazy"></div>' +
+						'<div><div class="s-line-title">' + frappe.utils.escape_html(l.title) + "</div>" +
+						'<div class="s-line-meta">' + l.qty + " × " + money(l.rate) + "</div></div>" +
+						'<div class="s-num">' + money(l.amount) + "</div></div>";
+				}).join("");
+
+				// anything the server refused (unpublished / no price) is shown,
+				// never silently dropped from under the customer
+				if ((q.dropped || []).length) {
+					linesEl.innerHTML += '<p class="s-card-meta" style="color:var(--s-offer-text);margin-top:10px">' +
+						(AR ? "أُزيلت بعض المنتجات غير المتاحة." : "Some unavailable items were removed.") + "</p>";
+					(q.dropped || []).forEach(function (d) { if (window.NarjesCart) NarjesCart.remove(d.item_code, true); });
+				}
+
+				totalsEl.innerHTML =
+					"<div><span>" + (AR ? "المجموع" : "Subtotal") + "</span><span class='s-num'>" + money(q.subtotal) + "</span></div>" +
+					"<div><span>" + (AR ? "التوصيل" : "Delivery") + "</span><span class='s-num'>" +
+						(gov.value ? money(q.delivery_fee) : (AR ? "يُحتسب بعد اختيار المحافظة" : "Choose a governorate")) + "</span></div>" +
+					"<div class='is-grand'><span>" + (AR ? "الإجمالي" : "Total") + "</span><span class='s-num'>" + money(q.grand_total) + "</span></div>";
+			}
+		});
+	}
+
+	gov.addEventListener("change", refresh);
+	document.addEventListener("narjes:cart-changed", refresh);
+	refresh();
+
+	function invalid(field, bad) {
+		field.closest(".s-field").classList.toggle("has-error", bad);
+		return bad;
+	}
+
+	form.addEventListener("submit", function (e) {
+		e.preventDefault();
+		var name = document.getElementById("f-name");
+		var phone = document.getElementById("f-phone");
+		var bad = false;
+		bad = invalid(name, !name.value.trim()) || bad;
+		bad = invalid(phone, phone.value.replace(/\D/g, "").length < 10) || bad;
+		bad = invalid(gov, !gov.value) || bad;
+		if (bad) return;
+
+		btn.disabled = true;
+		btn.textContent = AR ? "جارٍ الإرسال…" : "Placing order…";
+
+		frappe.call({
+			method: "narjes_custom.storefront.orders.place_order",
+			args: {
+				payload: JSON.stringify({
+					lang: LANG,
+					name: name.value,
+					phone: phone.value,
+					governorate: gov.value,
+					address: document.getElementById("f-address").value,
+					notes: document.getElementById("f-notes").value,
+					lines: window.NarjesCart ? NarjesCart.lines() : []
+				})
+			},
+			callback: function (r) {
+				var res = r.message || {};
+				if (res.ok) {
+					if (window.NarjesCart) NarjesCart.clear();
+					window.location.href = res.redirect;
+				} else {
+					btn.disabled = false;
+					btn.textContent = AR ? "تأكيد الطلب" : "Place order";
+				}
+			},
+			error: function () {
+				btn.disabled = false;
+				btn.textContent = AR ? "تأكيد الطلب" : "Place order";
+			}
+		});
+	});
+})();
+</script>
+{% endblock %}

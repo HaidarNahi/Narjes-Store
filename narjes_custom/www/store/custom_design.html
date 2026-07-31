@@ -1,0 +1,219 @@
+{% extends "templates/storefront/base.html" %}
+
+{% block title %}{{ t.custom_design }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+
+{% block content %}
+<div class="s-wrap">
+	<div style="max-width:56ch;padding-block:30px 0" data-reveal>
+		<h1>{{ t.custom_design }}</h1>
+		<p style="color:var(--s-text-2);margin-top:12px">
+			{{ "أخبرنا بفكرتك وسنحوّلها إلى قطعة فنية. أرفق صوراً مرجعية إن وُجدت، وسنتواصل معك بالسعر والتفاصيل."
+				if lang == "ar" else
+				"Tell us your idea and we'll turn it into a piece of art. Attach reference images if you have any, and we'll get back to you with a price." }}
+		</p>
+	</div>
+
+	<form class="s-form-grid" id="s-request" novalidate>
+		<div class="s-panel">
+			<div class="s-fields">
+				<div class="s-field">
+					<label for="r-occasion">{{ "المناسبة" if lang == "ar" else "Occasion" }}</label>
+					<select id="r-occasion" name="occasion">
+						<option value="">{{ "اختر" if lang == "ar" else "Choose" }}</option>
+						<option value="Graduation">{{ "تخرج" if lang == "ar" else "Graduation" }}</option>
+						<option value="Wedding">{{ "أعراس" if lang == "ar" else "Wedding" }}</option>
+						<option value="Hajj">{{ "حج" if lang == "ar" else "Hajj" }}</option>
+						<option value="Other">{{ "أخرى" if lang == "ar" else "Other" }}</option>
+					</select>
+				</div>
+
+				<div class="s-field">
+					<label for="r-type">{{ "نوع التصميم" if lang == "ar" else "Type" }}</label>
+					<select id="r-type" name="design_type">
+						<option value="">{{ "اختر" if lang == "ar" else "Choose" }}</option>
+						<option value="Canvas">{{ "كانفس" if lang == "ar" else "Canvas" }}</option>
+						<option value="MDF">MDF</option>
+						<option value="Frame">{{ "إطار" if lang == "ar" else "Frame" }}</option>
+						<option value="Flowers">{{ "ورد" if lang == "ar" else "Flowers" }}</option>
+						<option value="Gift">{{ "هدية" if lang == "ar" else "Gift" }}</option>
+					</select>
+				</div>
+
+				<div class="s-field s-field--wide">
+					<label for="r-size">{{ "المقاس المطلوب" if lang == "ar" else "Size" }}</label>
+					<input id="r-size" name="size" type="text" placeholder="{{ '30×40 سم' if lang == 'ar' else 'e.g. 30×40 cm' }}">
+				</div>
+
+				<div class="s-field s-field--wide">
+					<label for="r-notes">{{ "اشرح فكرتك" if lang == "ar" else "Describe your idea" }}</label>
+					<textarea id="r-notes" name="notes" rows="5"
+						placeholder="{{ 'الألوان، النص المطلوب، أي تفاصيل مهمة' if lang == 'ar' else 'Colours, text, any details that matter' }}"></textarea>
+				</div>
+			</div>
+
+			<div>
+				<label style="font-size:13px;font-weight:500;color:var(--s-text-2)">
+					{{ "صور مرجعية" if lang == "ar" else "Reference images" }}
+				</label>
+				<div class="s-drop" id="r-drop" style="margin-top:8px">
+					<svg style="width:26px;height:26px;color:var(--s-action);margin-bottom:8px" aria-hidden="true">
+						<use href="#ph-image"></use>
+					</svg>
+					<div>{{ "اضغط لاختيار الصور" if lang == "ar" else "Tap to choose images" }}</div>
+					<div class="s-card-meta" style="margin-top:4px">
+						{{ "حتى ٨ صور" if lang == "ar" else "Up to 8 images" }}
+					</div>
+					<input type="file" id="r-files" accept="image/*" multiple>
+				</div>
+				<div class="s-files" id="r-preview" style="margin-top:12px"></div>
+			</div>
+		</div>
+
+		<aside class="s-panel s-panel--summary">
+			<h3>{{ "بيانات التواصل" if lang == "ar" else "Your details" }}</h3>
+
+			<div class="s-field">
+				<label for="r-name">{{ "الاسم" if lang == "ar" else "Full name" }} *</label>
+				<input id="r-name" name="name" type="text" required autocomplete="name">
+				<span class="s-error">{{ "الرجاء إدخال الاسم" if lang == "ar" else "Please enter your name" }}</span>
+			</div>
+
+			<div class="s-field">
+				<label for="r-phone">{{ "رقم الهاتف" if lang == "ar" else "Phone" }} *</label>
+				<input id="r-phone" name="phone" type="tel" required inputmode="tel" dir="ltr" placeholder="07XX XXX XXXX">
+				<span class="s-error">{{ "رقم هاتف غير صحيح" if lang == "ar" else "Enter a valid phone number" }}</span>
+			</div>
+
+			<div class="s-field">
+				<label for="r-gov">{{ "المحافظة" if lang == "ar" else "Governorate" }}</label>
+				<select id="r-gov" name="governorate">
+					<option value="">{{ "اختر" if lang == "ar" else "Choose" }}</option>
+					{%- for g in governorates %}
+					<option value="{{ g }}">{{ g }}</option>
+					{%- endfor %}
+				</select>
+			</div>
+
+			<button type="submit" class="s-btn s-btn--primary s-btn--block" id="r-send">
+				<svg aria-hidden="true"><use href="#ph-sparkle"></use></svg>
+				{{ "إرسال الطلب" if lang == "ar" else "Send request" }}
+			</button>
+			<p class="s-card-meta">{{ "لا حاجة لحساب." if lang == "ar" else "No account needed." }}</p>
+		</aside>
+	</form>
+
+	<div id="r-done" class="s-confirm" style="display:none">
+		<svg style="width:58px;height:58px;color:var(--s-action)" aria-hidden="true"><use href="#ph-check-circle"></use></svg>
+		<h1>{{ "تم إرسال طلبك" if lang == "ar" else "Request sent" }}</h1>
+		<p style="color:var(--s-text-2);max-width:44ch">
+			{{ "سنتواصل معك قريباً لمناقشة التفاصيل والسعر." if lang == "ar"
+				else "We'll be in touch shortly to discuss details and pricing." }}
+		</p>
+		<div class="s-confirm-ref s-num" id="r-ref"></div>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+	var AR = {{ (lang == "ar") | tojson }};
+	var LANG = {{ lang | tojson }};
+	var form = document.getElementById("s-request");
+	var drop = document.getElementById("r-drop");
+	var input = document.getElementById("r-files");
+	var preview = document.getElementById("r-preview");
+	var btn = document.getElementById("r-send");
+	var uploaded = [];
+
+	drop.addEventListener("click", function () { input.click(); });
+	["dragenter", "dragover"].forEach(function (ev) {
+		drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("is-drag"); });
+	});
+	["dragleave", "drop"].forEach(function (ev) {
+		drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("is-drag"); });
+	});
+	drop.addEventListener("drop", function (e) { handle(e.dataTransfer.files); });
+	input.addEventListener("change", function () { handle(input.files); });
+
+	function handle(files) {
+		Array.prototype.slice.call(files, 0, 8 - uploaded.length).forEach(upload);
+	}
+
+	function upload(file) {
+		if (!/^image\//.test(file.type) || file.size > 8 * 1024 * 1024) return;
+		var fd = new FormData();
+		fd.append("file", file, file.name);
+		fd.append("is_private", 0);
+		var fig = document.createElement("figure");
+		fig.innerHTML = '<div class="s-skel" style="width:82px;height:82px"></div>';
+		preview.appendChild(fig);
+
+		fetch("/api/method/upload_file", {
+			method: "POST",
+			headers: { "X-Frappe-CSRF-Token": frappe.csrf_token || "" },
+			body: fd
+		}).then(function (r) { return r.json(); }).then(function (res) {
+			var url = res && res.message && res.message.file_url;
+			if (!url) { fig.remove(); return; }
+			uploaded.push(url);
+			fig.innerHTML = '<img src="' + url + '" alt=""><button type="button" aria-label="remove">&times;</button>';
+			fig.querySelector("button").addEventListener("click", function () {
+				uploaded = uploaded.filter(function (u) { return u !== url; });
+				fig.remove();
+			});
+		}).catch(function () { fig.remove(); });
+	}
+
+	function invalid(field, bad) {
+		field.closest(".s-field").classList.toggle("has-error", bad);
+		return bad;
+	}
+
+	form.addEventListener("submit", function (e) {
+		e.preventDefault();
+		var name = document.getElementById("r-name");
+		var phone = document.getElementById("r-phone");
+		var bad = false;
+		bad = invalid(name, !name.value.trim()) || bad;
+		bad = invalid(phone, phone.value.replace(/\D/g, "").length < 10) || bad;
+		if (bad) return;
+
+		btn.disabled = true;
+		btn.textContent = AR ? "جارٍ الإرسال…" : "Sending…";
+
+		frappe.call({
+			method: "narjes_custom.storefront.orders.submit_design_request",
+			args: {
+				payload: JSON.stringify({
+					lang: LANG,
+					name: name.value,
+					phone: phone.value,
+					governorate: document.getElementById("r-gov").value,
+					occasion: document.getElementById("r-occasion").value,
+					design_type: document.getElementById("r-type").value,
+					size: document.getElementById("r-size").value,
+					notes: document.getElementById("r-notes").value,
+					files: uploaded
+				})
+			},
+			callback: function (r) {
+				if (r.message && r.message.ok) {
+					form.style.display = "none";
+					document.getElementById("r-ref").textContent = r.message.reference;
+					document.getElementById("r-done").style.display = "";
+					window.scrollTo({ top: 0, behavior: "smooth" });
+				} else {
+					btn.disabled = false;
+					btn.textContent = AR ? "إرسال الطلب" : "Send request";
+				}
+			},
+			error: function () {
+				btn.disabled = false;
+				btn.textContent = AR ? "إرسال الطلب" : "Send request";
+			}
+		});
+	});
+})();
+</script>
+{% endblock %}

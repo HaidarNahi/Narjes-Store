@@ -62,10 +62,14 @@ _STOREFRONT_ROUTES = {
 	"shop": "store/shop",
 	"search": "store/shop",
 	"favorites": "store/favorites",
+	"cart": "store/cart",
+	"checkout": "store/checkout",
+	"custom-design": "store/custom_design",
 	"about": "store/about",
 	"contact": "store/contact",
 	"p/<slug>": "store/product",
 	"c/<slug>": "store/shop",
+	"order/<ref>": "store/order",
 }
 
 website_route_rules = [

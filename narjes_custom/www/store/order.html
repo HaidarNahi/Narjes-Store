@@ -1,0 +1,25 @@
+{% extends "templates/storefront/base.html" %}
+{% block title %}{{ "تم استلام طلبك" if lang == "ar" else "Order received" }} · {{ "نرجس" if lang == "ar" else "Narjes" }}{% endblock %}
+{% block content %}
+<div class="s-wrap">
+	<div class="s-confirm">
+		<svg style="width:58px;height:58px;color:var(--s-action)" aria-hidden="true"><use href="#ph-check-circle"></use></svg>
+		<h1>{{ "تم استلام طلبك" if lang == "ar" else "Order received" }}</h1>
+		<p style="color:var(--s-text-2);max-width:46ch">
+			{{ "شكراً لك. سنتواصل معك على رقم هاتفك لتأكيد الطلب وموعد التوصيل. الدفع عند الاستلام."
+				if lang == "ar" else
+				"Thank you. We'll call you to confirm your order and delivery time. Payment is cash on delivery." }}
+		</p>
+		{%- if reference %}
+		<div>
+			<div class="s-card-meta">{{ "رقم الطلب" if lang == "ar" else "Order reference" }}</div>
+			<div class="s-confirm-ref s-num">{{ reference }}</div>
+		</div>
+		{%- endif %}
+		<div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+			<a class="s-btn s-btn--primary" href="/{{ lang }}/shop">{{ t.browse }}</a>
+			<a class="s-btn s-btn--ghost" href="/{{ lang }}/contact">{{ t.contact }}</a>
+		</div>
+	</div>
+</div>
+{% endblock %}
