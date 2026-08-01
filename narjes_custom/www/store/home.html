@@ -31,7 +31,9 @@
 		<div class="s-hero-art" data-reveal>
 			<div class="s-tilt-stage" data-tilt>
 				<figure class="s-tilt-frame">
-					{%- if s.hero_image %}
+					{#- A hero image uploaded as *private* 403s for every visitor, so it is
+    treated as absent and the bundled artwork is used instead. -#}
+					{%- if s.hero_image and not s.hero_image.startswith("/private/") %}
 					<img src="{{ s.hero_image }}" alt="" width="920" height="1442">
 					{%- else %}
 					<picture>
