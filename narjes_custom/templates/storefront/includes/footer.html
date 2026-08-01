@@ -5,9 +5,12 @@
 				<img src="/assets/narjes_custom/images/narjes-logo.svg" alt="" width="30" height="30">
 				<span>{{ "نرجس" if lang == "ar" else "Narjes" }}</span>
 			</a>
+			{%- set tagline = s.get("hero_subtitle_ar") if lang == "ar" else s.get("hero_subtitle_en") %}
+			{%- if tagline %}
 			<p style="margin-top:12px;color:var(--s-text-3);font-size:14px;max-width:32ch">
-				{{ s.get("hero_subtitle_ar") if lang == "ar" else s.get("hero_subtitle_en") }}
+				{{ tagline }}
 			</p>
+			{%- endif %}
 		</div>
 
 		<div>
