@@ -13,7 +13,7 @@ def get_context(context):
 
 	context.p = product
 	context.canonical_path = f"/p/{frappe.form_dict.get('slug')}"
-	context.storefront_title = f"{product['title']} · " + ("نرجس" if lang == "ar" else "Narjes")
+	context.storefront_title = f"{product['title']} · " + ("النرجس" if lang == "ar" else "Narjes")
 	context.storefront_description = product.get("short") or context.storefront_description
 	context.related = [
 		r for r in core.published_items(lang, category=product.get("category"), limit=5)

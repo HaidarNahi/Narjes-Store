@@ -301,7 +301,7 @@ def translations(lang):
 	they are structural to the templates and must never be half-missing;
 	shop-editable copy lives in Storefront Settings instead."""
 	ar = {
-		"shop": "المتجر", "home": "الرئيسية", "about": "عن نرجس", "contact": "تواصل معنا",
+		"shop": "المتجر", "home": "الرئيسية", "about": "عن النرجس", "contact": "تواصل معنا",
 		"custom_design": "تصميم خاص", "cart": "السلة", "favorites": "المفضلة",
 		"search": "ابحث", "add_to_cart": "أضف إلى السلة", "added": "أُضيف إلى السلة",
 		"view": "عرض", "featured": "مختارات", "new_arrivals": "وصل حديثاً",
