@@ -22,35 +22,38 @@
 
 {% block scripts %}
 <script>
-// Favourites live in localStorage (no accounts in v1), so the list is
-// resolved client-side against a small public endpoint.
-(function () {
+// Favourites live in localStorage (no accounts in v1), so the list is resolved
+// client-side against the public catalogue endpoint.
+document.addEventListener("narjes:ready", function () {
 	var LANG = {{ lang | tojson }};
 	var grid = document.getElementById("s-fav-grid");
 	var empty = document.getElementById("s-fav-empty");
 
 	function render() {
-		var codes = [];
-		try { codes = JSON.parse(localStorage.getItem("narjes.favorites.v1")) || []; } catch (e) {}
+		var codes = Narjes.favorites.all();
 		if (!codes.length) { grid.innerHTML = ""; empty.style.display = ""; return; }
 		empty.style.display = "none";
 		grid.innerHTML = '<div class="s-skel" style="height:300px"></div>'.repeat(Math.min(codes.length, 4));
 
-		frappe.call({
-			method: "narjes_custom.storefront.api.get_items",
-			args: { item_codes: JSON.stringify(codes), lang: LANG },
-			callback: function (r) {
-				grid.innerHTML = (r.message || []).map(function (p) { return p.html; }).join("");
-				if (!(r.message || []).length) empty.style.display = "";
-				document.dispatchEvent(new CustomEvent("narjes:store-changed"));
-			}
+		Narjes.api("narjes_custom.storefront.api.get_items", {
+			item_codes: JSON.stringify(codes), lang: LANG
+		}).then(function (rows) {
+			rows = rows || [];
+			grid.innerHTML = rows.map(function (p) { return p.html; }).join("");
+			if (!rows.length) empty.style.display = "";
+		}).catch(function () {
+			grid.innerHTML = "";
+			empty.style.display = "";
 		});
 	}
 
-	document.addEventListener("narjes:store-changed", function (e) {
-		if (e.detail && e.detail.silent) return;
+	// re-render when an item is un-favourited from within this page
+	var last = Narjes.favorites.all().join(",");
+	document.addEventListener("narjes:store-changed", function () {
+		var now = Narjes.favorites.all().join(",");
+		if (now !== last) { last = now; render(); }
 	});
 	render();
-})();
+});
 </script>
 {% endblock %}

@@ -6,6 +6,7 @@
 // and progressive — the pages render and are navigable with JS disabled.
 
 import { initTilt } from "./tilt";
+import { initGallery } from "./gallery";
 
 const CART_KEY = "narjes.cart.v1";
 const FAV_KEY = "narjes.favorites.v1";
@@ -87,6 +88,63 @@ function sync() {
 	});
 	document.dispatchEvent(new CustomEvent("narjes:store-changed"));
 }
+
+
+/* -------------------------------------------------------------------- api */
+// The storefront renders from its own standalone base.html and never loads
+// Frappe's web bundle, so `frappe` does not exist here. Every page therefore
+// talks to the server through this helper rather than frappe.call — which was
+// throwing a ReferenceError on its first line and leaving favourites, the cart,
+// checkout and the design form stuck on their loading state forever.
+// Guest POSTs to /api/method are exempt from CSRF, so no token is needed.
+
+const csrf = () =>
+	document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+export async function api(method, args = {}) {
+	const res = await fetch(`/api/method/${method}`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			"X-Frappe-CSRF-Token": csrf(),
+		},
+		credentials: "same-origin",
+		body: JSON.stringify(args),
+	});
+	let payload = null;
+	try {
+		payload = await res.json();
+	} catch {
+		/* non-JSON error page */
+	}
+	if (!res.ok) {
+		const msg = payload && payload._server_messages
+			? JSON.parse(payload._server_messages).map((m) => JSON.parse(m).message).join(" ")
+			: (payload && payload.exception) || `Request failed (${res.status})`;
+		throw new Error(msg);
+	}
+	return payload && payload.message;
+}
+
+export async function uploadFile(file) {
+	const body = new FormData();
+	body.append("file", file, file.name);
+	const res = await fetch("/api/method/narjes_custom.storefront.api.upload_reference", {
+		method: "POST",
+		headers: { "X-Frappe-CSRF-Token": csrf() },
+		credentials: "same-origin",
+		body,
+	});
+	if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+	const data = await res.json();
+	return data && data.message && data.message.file_url;
+}
+
+export const escapeHtml = (value) =>
+	String(value == null ? "" : value).replace(/[&<>"']/g, (c) =>
+		({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+	);
 
 /* ------------------------------------------------------------------ theme */
 
@@ -292,7 +350,11 @@ function boot() {
 	initDrawers();
 	initActions();
 	initTilt();
+	initGallery();
 	sync();
+	// the page-level inline scripts talk to the server through these
+	window.Narjes = { api, uploadFile, escapeHtml, cart, favorites, toast };
+	document.dispatchEvent(new CustomEvent("narjes:ready"));
 }
 
 if (document.readyState === "loading") {

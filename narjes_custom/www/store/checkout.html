@@ -76,7 +76,7 @@
 
 {% block scripts %}
 <script>
-(function () {
+document.addEventListener("narjes:ready", function () {
 	var LANG = {{ lang | tojson }};
 	var AR = LANG === "ar";
 	var form = document.getElementById("s-checkout");
@@ -85,53 +85,54 @@
 	var btn = document.getElementById("s-place");
 	var gov = document.getElementById("f-gov");
 
-	function money(v) {
-		return (Math.round(v || 0)).toLocaleString("en-US") + " IQD";
-	}
+	var money = function (v) {
+		return Math.round(v || 0).toLocaleString("en-US") + " IQD";
+	};
 
 	function refresh() {
-		var cart = window.NarjesCart ? NarjesCart.lines() : [];
+		var cart = Narjes.cart.all();
 		if (!cart.length) {
 			linesEl.innerHTML = '<p class="s-card-meta">' + (AR ? "سلتك فارغة" : "Your cart is empty") + "</p>";
 			totalsEl.innerHTML = "";
 			btn.disabled = true;
 			return;
 		}
-		frappe.call({
-			method: "narjes_custom.storefront.orders.quote",
-			args: { lines: JSON.stringify(cart), governorate: gov.value || "", lang: LANG },
-			callback: function (r) {
-				var q = r.message || {};
-				var rows = q.lines || [];
-				btn.disabled = !rows.length;
+		Narjes.api("narjes_custom.storefront.orders.quote", {
+			lines: JSON.stringify(cart), governorate: gov.value || "", lang: LANG
+		}).then(function (q) {
+			q = q || {};
+			var rows = q.lines || [];
+			btn.disabled = !rows.length;
 
-				linesEl.innerHTML = rows.map(function (l) {
-					return '<div class="s-line"><div class="s-line-img' + (l.has_image ? "" : " is-placeholder") +
-						'"><img src="' + l.image + '" alt="" loading="lazy"></div>' +
-						'<div><div class="s-line-title">' + frappe.utils.escape_html(l.title) + "</div>" +
-						'<div class="s-line-meta">' + l.qty + " × " + money(l.rate) + "</div></div>" +
-						'<div class="s-num">' + money(l.amount) + "</div></div>";
-				}).join("");
+			linesEl.innerHTML = rows.map(function (l) {
+				return '<div class="s-line"><div class="s-line-img' + (l.has_image ? "" : " is-placeholder") +
+					'"><img src="' + l.image + '" alt="" loading="lazy"></div>' +
+					'<div><div class="s-line-title">' + Narjes.escapeHtml(l.title) + "</div>" +
+					'<div class="s-line-meta">' + l.qty + " \u00d7 " + money(l.rate) + "</div></div>" +
+					'<div class="s-num">' + money(l.amount) + "</div></div>";
+			}).join("");
 
-				// anything the server refused (unpublished / no price) is shown,
-				// never silently dropped from under the customer
-				if ((q.dropped || []).length) {
-					linesEl.innerHTML += '<p class="s-card-meta" style="color:var(--s-offer-text);margin-top:10px">' +
-						(AR ? "أُزيلت بعض المنتجات غير المتاحة." : "Some unavailable items were removed.") + "</p>";
-					(q.dropped || []).forEach(function (d) { if (window.NarjesCart) NarjesCart.remove(d.item_code, true); });
-				}
-
-				totalsEl.innerHTML =
-					"<div><span>" + (AR ? "المجموع" : "Subtotal") + "</span><span class='s-num'>" + money(q.subtotal) + "</span></div>" +
-					"<div><span>" + (AR ? "التوصيل" : "Delivery") + "</span><span class='s-num'>" +
-						(gov.value ? money(q.delivery_fee) : (AR ? "يُحتسب بعد اختيار المحافظة" : "Choose a governorate")) + "</span></div>" +
-					"<div class='is-grand'><span>" + (AR ? "الإجمالي" : "Total") + "</span><span class='s-num'>" + money(q.grand_total) + "</span></div>";
+			// anything the server refused (unpublished / no price) is surfaced,
+			// never silently dropped from under the customer
+			if ((q.dropped || []).length) {
+				linesEl.innerHTML += '<p class="s-card-meta" style="color:var(--s-offer-text);margin-top:10px">' +
+					(AR ? "أُزيلت بعض المنتجات غير المتاحة." : "Some unavailable items were removed.") + "</p>";
+				q.dropped.forEach(function (d) { Narjes.cart.remove(d.item_code); });
 			}
+
+			totalsEl.innerHTML =
+				"<div><span>" + (AR ? "المجموع" : "Subtotal") + "</span><span class='s-num'>" + money(q.subtotal) + "</span></div>" +
+				"<div><span>" + (AR ? "التوصيل" : "Delivery") + "</span><span class='s-num'>" +
+					(gov.value ? money(q.delivery_fee) : (AR ? "يُحتسب بعد اختيار المحافظة" : "Choose a governorate")) + "</span></div>" +
+				"<div class='is-grand'><span>" + (AR ? "الإجمالي" : "Total") + "</span><span class='s-num'>" + money(q.grand_total) + "</span></div>";
+		}).catch(function () {
+			totalsEl.innerHTML = "";
+			btn.disabled = true;
 		});
 	}
 
 	gov.addEventListener("change", refresh);
-	document.addEventListener("narjes:cart-changed", refresh);
+	document.addEventListener("narjes:store-changed", refresh);
 	refresh();
 
 	function invalid(field, bad) {
@@ -143,44 +144,36 @@
 		e.preventDefault();
 		var name = document.getElementById("f-name");
 		var phone = document.getElementById("f-phone");
+		var digits = phone.value.replace(/[^0-9]/g, "").length;
 		var bad = false;
 		bad = invalid(name, !name.value.trim()) || bad;
-		bad = invalid(phone, phone.value.replace(/\D/g, "").length < 10) || bad;
+		bad = invalid(phone, digits < 10) || bad;
 		bad = invalid(gov, !gov.value) || bad;
 		if (bad) return;
 
 		btn.disabled = true;
 		btn.textContent = AR ? "جارٍ الإرسال…" : "Placing order…";
 
-		frappe.call({
-			method: "narjes_custom.storefront.orders.place_order",
-			args: {
-				payload: JSON.stringify({
-					lang: LANG,
-					name: name.value,
-					phone: phone.value,
-					governorate: gov.value,
-					address: document.getElementById("f-address").value,
-					notes: document.getElementById("f-notes").value,
-					lines: window.NarjesCart ? NarjesCart.lines() : []
-				})
-			},
-			callback: function (r) {
-				var res = r.message || {};
-				if (res.ok) {
-					if (window.NarjesCart) NarjesCart.clear();
-					window.location.href = res.redirect;
-				} else {
-					btn.disabled = false;
-					btn.textContent = AR ? "تأكيد الطلب" : "Place order";
-				}
-			},
-			error: function () {
-				btn.disabled = false;
-				btn.textContent = AR ? "تأكيد الطلب" : "Place order";
-			}
+		Narjes.api("narjes_custom.storefront.orders.place_order", {
+			payload: JSON.stringify({
+				lang: LANG,
+				name: name.value,
+				phone: phone.value,
+				governorate: gov.value,
+				address: document.getElementById("f-address").value,
+				notes: document.getElementById("f-notes").value,
+				lines: Narjes.cart.all()
+			})
+		}).then(function (res) {
+			if (!(res && res.ok)) throw new Error(AR ? "تعذّر إتمام الطلب" : "Could not place the order");
+			Narjes.cart.clear();
+			window.location.href = res.redirect;
+		}).catch(function (err) {
+			btn.disabled = false;
+			btn.textContent = AR ? "تأكيد الطلب" : "Place order";
+			Narjes.toast(err.message || (AR ? "تعذّر إتمام الطلب" : "Could not place the order"), "warning");
 		});
 	});
-})();
+});
 </script>
 {% endblock %}

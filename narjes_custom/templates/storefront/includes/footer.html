@@ -48,8 +48,15 @@
 
 	<div class="s-wrap">
 		<div class="s-footer-bottom">
-			<span>© {{ frappe.utils.now_datetime().year }} {{ "نرجس ستور" if lang == "ar" else "Narjes Store" }}</span>
-			<span>{{ t.cod }}</span>
+			<span>
+				{%- if lang == "ar" -%}
+				تم تطويره بواسطة شركة
+				<a class="s-credit" href="https://asasthaki.dev/" target="_blank" rel="noopener">أساس ذكي</a>
+				{%- else -%}
+				Developed by
+				<a class="s-credit" href="https://asasthaki.dev/" target="_blank" rel="noopener">Asas Thaki</a>
+				{%- endif -%}
+			</span>
 		</div>
 	</div>
 </footer>

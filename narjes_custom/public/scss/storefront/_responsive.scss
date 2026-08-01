@@ -1,0 +1,204 @@
+// Phone and tablet pass. Loaded last so it can correct the desktop-first
+// pieces without a specificity fight.
+//
+// Most visitors arrive from Instagram on a phone, so the small screens are the
+// real design target — the desktop layout is the variant, not the baseline.
+
+// ---------------------------------------------------------------- tablet
+@media (max-width: 1024px) {
+	.narjes-shop {
+		.s-wrap { padding-inline: 20px; }
+
+		.s-grid {
+			grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+			gap: 16px;
+		}
+
+		.s-hero .s-hero-in { padding-block: clamp(36px, 7vw, 72px); }
+		.s-tilt-stage { width: min(100%, 420px); }
+	}
+}
+
+// ------------------------------------------------------------ small tablet
+@media (max-width: 860px) {
+	.narjes-shop {
+		// Rather than hiding the links behind a hamburger, they drop to a
+		// scrollable strip under the header: every destination stays one thumb
+		// tap away, which matters when Instagram is the main way in.
+		.s-header .s-nav-links {
+			display: flex;
+			position: absolute;
+			inset-inline: 0;
+			top: 100%;
+			gap: 18px;
+			padding: 10px 16px;
+			overflow-x: auto;
+			scrollbar-width: none;
+			background: var(--s-surface);
+			border-block-start: 1px solid var(--s-border);
+
+			&::-webkit-scrollbar { display: none; }
+
+			a { white-space: nowrap; font-size: 13.5px; }
+		}
+
+		.s-header { position: relative; }
+
+		// the strip adds a row, so content must clear it
+		main { padding-block-start: 44px; }
+
+		.s-hero .s-hero-in {
+			grid-template-columns: 1fr;
+			text-align: center;
+		}
+
+		.s-hero-copy {
+			align-items: center;
+			max-width: 46ch;
+			margin-inline: auto;
+		}
+
+		.s-hero-actions { justify-content: center; }
+
+		// art first on small screens: the piece is the pitch
+		.s-hero-art { order: -1; }
+
+		.s-form-grid { grid-template-columns: 1fr; }
+
+		.s-panel--summary {
+			position: static;
+			order: 2;
+		}
+
+		.s-product { grid-template-columns: 1fr; }
+	}
+}
+
+// ------------------------------------------------------------------ phone
+@media (max-width: 640px) {
+	.narjes-shop {
+		.s-wrap { padding-inline: 16px; }
+
+		// two columns still beat one on a phone for a visual catalogue —
+		// people scan photos, they don't read a list
+		.s-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 12px;
+		}
+
+		.s-card-body { padding: 11px 12px 13px; }
+		.s-card-title { font-size: 14px; }
+		.s-card-meta { font-size: 11.5px; }
+		.s-price { font-size: 14px; }
+		.s-price-ask { font-size: 11.5px; }
+
+		.s-card-fav {
+			width: 32px;
+			height: 32px;
+			svg { width: 16px; height: 16px; }
+		}
+
+		// header: tighten the rail so 5 controls + brand fit at 360px
+		.s-header .s-header-in { gap: 6px; }
+		.s-icon-btn { width: 36px; height: 36px; }
+		.s-icon-btn svg { width: 19px; height: 19px; }
+		.s-brand img { height: 26px; }
+		.s-brand span { font-size: 17px; }
+
+		h1 { font-size: clamp(26px, 7.5vw, 34px); }
+		h2 { font-size: clamp(21px, 5.6vw, 26px); }
+
+		.s-hero .s-hero-in { padding-block: 28px 34px; }
+		.s-tilt-stage { width: min(100%, 340px); padding: 12px; }
+
+		// The drawer becomes a bottom sheet — a side panel on a 360px screen
+		// is just a full-screen overlay with a hairline of wasted space.
+		.s-drawer {
+			inset-inline: 0;
+			inset-block: auto 0;
+			width: 100%;
+			max-height: 86vh;
+			border-inline-start: none;
+			border-start-start-radius: 20px;
+			border-start-end-radius: 20px;
+			transform: translateY(100%);
+
+			&.is-open { transform: translateY(0); }
+		}
+
+		// the RTL rule for the side drawer must not fight the sheet
+		&[dir="rtl"] .s-drawer { transform: translateY(100%); }
+		&[dir="rtl"] .s-drawer.is-open { transform: translateY(0); }
+
+		.s-toasts {
+			inset-inline: 12px;
+			inset-block-end: 12px;
+		}
+
+		.s-toast { max-width: none; }
+
+		.s-panel { padding: 16px; border-radius: 14px; }
+		.s-fields { grid-template-columns: 1fr; }
+
+		// Inputs must be >= 16px or iOS Safari zooms the whole page on focus.
+		input[type="text"],
+		input[type="tel"],
+		input[type="email"],
+		input[type="number"],
+		input[type="search"],
+		select,
+		textarea { font-size: 16px; }
+
+		.s-toolbar {
+			gap: 8px;
+			padding-block: 12px;
+			margin-block-end: 18px;
+		}
+
+		// filters scroll horizontally rather than stacking into a wall
+		.s-chips {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			scrollbar-width: none;
+			-webkit-overflow-scrolling: touch;
+
+			&::-webkit-scrollbar { display: none; }
+		}
+
+		.s-chip { flex: 0 0 auto; }
+
+		.s-line { grid-template-columns: 56px 1fr auto; gap: 10px; }
+		.s-line .s-line-img { width: 56px; height: 56px; }
+
+		.s-thumbs button { flex-basis: 60px; width: 60px; height: 60px; }
+
+		.s-product-price .s-price { font-size: 23px; }
+
+		.s-footer-in { gap: 26px; }
+
+		.s-lightbox .s-lb-nav { width: 40px; height: 40px; }
+		.s-lightbox .s-lb-prev { inset-inline-start: 8px; }
+		.s-lightbox .s-lb-next { inset-inline-end: 8px; }
+	}
+}
+
+// --------------------------------------------------------- touch affordances
+// Coarse pointers get no hover states (they stick after a tap) and larger
+// targets. The hero tilt and image zoom already opt out in JS.
+@media (pointer: coarse) {
+	.narjes-shop {
+		.s-card:hover {
+			transform: none;
+			box-shadow: none;
+		}
+
+		.s-card:hover .s-card-img img { transform: none; }
+
+		.s-btn,
+		.s-chip,
+		.s-icon-btn { touch-action: manipulation; }
+
+		.s-btn { min-height: 44px; }
+		.s-gallery-main { cursor: default; }
+	}
+}

@@ -393,3 +393,132 @@
 	from { background-position: 200% 0; }
 	to { background-position: -200% 0; }
 }
+
+/* ------------------------------------------------------------ footer credit */
+
+.narjes-shop .s-credit {
+	font-weight: 600;
+	// blue gradient wordmark; falls back to a solid blue where
+	// background-clip:text is unsupported
+	color: #2f7de1;
+	background: linear-gradient(95deg, #4aa3ff 0%, #2f7de1 45%, #6f5cf0 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	text-decoration: none;
+
+	&:hover,
+	&:focus-visible {
+		background: linear-gradient(95deg, #6cb8ff 0%, #4a92ec 45%, #8a78ff 100%);
+		-webkit-background-clip: text;
+		background-clip: text;
+		text-decoration: underline;
+		text-decoration-color: #4a92ec;
+	}
+}
+
+/* ---------------------------------------------------- gallery zoom + lightbox */
+
+.narjes-shop .s-gallery-main {
+	position: relative;
+	cursor: zoom-in;
+	background-repeat: no-repeat;
+
+	// The zoomed layer is the element's own background; fading the <img> out
+	// reveals it, so nothing is cloned or re-decoded mid-hover.
+	img { transition: opacity 160ms var(--n-ease); }
+
+	&.is-zooming img { opacity: 0; }
+
+	&.is-placeholder { cursor: default; }
+}
+
+.narjes-shop .s-zoom-open {
+	position: absolute;
+	inset-block-end: 12px;
+	inset-inline-end: 12px;
+	width: 40px;
+	height: 40px;
+	border: none;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--s-surface) 86%, transparent);
+	backdrop-filter: blur(6px);
+	color: var(--s-text);
+	display: grid;
+	place-items: center;
+	cursor: zoom-in;
+	box-shadow: var(--s-e1);
+	z-index: 2;
+
+	svg { width: 18px; height: 18px; }
+}
+
+.narjes-shop .s-zoom-lens {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 160ms var(--n-ease);
+	background: radial-gradient(
+		circle at var(--lens-x, 50%) var(--lens-y, 50%),
+		rgba(255, 255, 255, 0.16),
+		rgba(255, 255, 255, 0) 42%
+	);
+}
+
+.narjes-shop .s-gallery-main.is-zooming .s-zoom-lens { opacity: 1; }
+
+.narjes-shop .s-lightbox {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	display: grid;
+	place-items: center;
+	padding: clamp(12px, 4vw, 48px);
+	background: rgba(10, 16, 13, 0.92);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 220ms var(--n-ease), visibility 220ms;
+
+	&.is-open { opacity: 1; visibility: visible; }
+
+	.s-lb-stage {
+		margin: 0;
+		max-width: min(1100px, 100%);
+		max-height: 100%;
+
+		img {
+			display: block;
+			max-width: 100%;
+			max-height: 86vh;
+			width: auto;
+			height: auto;
+			border-radius: 10px;
+			box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+		}
+	}
+
+	.s-lb-close,
+	.s-lb-nav {
+		position: absolute;
+		width: 46px;
+		height: 46px;
+		border: none;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.12);
+		color: #fff;
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+		transition: background 160ms var(--n-ease);
+
+		svg { width: 20px; height: 20px; }
+
+		&:hover { background: rgba(255, 255, 255, 0.24); }
+	}
+
+	.s-lb-close { top: 16px; inset-inline-end: 16px; }
+	.s-lb-prev { inset-inline-start: 16px; }
+	.s-lb-next { inset-inline-end: 16px; }
+	.s-lb-nav { top: 50%; transform: translateY(-50%); }
+}

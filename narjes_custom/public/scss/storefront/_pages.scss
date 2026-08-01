@@ -56,29 +56,54 @@
 		// The tracked area is deliberately larger than the frame: the tilt
 		// responds as the cursor approaches, not only once it's over the art.
 		.s-tilt-stage {
-			width: min(100%, 400px);
+			width: min(100%, 500px);
 			padding: 26px;
 			transform-style: preserve-3d;
 		}
 
+		// A classical gilt frame: layered gold gradients rather than an image,
+		// so it stays crisp at any size, recolours with the theme and costs no
+		// extra request. Outer bevel -> gold band -> inner fillet -> art.
 		.s-tilt-frame {
 			position: relative;
 			margin: 0;
-			border-radius: 18px;
-			overflow: hidden;
-			background: var(--s-surface);
-			box-shadow: var(--s-e3);
+			padding: clamp(14px, 3.4vw, 22px);
+			border-radius: 10px;
+			background:
+				linear-gradient(145deg, #f6e3ab 0%, #c9a227 18%, #8a6a14 38%,
+					#e8d08a 52%, #b8901f 70%, #f3e0a6 88%, #9a7718 100%);
+			box-shadow:
+				0 0 0 1px rgba(122, 92, 16, 0.75),
+				inset 0 0 0 1px rgba(255, 246, 214, 0.55),
+				var(--s-e3);
 			transform-style: preserve-3d;
 			// only transform + box-shadow animate — both compositor-friendly
 			transition: box-shadow 320ms var(--n-ease);
 			will-change: transform;
 
+			// inner fillet: a thin dark reveal that separates gold from art,
+			// the way a real frame's rebate does
+			&::before {
+				content: "";
+				position: absolute;
+				inset: clamp(9px, 2.3vw, 15px);
+				border-radius: 4px;
+				box-shadow:
+					0 0 0 2px rgba(90, 66, 10, 0.85),
+					0 0 0 4px rgba(247, 231, 183, 0.5),
+					inset 0 2px 10px rgba(0, 0, 0, 0.35);
+				pointer-events: none;
+				z-index: 2;
+			}
+
 			img {
 				display: block;
 				width: 100%;
 				height: auto;
-				border-radius: inherit;
-				// nudged back in Z so the frame edge catches the light first
+				border-radius: 3px;
+				position: relative;
+				z-index: 1;
+				// nudged forward so the gilt edge catches the light first
 				transform: translateZ(0);
 			}
 		}
@@ -88,6 +113,7 @@
 		.s-tilt-gloss {
 			position: absolute;
 			inset: 0;
+			z-index: 3;
 			border-radius: inherit;
 			pointer-events: none;
 			opacity: 0;

@@ -31,17 +31,25 @@
 
 	<div class="s-product">
 		<div class="s-gallery" data-reveal>
-			<div class="s-gallery-main {{ 'is-placeholder' if not p.has_image }}">
+			{#- Zoom-on-hover + click-to-open lightbox, but only when there is a
+			    real photo: magnifying the shared placeholder would be nonsense. -#}
+			<div class="s-gallery-main {{ 'is-placeholder' if not p.has_image }}"
+				{% if p.has_image %}data-zoom data-lightbox{% endif %}>
 				<img id="s-main-img" src="{{ p.gallery[0].image }}" alt="{{ p.title }}"
 					width="800" height="800">
+				{%- if p.has_image %}
+				<span class="s-zoom-lens" aria-hidden="true"></span>
+				<button class="s-zoom-open" type="button"
+					aria-label="{{ 'تكبير الصورة' if lang == 'ar' else 'View larger' }}">
+					<svg aria-hidden="true"><use href="#ph-magnifying-glass"></use></svg>
+				</button>
+				{%- endif %}
 			</div>
 			{%- if p.gallery | length > 1 %}
 			<div class="s-thumbs">
 				{%- for shot in p.gallery %}
 				<button type="button" aria-pressed="{{ 'true' if loop.first else 'false' }}"
-					onclick="document.getElementById('s-main-img').src=this.querySelector('img').src;
-						document.querySelectorAll('.s-thumbs button').forEach(function(b){b.setAttribute('aria-pressed','false')});
-						this.setAttribute('aria-pressed','true')">
+					data-thumb>
 					<img src="{{ shot.image }}" alt="{{ shot.alt_text or p.title }}" loading="lazy">
 				</button>
 				{%- endfor %}

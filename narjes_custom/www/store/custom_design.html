@@ -116,7 +116,7 @@
 
 {% block scripts %}
 <script>
-(function () {
+document.addEventListener("narjes:ready", function () {
 	var AR = {{ (lang == "ar") | tojson }};
 	var LANG = {{ lang | tojson }};
 	var form = document.getElementById("s-request");
@@ -142,19 +142,11 @@
 
 	function upload(file) {
 		if (!/^image\//.test(file.type) || file.size > 8 * 1024 * 1024) return;
-		var fd = new FormData();
-		fd.append("file", file, file.name);
-		fd.append("is_private", 0);
 		var fig = document.createElement("figure");
 		fig.innerHTML = '<div class="s-skel" style="width:82px;height:82px"></div>';
 		preview.appendChild(fig);
 
-		fetch("/api/method/upload_file", {
-			method: "POST",
-			headers: { "X-Frappe-CSRF-Token": frappe.csrf_token || "" },
-			body: fd
-		}).then(function (r) { return r.json(); }).then(function (res) {
-			var url = res && res.message && res.message.file_url;
+		Narjes.uploadFile(file).then(function (url) {
 			if (!url) { fig.remove(); return; }
 			uploaded.push(url);
 			fig.innerHTML = '<img src="' + url + '" alt=""><button type="button" aria-label="remove">&times;</button>';
@@ -162,7 +154,10 @@
 				uploaded = uploaded.filter(function (u) { return u !== url; });
 				fig.remove();
 			});
-		}).catch(function () { fig.remove(); });
+		}).catch(function () {
+			fig.remove();
+			Narjes.toast(AR ? "تعذّر رفع الصورة" : "Could not upload that image", "warning");
+		});
 	}
 
 	function invalid(field, bad) {
@@ -182,10 +177,8 @@
 		btn.disabled = true;
 		btn.textContent = AR ? "جارٍ الإرسال…" : "Sending…";
 
-		frappe.call({
-			method: "narjes_custom.storefront.orders.submit_design_request",
-			args: {
-				payload: JSON.stringify({
+		Narjes.api("narjes_custom.storefront.orders.submit_design_request", {
+			payload: JSON.stringify({
 					lang: LANG,
 					name: name.value,
 					phone: phone.value,
@@ -194,26 +187,20 @@
 					design_type: document.getElementById("r-type").value,
 					size: document.getElementById("r-size").value,
 					notes: document.getElementById("r-notes").value,
-					files: uploaded
-				})
-			},
-			callback: function (r) {
-				if (r.message && r.message.ok) {
-					form.style.display = "none";
-					document.getElementById("r-ref").textContent = r.message.reference;
-					document.getElementById("r-done").style.display = "";
-					window.scrollTo({ top: 0, behavior: "smooth" });
-				} else {
-					btn.disabled = false;
-					btn.textContent = AR ? "إرسال الطلب" : "Send request";
-				}
-			},
-			error: function () {
-				btn.disabled = false;
-				btn.textContent = AR ? "إرسال الطلب" : "Send request";
-			}
+				files: uploaded
+			})
+		}).then(function (res) {
+			if (!(res && res.ok)) throw new Error("request failed");
+			form.style.display = "none";
+			document.getElementById("r-ref").textContent = res.reference;
+			document.getElementById("r-done").style.display = "";
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		}).catch(function (err) {
+			btn.disabled = false;
+			btn.textContent = AR ? "إرسال الطلب" : "Send request";
+			Narjes.toast(err.message || (AR ? "تعذّر إرسال الطلب" : "Could not send the request"), "warning");
 		});
 	});
-})();
+});
 </script>
 {% endblock %}

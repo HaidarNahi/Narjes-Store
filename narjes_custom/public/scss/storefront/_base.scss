@@ -182,9 +182,11 @@
 		gap: 4px;
 	}
 
-	@media (max-width: 860px) {
-		.s-nav-links { display: none; }
-	}
+	// `display: contents` lets the links participate in .s-nav's flex layout
+	// without an extra box. It used to be an inline style on the element, which
+	// no media query could ever override — that is why the desktop links stayed
+	// on top of the brand on phones.
+	.s-nav-links { display: contents; }
 }
 
 // The Phosphor sprite's symbols declare no fill, so SVG's initial value —

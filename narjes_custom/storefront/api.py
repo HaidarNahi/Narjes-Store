@@ -85,3 +85,59 @@ def search(q, lang=None):
 		}
 		for p in products
 	]
+
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+
+@frappe.whitelist(allow_guest=True)
+def upload_reference():
+	"""Accept a reference image for a custom-design request.
+
+	Frappe's own `upload_file` refuses guests (403), and opening that endpoint
+	up would let anyone attach anything to any doctype. This is the narrow
+	alternative: images only, size-capped, never attached to a document.
+	"""
+	if not core.storefront_enabled():
+		frappe.throw(frappe._("Uploads are currently unavailable."))
+
+	files = getattr(frappe.request, "files", None)
+	uploaded = files.get("file") if files else None
+	if not uploaded:
+		frappe.throw(frappe._("No file received."))
+
+	content = uploaded.stream.read()
+	if not content:
+		frappe.throw(frappe._("The file is empty."))
+	if len(content) > MAX_UPLOAD_BYTES:
+		frappe.throw(frappe._("Images must be under 5 MB."))
+
+	filename = (uploaded.filename or "reference").rsplit("/", 1)[-1]
+	extension = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
+	if extension not in ALLOWED_EXTENSIONS or (uploaded.mimetype or "") not in ALLOWED_IMAGE_TYPES:
+		frappe.throw(frappe._("Only JPG, PNG, WEBP or GIF images are accepted."))
+
+	# Decoding proves it is genuinely an image rather than something renamed.
+	try:
+		from io import BytesIO
+
+		from PIL import Image
+
+		Image.open(BytesIO(content)).verify()
+	except Exception:
+		frappe.throw(frappe._("That file is not a readable image."))
+
+	from narjes_custom.storefront.orders import as_system
+
+	with as_system():
+		doc = frappe.new_doc("File")
+		doc.file_name = filename[:120]
+		doc.content = content
+		doc.is_private = 0
+		doc.folder = "Home"
+		doc.insert(ignore_permissions=True)
+		frappe.db.commit()
+
+	return {"file_url": doc.file_url}

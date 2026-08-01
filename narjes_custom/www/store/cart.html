@@ -9,7 +9,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-(function () {
+document.addEventListener("narjes:ready", function () {
 	var AR = {{ (lang == "ar") | tojson }};
 	var LANG = {{ lang | tojson }};
 	var box = document.getElementById("s-cart-page");
@@ -17,7 +17,7 @@
 	function money(v){ return (Math.round(v||0)).toLocaleString("en-US") + " IQD"; }
 
 	function render() {
-		var cart = window.NarjesCart ? NarjesCart.lines() : [];
+		var cart = Narjes.cart.all();
 		if (!cart.length) {
 			box.innerHTML = '<div class="s-empty"><h3>' + (AR ? "سلتك فارغة" : "Your cart is empty") +
 				'</h3><p style="margin-top:12px"><a class="s-btn s-btn--ghost" href="/' + LANG + '/shop">' +
@@ -25,17 +25,16 @@
 			foot.innerHTML = "";
 			return;
 		}
-		frappe.call({
-			method: "narjes_custom.storefront.orders.quote",
-			args: { lines: JSON.stringify(cart), lang: LANG },
-			callback: function (r) {
-				var q = r.message || {};
+		Narjes.api("narjes_custom.storefront.orders.quote", {
+			lines: JSON.stringify(cart), lang: LANG
+		}).then(function (q) {
+				q = q || {};
 				box.innerHTML = (q.lines || []).map(function (l) {
 					return '<div class="s-line"><div class="s-line-img' + (l.has_image ? "" : " is-placeholder") +
 						'"><img src="' + l.image + '" alt="" loading="lazy"></div>' +
-						'<div><a class="s-line-title" href="' + l.route + '">' + frappe.utils.escape_html(l.title) + "</a>" +
+						'<div><a class="s-line-title" href="' + l.route + '">' + Narjes.escapeHtml(l.title) + "</a>" +
 						'<div class="s-line-meta">' + money(l.rate) + "</div>" +
-						'<button class="s-btn s-btn--quiet" data-rm="' + frappe.utils.escape_html(l.item_code) + '" style="padding-inline:0">' +
+						'<button class="s-btn s-btn--quiet" data-rm="' + Narjes.escapeHtml(l.item_code) + '" style="padding-inline:0">' +
 						(AR ? "إزالة" : "Remove") + "</button></div>" +
 						'<div class="s-num">' + l.qty + " × " + money(l.rate) + "</div></div>";
 				}).join("");
@@ -44,13 +43,12 @@
 					'<a class="s-btn s-btn--primary s-btn--block" style="margin-top:16px" href="/' + LANG + '/checkout">' +
 					(AR ? "إتمام الطلب" : "Checkout") + "</a>";
 				box.querySelectorAll("[data-rm]").forEach(function (b) {
-					b.addEventListener("click", function () { NarjesCart.remove(b.dataset.rm); });
+					b.addEventListener("click", function () { Narjes.cart.remove(b.dataset.rm); });
 				});
-			}
 		});
 	}
 	document.addEventListener("narjes:cart-changed", render);
 	render();
-})();
+});
 </script>
 {% endblock %}

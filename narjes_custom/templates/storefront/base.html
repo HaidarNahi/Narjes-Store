@@ -3,6 +3,10 @@
 <html lang="{{ lang }}" dir="{{ text_direction }}" data-theme="light">
 <head>
 	<meta charset="utf-8">
+	{#- Frappe enforces CSRF on POSTs once a session cookie exists, and the
+    storefront never loads frappe's boot, so the token is published here
+    for the fetch helper in storefront.bundle.js. -#}
+	<meta name="csrf-token" content="{{ frappe.session.csrf_token or '' }}">
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<title>{% block title %}{{ storefront_title }}{% endblock %}</title>
 	<meta name="description" content="{% block description %}{{ storefront_description }}{% endblock %}">
