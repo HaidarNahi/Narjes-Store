@@ -22,13 +22,15 @@ from narjes_custom.ai_intake.extraction import (
     get_item_catalog,
     is_complete_extraction,
 )
+from narjes_custom.ai_intake import settings as ai_settings
 from narjes_custom.ai_intake.matching import match_customer
 from narjes_custom.business_logic import is_discount_excessive
 
-# A discount above this percentage of the order subtotal blocks confirm_intake
-# outright rather than trusting the (AI-extracted, human-reviewed-but-not-
-# guaranteed-reviewed) discount_amount value — see the sanity check in
-# confirm_intake() and NARJES_STORE_SYSTEM.md §8.4/§15.
+# Fallback for the discount guardrail, used only when AI Intake Settings
+# can't be read. A discount above this percentage of the order subtotal
+# blocks confirm_intake outright rather than trusting the (AI-extracted,
+# human-reviewed-but-not-guaranteed-reviewed) discount_amount value — see
+# the sanity check in confirm_intake() and NARJES_STORE_SYSTEM.md §8.4/§15.
 MAX_DISCOUNT_PERCENTAGE = 50
 
 
@@ -42,13 +44,23 @@ def _hash_text(raw_text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def _get_default_so_items_params():
-    """Get required SO item defaults from ERPNext."""
-    warehouses = frappe.get_all(
-        "Warehouse", filters={"is_group": 0, "disabled": 0}, pluck="name", limit=1
-    )
-    default_warehouse = warehouses[0] if warehouses else None
-    default_uom = "Nos"
+def _get_default_so_items_params(settings=None):
+    """
+    Warehouse and UOM for Sales Order lines built from an intake.
+
+    Both come from AI Intake Settings. The warehouse falls back to the first
+    enabled non-group warehouse if none is configured — which is arbitrary
+    (it is whatever the DB returns first), so the setting exists precisely to
+    make that choice explicit.
+    """
+    default_warehouse = ai_settings.get_setting("default_warehouse", settings)
+    if not default_warehouse or not frappe.db.exists("Warehouse", default_warehouse):
+        warehouses = frappe.get_all(
+            "Warehouse", filters={"is_group": 0, "disabled": 0}, pluck="name", limit=1
+        )
+        default_warehouse = warehouses[0] if warehouses else None
+
+    default_uom = ai_settings.get_str("default_uom", settings) or "Nos"
     return default_warehouse, default_uom
 
 
@@ -69,6 +81,12 @@ def process_intake(raw_text: str) -> dict:
     Returns a dict with the intake record data for the frontend review screen.
     Never creates Customer or Sales Order — that only happens in confirm_intake().
     """
+    if not ai_settings.is_enabled():
+        frappe.throw(
+            "AI Order Intake is turned off. A System Manager can re-enable it "
+            "in AI Intake Settings. Orders already in the queue can still be reviewed."
+        )
+
     if not raw_text or not raw_text.strip():
         frappe.throw("Please paste the order text before processing.")
 
@@ -198,10 +216,18 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
     """
     Step 2 of the AI intake flow — called ONLY after human review.
     """
+    settings = ai_settings.get_settings()
+
     intake = frappe.get_doc("AI Order Intake", intake_name)
     if intake.status == "Confirmed":
         frappe.throw(f"This intake ({intake_name}) is already confirmed.")
-    if intake.status == "Failed" and not frappe.conf.get("allow_retry_failed_intake"):
+
+    # site_config still wins if set, so an existing deployment that relied on
+    # it keeps working; otherwise the AI Intake Settings checkbox decides.
+    allow_retry = frappe.conf.get("allow_retry_failed_intake") or ai_settings.get_bool(
+        "allow_retry_failed_intake", settings
+    )
+    if intake.status == "Failed" and not allow_retry:
         frappe.throw(
             "This intake failed during extraction. "
             "Please start a new intake with the corrected text."
@@ -268,7 +294,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             frappe.throw(f"Customer '{customer_docname}' not found.")
 
     # ── Build Sales Order items ────────────────────────────────────────────
-    default_warehouse, default_uom = _get_default_so_items_params()
+    default_warehouse, default_uom = _get_default_so_items_params(settings)
 
     so_items = []
     flower_items = []
@@ -330,12 +356,13 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
     # discount through unnoticed. This is a coarse backstop, not a
     # replacement for review: it blocks the exceptional case rather than
     # trying to validate every number (see NARJES_STORE_SYSTEM.md §8.4).
+    max_discount_percentage = ai_settings.get_float("max_discount_percentage", settings)
     discount_amount = float(data.get("discount_amount") or 0)
     order_subtotal = sum((item.get("qty") or 0) * (item.get("rate") or 0) for item in so_items)
     order_subtotal += sum((f.get("qty") or 0) * (f.get("rate") or 0) for f in flower_items)
-    if is_discount_excessive(discount_amount, order_subtotal, MAX_DISCOUNT_PERCENTAGE):
+    if is_discount_excessive(discount_amount, order_subtotal, max_discount_percentage):
         frappe.throw(
-            f"The discount ({discount_amount:,.0f}) is more than {MAX_DISCOUNT_PERCENTAGE}% of the "
+            f"The discount ({discount_amount:,.0f}) is more than {max_discount_percentage:g}% of the "
             f"order subtotal ({order_subtotal:,.0f}). Please double-check it on the review screen — "
             f"if it's genuinely correct, create/adjust this Sales Order manually instead of through AI intake."
         )
@@ -346,7 +373,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
         "customer": customer_docname,
         "transaction_date": today(),
         "delivery_date": data.get("delivery_date") or today(),
-        "currency": data.get("currency") or "IQD",
+        "currency": data.get("currency") or ai_settings.get_str("default_currency", settings),
         "gift": 1 if data.get("gift") else 0,
         "priority": data.get("priority") or "",
         "custom_details": data.get("custom_details") or "",

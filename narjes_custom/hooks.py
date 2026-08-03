@@ -162,6 +162,7 @@ doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 # after_install = "narjes_custom.install.after_install"
 after_install = [
 	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.ai_intake_defaults.run",
 	"narjes_custom.setup.branding.run",
 	"narjes_custom.setup.workspace_visibility.run",
 	"narjes_custom.setup.sidebar_layout.run",
@@ -176,6 +177,7 @@ after_install = [
 # holding a pre-Phosphor-reskin emoji value.
 after_migrate = [
 	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.ai_intake_defaults.run",
 	"narjes_custom.setup.storefront.run",
 	"narjes_custom.setup.branding.run",
 	"narjes_custom.setup.theme_branding.run",

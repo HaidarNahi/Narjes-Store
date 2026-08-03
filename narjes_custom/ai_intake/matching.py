@@ -13,7 +13,11 @@ import re
 import frappe
 from rapidfuzz import fuzz
 
-# Threshold for fuzzy name matching — below this, it's "no match"
+from narjes_custom.ai_intake import settings as ai_settings
+
+# Fallback threshold for fuzzy name matching — below this, it's "no match".
+# The live value comes from AI Intake Settings; this applies only when that
+# doctype can't be read (see settings.DEFAULTS).
 FUZZY_THRESHOLD = 85
 
 
@@ -71,13 +75,14 @@ def normalize_stored_phone(stored_int) -> str:
 # Customer matching
 # ---------------------------------------------------------------------------
 
-def match_customer(extracted_phones: list, extracted_name: str) -> dict:
+def match_customer(extracted_phones: list, extracted_name: str, threshold: float = None) -> dict:
     """
     Find the best existing Customer match.
 
     Args:
         extracted_phones: list of raw phone strings from AI extraction
         extracted_name:   customer name string from AI extraction
+        threshold:        fuzzy score floor; None reads it from AI Intake Settings
 
     Returns dict with keys:
         customer    (str | None)   — Customer.name (doc name)
@@ -108,7 +113,11 @@ def match_customer(extracted_phones: list, extracted_name: str) -> dict:
                     }
 
     # ---- Step 2: Fuzzy name matching ----
-    if extracted_name:
+    settings = ai_settings.get_settings()
+    if threshold is None:
+        threshold = ai_settings.get_float("fuzzy_match_threshold", settings)
+
+    if extracted_name and ai_settings.get_bool("enable_fuzzy_name_match", settings):
         customers = frappe.get_all("Customer", fields=["name", "customer_name"])
         best_score = 0.0
         best_customer = None
@@ -123,7 +132,7 @@ def match_customer(extracted_phones: list, extracted_name: str) -> dict:
                 best_score = score
                 best_customer = cust["name"]
 
-        if best_score >= FUZZY_THRESHOLD and best_customer:
+        if best_score >= threshold and best_customer:
             return {
                 "customer": best_customer,
                 "method": "Fuzzy Name",

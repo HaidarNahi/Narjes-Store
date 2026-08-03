@@ -1,18 +1,24 @@
 """
 narjes_custom.ai_intake.extraction
 ====================================
-Gemini 2.5 Flash extraction layer — AI is used ONLY here.
+Gemini extraction layer — AI is used ONLY here.
 AI never touches the database. All it does is parse raw text → structured dict.
 
-API key must be set in site_config.json:
+Every knob (model, temperature, timeout, retries, prompt, catalog and
+example handling) comes from the `AI Intake Settings` Single doctype via
+`narjes_custom.ai_intake.settings`. The API key resolves from that doctype
+first, then falls back to site_config.json:
     bench --site narjes.local set-config gemini_api_key "YOUR_KEY_HERE"
 """
 
 import json
+import time
 
 import frappe
 from google import genai
 from google.genai import types
+
+from narjes_custom.ai_intake import settings as ai_settings
 
 
 # ---------------------------------------------------------------------------
@@ -23,6 +29,10 @@ def get_item_catalog() -> list[dict]:
     """
     Fetch all active, non-disabled items from the Item master.
     Returns list of dicts: [{"name": "Wood Stand", "item_name": "...", "item_group": "..."}]
+
+    Deliberately unfiltered: the review screen autocompletes against this, so
+    it must show every item a human could pick. The narrowing knobs in AI
+    Intake Settings apply to get_prompt_catalog() only.
     """
     return frappe.get_all(
         "Item",
@@ -32,12 +42,39 @@ def get_item_catalog() -> list[dict]:
     )
 
 
-def _build_catalog_for_prompt(catalog: list[dict]) -> str:
+def get_prompt_catalog(settings=None) -> list[dict]:
+    """
+    The subset of the catalog that gets sent to the model, after the
+    `Only These Item Groups` and `Max Catalog Items` settings.
+    """
+    filters = {"disabled": 0}
+
+    groups = ai_settings.get_lines("catalog_item_groups", settings)
+    if groups:
+        filters["item_group"] = ["in", groups]
+
+    limit = ai_settings.get_int("max_catalog_items", settings)
+
+    return frappe.get_all(
+        "Item",
+        filters=filters,
+        fields=["name", "item_name", "item_group"],
+        order_by="name asc",
+        limit=limit if limit > 0 else None,
+    )
+
+
+def _build_catalog_for_prompt(catalog: list[dict], include_item_name: bool = True) -> str:
     """Format the item catalog as a readable list for the AI prompt."""
     lines = []
     for item in catalog:
-        # Show both the item code (name) and the group for disambiguation
-        lines.append(f"  - \"{item['name']}\" (group: {item['item_group']})")
+        # Show the item code (name) and the group for disambiguation
+        line = f"  - \"{item['name']}\" (group: {item['item_group']}"
+        # The item name is often the Arabic one while the code is not, so it
+        # is what a customer's message actually resembles
+        if include_item_name and item.get("item_name") and item["item_name"] != item["name"]:
+            line += f", name: {item['item_name']}"
+        lines.append(line + ")")
     return "\n".join(lines)
 
 
@@ -207,43 +244,89 @@ EXTRACTION_SCHEMA = {
 # System prompt
 # ---------------------------------------------------------------------------
 
+def resolve_few_shot_examples(settings=None) -> list[dict]:
+    """
+    The examples to teach the model with: the admin's JSON override from
+    AI Intake Settings if it parses, otherwise the built-ins above.
+
+    Falling back rather than raising is deliberate — a typo in the override
+    should cost prompt quality, not block every order coming in. The doctype
+    validates the JSON on save, so a broken value can only get here if it was
+    written around the form.
+    """
+    raw = ai_settings.get_str("few_shot_examples", settings).strip()
+    if not raw:
+        return FEW_SHOT_EXAMPLES
+
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return FEW_SHOT_EXAMPLES
+
+    if not isinstance(parsed, list) or not parsed:
+        return FEW_SHOT_EXAMPLES
+
+    examples = [ex for ex in parsed if isinstance(ex, dict) and "input" in ex and "output" in ex]
+    return examples or FEW_SHOT_EXAMPLES
+
+
 def _build_system_prompt(catalog: list[dict], settings) -> str:
     base_prompt = settings.system_prompt_base or "You are an order intake assistant."
     rules = settings.extraction_rules or ""
-    
+
     prompt = f"{base_prompt}\n\nRULES:\n{rules}"
-    
+
     # Dynamically inject Governorate options so the AI doesn't invent invalid ones
-    try:
-        meta = frappe.get_meta("Customer")
-        gov_field = meta.get_field("governorate")
-        if gov_field and gov_field.options:
-            valid_options = [opt for opt in gov_field.options.split("\n") if opt.strip()]
-            prompt += (
-                f"\n\nVALID GOVERNORATE OPTIONS (You MUST pick one of these exactly, or return null):\n"
-                f"{', '.join(valid_options)}"
-            )
-    except Exception:
-        pass
-    
-    if settings.append_catalog:
-        items_list = _build_catalog_for_prompt(catalog)
+    if ai_settings.get_bool("append_governorates", settings):
+        try:
+            meta = frappe.get_meta("Customer")
+            gov_field = meta.get_field("governorate")
+            if gov_field and gov_field.options:
+                valid_options = [opt for opt in gov_field.options.split("\n") if opt.strip()]
+                prompt += (
+                    f"\n\nVALID GOVERNORATE OPTIONS (You MUST pick one of these exactly, or return null):\n"
+                    f"{', '.join(valid_options)}"
+                )
+        except Exception:
+            pass
+
+    if ai_settings.get_bool("append_catalog", settings):
+        items_list = _build_catalog_for_prompt(
+            catalog,
+            include_item_name=ai_settings.get_bool("catalog_include_item_name", settings),
+        )
         prompt += f"\n\nAVAILABLE ITEM CATALOG:\n{items_list}"
-        
-    if settings.append_examples:
+
+    if ai_settings.get_bool("append_examples", settings):
         few_shot_text = ""
-        for i, ex in enumerate(FEW_SHOT_EXAMPLES, 1):
+        for i, ex in enumerate(resolve_few_shot_examples(settings), 1):
             few_shot_text += (
                 f"\n\n--- Example {i} ---\n"
                 f"Input:\n{ex['input']}\n\n"
                 f"Expected JSON output:\n{json.dumps(ex['output'], ensure_ascii=False, indent=2)}"
             )
         prompt += f"\n\nFEW-SHOT EXAMPLES:{few_shot_text}"
-        
+
     prompt += "\n\nDISCOUNT RULE: Extract any explicitly mentioned discount amount from the text and place it in the 'discount_amount' field as a number (e.g. 5000 for 5000 IQD discount, or 10000). If no discount is mentioned, use null."
     prompt += "\n\nCUSTOM DETAILS RULE: Extract any additional details, special instructions, custom notes, or unmapped text into the 'custom_details' field as text. If no extra details are mentioned, use null."
+
+    extra = ai_settings.get_str("extra_instructions", settings).strip()
+    if extra:
+        prompt += f"\n\nADDITIONAL INSTRUCTIONS:\n{extra}"
+
     prompt += "\n\nNow extract the order data from the user's message and return ONLY valid JSON matching the schema."
     return prompt
+
+
+def build_system_prompt(settings=None) -> str:
+    """The exact system instruction an extraction would send right now.
+
+    Used by the Preview System Prompt button so prompt edits can be checked
+    against the real assembled text instead of guessed at.
+    """
+    if settings is None:
+        settings = ai_settings.get_settings()
+    return _build_system_prompt(get_prompt_catalog(settings), settings)
 
 
 # ---------------------------------------------------------------------------
@@ -255,47 +338,92 @@ class ExtractionError(Exception):
     pass
 
 
+def resolve_api_key(settings=None) -> str:
+    """The API key in use: the one on AI Intake Settings, else site config."""
+    if settings is None:
+        settings = ai_settings.get_settings()
+    if settings is not None and settings.get("api_key"):
+        return settings.get_password("api_key")
+    return frappe.conf.get("gemini_api_key")
+
+
+def _is_worth_retrying(exc: Exception) -> bool:
+    """
+    Whether a failed Gemini call could plausibly succeed on a second attempt.
+
+    Rate limits and 5xx are transient; so is anything that never got an HTTP
+    status at all (timeout, DNS, dropped connection). A 400/401/403/404 means
+    the key, model name or request is wrong — retrying that just makes the
+    user wait longer for the same error.
+    """
+    code = getattr(exc, "code", None)
+    if code is None:
+        return True
+    return code == 429 or code >= 500
+
+
 def extract_order(raw_text: str) -> dict:
     """
-    Extract structured order data from raw_text using Gemini 2.5 Flash.
+    Extract structured order data from raw_text using the configured Gemini model.
 
     Returns a dict matching the extraction schema.
     Raises ExtractionError on API failure.
-    Never touches the Frappe database (except reading Item catalog).
+    Never touches the Frappe database (except reading settings and the Item catalog).
     """
-    settings = frappe.get_doc("AI Intake Settings")
-    
-    # Use API key from settings if available, else fallback to site config
-    api_key = settings.get_password("api_key") if settings.get("api_key") else frappe.conf.get("gemini_api_key")
+    settings = ai_settings.get_settings()
+
+    api_key = resolve_api_key(settings)
     if not api_key:
         raise ExtractionError(
             "Gemini API key not configured. "
             "Set it in 'AI Intake Settings' or run: bench --site narjes.local set-config gemini_api_key YOUR_KEY"
         )
 
-    # Fetch live catalog
-    catalog = get_item_catalog()
+    catalog = get_prompt_catalog(settings)
 
-    client = genai.Client(api_key=api_key)
-    
-    model_name = settings.model_name or "gemini-2.5-flash"
-    temperature = float(settings.temperature) if settings.temperature is not None else 0.1
-    max_tokens = int(settings.max_tokens) if settings.max_tokens is not None else 4096
+    model_name = ai_settings.get_str("model_name", settings)
+    temperature = ai_settings.get_float("temperature", settings)
+    max_tokens = ai_settings.get_int("max_tokens", settings)
+    timeout_seconds = ai_settings.get_int("request_timeout", settings)
+    max_retries = max(0, ai_settings.get_int("max_retries", settings))
 
-    try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=[raw_text],
-            config=types.GenerateContentConfig(
-                system_instruction=_build_system_prompt(catalog, settings),
-                response_mime_type="application/json",
-                response_schema=EXTRACTION_SCHEMA,
-                temperature=temperature,
-                max_output_tokens=max_tokens,
-            ),
-        )
-    except Exception as e:
-        raise ExtractionError(f"Gemini API call failed: {str(e)}")
+    client = genai.Client(
+        api_key=api_key,
+        # google-genai takes the request timeout in milliseconds
+        http_options=types.HttpOptions(timeout=timeout_seconds * 1000),
+    )
+
+    config = types.GenerateContentConfig(
+        system_instruction=_build_system_prompt(catalog, settings),
+        response_mime_type="application/json",
+        response_schema=EXTRACTION_SCHEMA,
+        temperature=temperature,
+        max_output_tokens=max_tokens,
+    )
+
+    response = None
+    last_error = None
+    attempts_made = 0
+    for attempt in range(max_retries + 1):
+        attempts_made = attempt + 1
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=[raw_text],
+                config=config,
+            )
+            break
+        except Exception as e:
+            last_error = e
+            if attempt == max_retries or not _is_worth_retrying(e):
+                break
+            # Back off a little between attempts so a rate limit has a
+            # chance to clear instead of being hammered
+            time.sleep(2 ** attempt)
+
+    if response is None:
+        attempts = "1 attempt" if attempts_made == 1 else f"{attempts_made} attempts"
+        raise ExtractionError(f"Gemini API call failed after {attempts}: {str(last_error)}")
 
     # Parse the structured response
     try:
