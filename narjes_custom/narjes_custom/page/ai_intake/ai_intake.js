@@ -176,6 +176,19 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         return html;
     }
 
+    // Must stay in sync with the Customer.channal Select options — the
+    // backend rejects anything else, and _normalize_channel() in
+    // ai_intake/api.py silently drops a value it cannot map.
+    const CUSTOMER_CHANNELS = ["Instagram", "Facebook", "Whatsapp", "Telegram", "Website"];
+
+    function channel_options_html(selected) {
+        let html = `<option value="" ${!selected ? "selected" : ""}>— None —</option>`;
+        CUSTOMER_CHANNELS.forEach((channel) => {
+            html += `<option value="${channel}" ${selected === channel ? "selected" : ""}>${channel}</option>`;
+        });
+        return html;
+    }
+
     // Simple Levenshtein distance for fuzzy matching
     function levenshtein(a, b) {
         if (a.length === 0) return b.length;
@@ -368,6 +381,12 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                             </div>
                             <div class="ai-field-row">
                                 <div class="ai-field-group">
+                                    <label>Channel</label>
+                                    <select id="ai-new-channel">${channel_options_html(ex.platform)}</select>
+                                </div>
+                            </div>
+                            <div class="ai-field-row">
+                                <div class="ai-field-group">
                                     <label>Governorate</label>
                                     <select id="ai-new-gov">${governorate_options_html(ex.governorate)}</select>
                                 </div>
@@ -543,8 +562,19 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $("#ai-grand-total").text(grandTotal.toFixed(2));
         }
 
+        catalog_rate(item_code) {
+            if (!item_code) return 0;
+            const hit = this.item_catalog.find((i) => i.name === item_code);
+            return hit ? hit.standard_rate || 0 : 0;
+        }
+
         add_item_row(item = {}) {
             const initialCode = item.item_code_hint || item.item_code || "";
+            // Intake no longer prices the order — the AI leaves unit_price at
+            // 0 on purpose, so the shop's own price list fills the box. A
+            // non-zero value only ever comes from a human editing this row.
+            const initialPrice =
+                item.unit_price || item.rate || this.catalog_rate(initialCode);
             const row = $(`
                 <tr class="ai-item-row">
                     <td>
@@ -555,7 +585,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     </td>
                     <td><input type="text" class="ai-item-desc" value="${frappe.utils.escape_html(item.description || "")}" dir="auto" placeholder="Description…"/></td>
                     <td><input type="number" class="ai-item-qty" value="${item.qty || 1}" min="1" style="width:100%;"/></td>
-                    <td><input type="number" class="ai-item-price" value="${item.unit_price || item.rate || 0}" min="0"/></td>
+                    <td><input type="number" class="ai-item-price" value="${initialPrice}" min="0"/></td>
                     <td class="ai-item-amount" style="text-align:right;">0.00</td>
                     <td><input type="text" class="ai-item-notes" value="${frappe.utils.escape_html(item.notes || "")}" placeholder="Notes…" dir="auto"/></td>
                     <td><button class="btn-remove ai-remove-row" title="Remove">${narjes_icon('x', {size: 'xs'})}</button></td>
@@ -593,9 +623,25 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 }
             });
 
-            $dropdown.on('click', '.ai-autocomplete-item', function() {
-                $input.val($(this).data('val'));
+            row.data('code', initialCode);
+            $dropdown.on('click', '.ai-autocomplete-item', (e) => {
+                const picked = $(e.currentTarget).data('val');
+                $input.val(picked);
                 $dropdown.hide();
+
+                // Follow the newly picked item's list price, but never
+                // overwrite a price the reviewer typed themselves: that is
+                // the case where the box no longer matches what the
+                // previously selected item costs.
+                const $price = row.find('.ai-item-price');
+                const current = parseFloat($price.val()) || 0;
+                const previousRate = this.catalog_rate(row.data('code'));
+                if (!current || current === previousRate) {
+                    $price.val(this.catalog_rate(picked));
+                }
+
+                row.data('code', picked);
+                this.update_totals();
             });
 
             // Close dropdown when clicking outside
@@ -759,6 +805,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 main_phone_number: $("#ai-new-phone").val().trim(),
                 secondary_phone_number: $("#ai-new-phone2").val().trim(),
                 username: $("#ai-new-username").val().trim(),
+                platform: $("#ai-new-channel").val() || "",
                 governorate: $("#ai-new-gov").val().trim(),
                 full_address: $("#ai-new-address").val().trim(),
                 delivery_date: $("#ai-delivery-date").val() || frappe.datetime.get_today(),

@@ -13,6 +13,7 @@ first, then falls back to site_config.json:
 
 import json
 import time
+from datetime import timedelta
 
 import frappe
 from google import genai
@@ -209,6 +210,13 @@ EXTRACTION_SCHEMA = {
             "items": {"type": "STRING"}
         },
         "username": {"type": "STRING", "nullable": True},
+        # Maps to Customer.channal, a Select — the enum keeps the model from
+        # returning "insta"/"انستا" where only "Instagram" is a valid option
+        "platform": {
+            "type": "STRING",
+            "nullable": True,
+            "enum": ["Instagram", "Facebook", "Whatsapp", "Telegram", "Website"],
+        },
         "address": {"type": "STRING", "nullable": True},
         "governorate": {"type": "STRING", "nullable": True},
         "delivery_date": {"type": "STRING", "nullable": True},
@@ -270,11 +278,51 @@ def resolve_few_shot_examples(settings=None) -> list[dict]:
     return examples or FEW_SHOT_EXAMPLES
 
 
+# Arabic weekday names as customers actually write them, mapped to Python's
+# Monday=0 weekday numbering. Several spellings per day on purpose — messages
+# use "الاربعاء", "الأربعاء" and "اربعاء" interchangeably.
+_ARABIC_WEEKDAYS = [
+    (0, ["الاثنين", "الإثنين", "اثنين", "الاثنين"]),
+    (1, ["الثلاثاء", "ثلاثاء"]),
+    (2, ["الاربعاء", "الأربعاء", "اربعاء"]),
+    (3, ["الخميس", "خميس"]),
+    (4, ["الجمعة", "الجمعه", "جمعة"]),
+    (5, ["السبت", "سبت"]),
+    (6, ["الاحد", "الأحد", "احد"]),
+]
+
+
+def _build_calendar_block() -> str:
+    """Today's date plus the next occurrence of every weekday.
+
+    The model has no clock, so a phrase like "الاربعاء" is unresolvable
+    without this. Precomputing each weekday here rather than asking the model
+    to do date arithmetic removes a whole class of quiet off-by-one errors —
+    it only has to look the day up.
+    """
+    from frappe.utils import getdate, nowdate
+
+    today = getdate(nowdate())
+    lines = [
+        f"CURRENT DATE: {today.isoformat()} ({today.strftime('%A')})",
+        f"TOMORROW (باجر): {(today + timedelta(days=1)).isoformat()}",
+        f"DAY AFTER TOMORROW (بعده): {(today + timedelta(days=2)).isoformat()}",
+        "NEXT OCCURRENCE OF EACH WEEKDAY — use these exact dates when the customer names a day:",
+    ]
+    for weekday, names in _ARABIC_WEEKDAYS:
+        # Always the *next* such day; a day named today means next week's one,
+        # since an order taken today is never delivered the same day.
+        delta = (weekday - today.weekday()) % 7 or 7
+        target = today + timedelta(days=delta)
+        lines.append(f"  {' / '.join(names[:2])} -> {target.isoformat()}")
+    return "\n".join(lines)
+
+
 def _build_system_prompt(catalog: list[dict], settings) -> str:
     base_prompt = settings.system_prompt_base or "You are an order intake assistant."
     rules = settings.extraction_rules or ""
 
-    prompt = f"{base_prompt}\n\nRULES:\n{rules}"
+    prompt = f"{base_prompt}\n\n{_build_calendar_block()}\n\nRULES:\n{rules}"
 
     # Dynamically inject Governorate options so the AI doesn't invent invalid ones
     if ai_settings.get_bool("append_governorates", settings):

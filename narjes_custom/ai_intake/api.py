@@ -64,6 +64,91 @@ def _get_default_so_items_params(settings=None):
     return default_warehouse, default_uom
 
 
+# The channel values Customer.channal accepts, keyed by what people actually
+# write on the order line. The AI is constrained to the canonical values by
+# the response schema; this catches anything typed by hand on the review screen.
+_CHANNEL_ALIASES = {
+    "insta": "Instagram", "instagram": "Instagram", "انستا": "Instagram", "أنستا": "Instagram",
+    "face": "Facebook", "facebook": "Facebook", "فيسبوك": "Facebook", "فيس": "Facebook",
+    "whatsapp": "Whatsapp", "whats": "Whatsapp", "واتساب": "Whatsapp", "واتس": "Whatsapp",
+    "telegram": "Telegram", "تلكرام": "Telegram", "تليجرام": "Telegram",
+    "website": "Website", "site": "Website", "الموقع": "Website",
+}
+
+
+def _normalize_channel(raw) -> str:
+    """Map a free-text platform onto a valid Customer.channal option.
+
+    Returns "" when it doesn't resolve — an invalid Select value would make
+    the Customer insert fail, and losing the channel is much cheaper than
+    losing the whole order.
+    """
+    if not raw:
+        return ""
+    value = str(raw).strip()
+    if not value:
+        return ""
+
+    try:
+        options = frappe.get_meta("Customer").get_field("channal").options or ""
+        valid = [o.strip() for o in options.split("\n") if o.strip()]
+    except Exception:
+        return ""
+
+    for option in valid:
+        if value.lower() == option.lower():
+            return option
+
+    mapped = _CHANNEL_ALIASES.get(value.lower())
+    return mapped if mapped in valid else ""
+
+
+def get_catalog_with_prices() -> list:
+    """The item catalog plus each item's selling price, for the review screen.
+
+    The prompt catalog deliberately carries no prices — showing them to the
+    model invites it to price the order, which is the shop's decision. The
+    reviewer does need them, so they are attached here instead, and the price
+    box on each row is pre-filled from this rather than from the extraction.
+    """
+    catalog = get_item_catalog()
+    price_list = (
+        frappe.db.get_single_value("Selling Settings", "selling_price_list")
+        or "Standard Selling"
+    )
+    prices = dict(
+        frappe.get_all(
+            "Item Price",
+            filters={"price_list": price_list, "selling": 1},
+            fields=["item_code", "price_list_rate"],
+            as_list=True,
+        )
+    )
+    for item in catalog:
+        item["standard_rate"] = float(prices.get(item["name"]) or 0)
+    return catalog
+
+
+def _default_selling_rate(item_code: str) -> float:
+    """The item's own selling price, used when intake supplies no rate.
+
+    Prices are the shop's decision, not the AI's — the model is told to leave
+    unit_price at 0 and let the catalog answer. Reading the rate here rather
+    than leaving it unset keeps the discount guardrail meaningful, since that
+    check runs on this subtotal before the Sales Order exists.
+    """
+    price_list = (
+        frappe.db.get_single_value("Selling Settings", "selling_price_list")
+        or "Standard Selling"
+    )
+    rate = frappe.db.get_value(
+        "Item Price",
+        {"item_code": item_code, "price_list": price_list, "selling": 1},
+        "price_list_rate",
+    )
+    return float(rate or 0)
+
+
 # ---------------------------------------------------------------------------
 # Endpoint 1: process_intake
 # ---------------------------------------------------------------------------
@@ -187,8 +272,9 @@ def _intake_to_response(intake_doc, extracted=None) -> dict:
         except Exception:
             extracted = {}
 
-    # Include the live item catalog so the frontend can do client-side validation
-    catalog = get_item_catalog()
+    # Include the live item catalog so the frontend can do client-side
+    # validation and pre-fill each row's price from the shop's own price list
+    catalog = get_catalog_with_prices()
 
     return {
         "duplicate": False,
@@ -282,6 +368,10 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 "username": data.get("username") or "",
                 "governorate": gov,
                 "full_address": data.get("full_address") or "",
+                # Where this customer came to us from, taken off the order's
+                # "منصة الطلب" line — only ever set on a customer we create,
+                # never overwriting the channel on an existing record
+                "channal": _normalize_channel(data.get("platform")),
             })
             cust.insert(ignore_permissions=True)
             customer_docname = cust.name
@@ -311,8 +401,13 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             )
             
         qty = float(item.get("qty") or 1)
+        # Intake deliberately does not price anything: the AI leaves unit_price
+        # at 0 and the reviewer only overrides when this order is genuinely
+        # priced differently. A 0 here means "use the catalog price", not "free".
         rate = float(item.get("rate") or item.get("unit_price") or 0)
-        
+        if not rate:
+            rate = _default_selling_rate(item_code)
+
         is_flower = frappe.db.get_value("Item", item_code, "custom_is_flower")
         
         if is_flower:
@@ -408,8 +503,8 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
 
 @frappe.whitelist()
 def get_item_catalog_endpoint() -> list:
-    """Return available items for the frontend autocomplete."""
-    return get_item_catalog()
+    """Return available items, with prices, for the frontend autocomplete."""
+    return get_catalog_with_prices()
 
 
 # ---------------------------------------------------------------------------
