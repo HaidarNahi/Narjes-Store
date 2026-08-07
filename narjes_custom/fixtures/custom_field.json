@@ -276,7 +276,7 @@
   "name": "Customer-channal",
   "no_copy": 0,
   "non_negative": 0,
-  "options": "Instagram\nFacebook\nWhatsapp\nTelegram",
+  "options": "Instagram\nFacebook\nWhatsapp\nTelegram\nTikTok\nWebsite",
   "permlevel": 0,
   "placeholder": null,
   "precision": "",

@@ -62,7 +62,10 @@ CUSTOM_FIELDS = {
             "fieldname": "channal",
             "fieldtype": "Select",
             "label": "Channel",
-            "options": "Instagram\nFacebook\nWhatsapp\nTelegram",
+            # "Website" is appended separately by setup.storefront, which runs
+            # after this module on every migrate — keep it out of this list or
+            # the two will fight over the field's options.
+            "options": "Instagram\nFacebook\nWhatsapp\nTelegram\nTikTok",
             "insert_after": "secondary_phone_number",
             "allow_in_quick_entry": 1,
         },

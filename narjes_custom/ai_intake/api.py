@@ -72,6 +72,7 @@ _CHANNEL_ALIASES = {
     "face": "Facebook", "facebook": "Facebook", "فيسبوك": "Facebook", "فيس": "Facebook",
     "whatsapp": "Whatsapp", "whats": "Whatsapp", "واتساب": "Whatsapp", "واتس": "Whatsapp",
     "telegram": "Telegram", "تلكرام": "Telegram", "تليجرام": "Telegram",
+    "tiktok": "TikTok", "tik tok": "TikTok", "تيك توك": "TikTok", "تيكتوك": "TikTok",
     "website": "Website", "site": "Website", "الموقع": "Website",
 }
 

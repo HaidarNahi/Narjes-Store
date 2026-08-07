@@ -215,7 +215,7 @@ EXTRACTION_SCHEMA = {
         "platform": {
             "type": "STRING",
             "nullable": True,
-            "enum": ["Instagram", "Facebook", "Whatsapp", "Telegram", "Website"],
+            "enum": ["Instagram", "Facebook", "Whatsapp", "Telegram", "TikTok", "Website"],
         },
         "address": {"type": "STRING", "nullable": True},
         "governorate": {"type": "STRING", "nullable": True},

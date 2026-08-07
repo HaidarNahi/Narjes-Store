@@ -179,7 +179,9 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
     // Must stay in sync with the Customer.channal Select options — the
     // backend rejects anything else, and _normalize_channel() in
     // ai_intake/api.py silently drops a value it cannot map.
-    const CUSTOMER_CHANNELS = ["Instagram", "Facebook", "Whatsapp", "Telegram", "Website"];
+    const CUSTOMER_CHANNELS = [
+        "Instagram", "Facebook", "Whatsapp", "Telegram", "TikTok", "Website",
+    ];
 
     function channel_options_html(selected) {
         let html = `<option value="" ${!selected ? "selected" : ""}>— None —</option>`;

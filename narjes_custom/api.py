@@ -610,6 +610,12 @@ def get_customer_info(customer):
 		"Table MultiSelect", "Button", "Fold", "Heading", "Image",
 	}
 
+	# Fields worth a row even when empty, because their absence is itself
+	# information staff act on. An unset channel means nobody recorded where
+	# this customer came from — hiding the row makes that look like the
+	# question was never asked rather than never answered.
+	always_show = {"channal"}
+
 	groups = []
 	current = {"label": frappe._("Details"), "fields": []}
 
@@ -624,7 +630,11 @@ def get_customer_info(customer):
 			continue
 
 		value = doc.get(field.fieldname)
-		if value in (None, "", 0) and field.fieldtype not in ("Check", "Currency", "Float", "Int"):
+		if (
+			value in (None, "", 0)
+			and field.fieldname not in always_show
+			and field.fieldtype not in ("Check", "Currency", "Float", "Int")
+		):
 			continue
 
 		current["fields"].append({
