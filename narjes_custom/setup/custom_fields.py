@@ -146,6 +146,31 @@ CUSTOM_FIELDS = {
         },
     ],
     "Sales Order": [
+        {
+            # This field existed only in the database (created through the UI),
+            # so it was not reproducible on a fresh site — the same drift the
+            # rest of this module exists to prevent. Declared here now, with a
+            # description that spells out what each choice actually means for
+            # the money, because "Partially" and "Prepayment" are not
+            # self-explanatory to someone new on the counter.
+            "fieldname": "payment",
+            "label": "Payment",
+            "fieldtype": "Select",
+            "options": "Deliveryman\nPrepayment\nPartially\nOnline After Delivery",
+            "insert_after": "packaging_costs",
+            "description": (
+                "How the customer pays. "
+                "<b>Deliveryman</b>: the courier collects the whole amount — goods plus "
+                "delivery — from the customer on arrival. "
+                "<b>Prepayment</b>: the goods are already paid online, the order is sent by "
+                "taxi, and the customer pays the driver directly — so no delivery fee is "
+                "added to this order. "
+                "<b>Partially</b>: part of the amount was paid in advance, the rest is "
+                "collected on delivery. "
+                "<b>Online After Delivery</b>: the customer transfers the amount online "
+                "after receiving the order."
+            ),
+        },
         # --- Order intake meta-data ---
         {
             "fieldname": "governorate_of_delivery",

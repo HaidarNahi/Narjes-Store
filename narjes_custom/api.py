@@ -238,16 +238,31 @@ def automate_so_flow(doc, method):
                     "total_area": row.total_area
                 })
             
-            pc = frappe.get_doc({
-                "doctype": "Painting Cost",
-                "sales_order": doc.name,
-                "rate_per_cm": frappe.get_cached_doc("Narjes Settings").painting_rate_per_cm or 0,
-                "total_area": doc.get("custom_total_canvas_area") or 0,
-                "total_painting_cost": total_painting_cost,
-                "items": painting_items or [{"item_code": "N/A", "qty": 0, "area_per_item": 0, "total_area": 0}]
-            })
-            pc.insert(ignore_permissions=True)
-            pc.submit()
+            # A Painting Cost record describes canvas work: rate per cm, total
+            # area, and the canvas rows that produced it. Sheet work carries a
+            # cost too, but it has no area and lives in custom_sheet_items — so
+            # a sheet-only order legitimately has a painting cost and no canvas
+            # rows, and there is nothing for this document to describe.
+            #
+            # The previous code still created one, padding the mandatory items
+            # table with a fabricated {"item_code": "N/A"} row. No Item named
+            # "N/A" exists, so link validation rejected it and the order could
+            # not be submitted at all — which blocked every sheet-only order
+            # (8 of them were stuck in draft when this was found).
+            #
+            # The cost itself is real either way, so the journal entry below is
+            # booked regardless; only this record is conditional.
+            if painting_items:
+                pc = frappe.get_doc({
+                    "doctype": "Painting Cost",
+                    "sales_order": doc.name,
+                    "rate_per_cm": frappe.get_cached_doc("Narjes Settings").painting_rate_per_cm or 0,
+                    "total_area": doc.get("custom_total_canvas_area") or 0,
+                    "total_painting_cost": total_painting_cost,
+                    "items": painting_items,
+                })
+                pc.insert(ignore_permissions=True)
+                pc.submit()
             
             je_painting = _book_cost_je(
                 doc,
