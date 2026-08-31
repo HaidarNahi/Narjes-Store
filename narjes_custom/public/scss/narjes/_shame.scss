@@ -14,14 +14,17 @@
 	}
 }
 
-// 2. Kanban "Order Phases" wide columns (absorbed from narjes_kanban.css):
-//    frappe's kanban sets column width inline/with higher specificity; the
-//    custom .so-kanban-card needs the 400px column. Delete when Frappe
-//    exposes a column-width setting.
+// 2. Kanban "Order Phases" column width (absorbed from narjes_kanban.css):
+//    frappe's kanban sets `flex: 1 0 260px; max-width: 300px` with higher
+//    specificity, so the width has to be forced. 288px as of the card
+//    redesign — down from 400px, which is what dropping the vertical icon
+//    rail bought. Delete when Frappe exposes a column-width setting.
+//    (.so-collapsed overrides this in _kanban.scss and needs !important for
+//    the same reason.)
 body.narjes-ledger .kanban .kanban-column {
-	min-width: 400px !important;
-	max-width: 400px !important;
-	width: 400px !important;
+	min-width: 288px !important;
+	max-width: 288px !important;
+	width: 288px !important;
 }
 
 // 3. The custom kanban card fully replaces Frappe's own card markup; the

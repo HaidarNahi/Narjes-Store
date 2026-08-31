@@ -1,0 +1,198 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "EXP-.YYYY.-.#####",
+ "creation": "2026-08-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_capture",
+  "raw_text",
+  "sb_details",
+  "expense_date",
+  "payee",
+  "description",
+  "cb_details",
+  "amount",
+  "expense_account",
+  "paid_from",
+  "sb_more",
+  "cost_center",
+  "company",
+  "cb_more",
+  "receipt",
+  "notes",
+  "sb_link",
+  "journal_entry",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_capture",
+   "fieldtype": "Section Break",
+   "label": "Describe It"
+  },
+  {
+   "fieldname": "raw_text",
+   "fieldtype": "Small Text",
+   "label": "What did you spend?",
+   "description": "Write it however you like, in Arabic or English — e.g. \"دفعت فاتورة التسويق لميتا 131000\" or \"paid Meta marketing bill 131,000\". Then press Read This, and check the fields below before saving."
+  },
+  {
+   "fieldname": "sb_details",
+   "fieldtype": "Section Break",
+   "label": "Expense"
+  },
+  {
+   "fieldname": "expense_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "payee",
+   "fieldtype": "Data",
+   "label": "Paid To",
+   "description": "Who got the money — Meta, Zain, the landlord. Free text; it does not have to be a Supplier.",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "What For",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expense_account",
+   "fieldtype": "Link",
+   "options": "Account",
+   "label": "Category",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "description": "Which expense account this belongs to — Marketing Expenses, Office Rent, and so on."
+  },
+  {
+   "fieldname": "paid_from",
+   "fieldtype": "Link",
+   "options": "Account",
+   "label": "Paid From",
+   "reqd": 1,
+   "description": "The cash or bank account the money left."
+  },
+  {
+   "fieldname": "sb_more",
+   "fieldtype": "Section Break",
+   "label": "Details",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "options": "Cost Center",
+   "label": "Cost Center"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cb_more",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "receipt",
+   "fieldtype": "Attach",
+   "label": "Receipt",
+   "description": "Photo of the bill or transfer confirmation."
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "sb_link",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "options": "Journal Entry",
+   "label": "Journal Entry",
+   "read_only": 1,
+   "description": "Created automatically when this expense is submitted."
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "options": "Narjes Expense",
+   "label": "Amended From",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "Narjes Expense",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "expense_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "description",
+ "track_changes": 1
+}

@@ -58,6 +58,10 @@ frappe.ui.form.on('Sales Order', {
     governorate_of_delivery: function(frm) {
         setTimeout(() => calculate_custom_totals(frm), 500);
     },
+    payment: function(frm) {
+        // switching to/from Prepayment adds or removes the delivery fee
+        setTimeout(() => calculate_custom_totals(frm), 500);
+    },
     packaging_costs: function(frm) {
         setTimeout(() => calculate_custom_totals(frm), 500);
     },
@@ -76,6 +80,65 @@ frappe.ui.form.on('Sales Order', {
 // grouped the way the Customer form groups them. Values come from the live
 // record (api.get_customer_info) rather than from mirrored fields on the Sales
 // Order, so the tab is never a stale copy of the customer master.
+// Read-only receipt: the order's own money and lines, shown above the customer
+// record on the Receipt Info tab.
+//
+// Built from frm.doc rather than fetched: grand_total, items and
+// custom_flower_items are already loaded on the form, so this cannot go stale
+// against what the user is looking at, needs no endpoint, and no permission
+// check of its own. It is re-rendered on every refresh (unlike the customer
+// block, which is cached per customer) so editing a line updates it at once.
+function render_receipt_block(frm) {
+    const esc = frappe.utils.escape_html;
+    const money = (v) => format_currency(v || 0, frm.doc.currency);
+
+    const rows = (list, code_field, name_field) => (list || []).map((r) => `
+        <tr>
+            <td class="narjes-receipt-item">${esc(r[code_field] || '')}${
+                r[name_field] && r[name_field] !== r[code_field]
+                    ? `<span class="narjes-receipt-sub">${esc(r[name_field])}</span>` : ''
+            }</td>
+            <td class="narjes-receipt-num">${format_number(r.qty || 0, null,
+                Number.isInteger(Number(r.qty)) ? 0 : 2)}</td>
+            <td class="narjes-receipt-num">${money(r.rate)}</td>
+            <td class="narjes-receipt-num">${money(r.amount)}</td>
+        </tr>`).join('');
+
+    const table = (label, body, count) => !count ? '' : `
+        <section class="narjes-receipt-group">
+            <h5>${esc(label)} <span class="narjes-receipt-count">${count}</span></h5>
+            <div class="narjes-receipt-scroll">
+                <table class="narjes-receipt-table">
+                    <thead><tr>
+                        <th>${__('Item')}</th>
+                        <th class="narjes-receipt-num">${__('Qty')}</th>
+                        <th class="narjes-receipt-num">${__('Rate')}</th>
+                        <th class="narjes-receipt-num">${__('Amount')}</th>
+                    </tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>
+        </section>`;
+
+    const items = frm.doc.items || [];
+    const flowers = frm.doc.custom_flower_items || [];
+
+    return `
+        <div class="narjes-receipt">
+            <div class="narjes-receipt-total">
+                <span class="narjes-receipt-total-label">${__('Total with Delivery Fees')}</span>
+                <span class="narjes-receipt-total-value">${money(frm.doc.total_with_delivery_fees)}</span>
+                ${frm.doc.delivery_fees ? `<span class="narjes-receipt-total-note">${
+                    __('includes {0} delivery', [money(frm.doc.delivery_fees)])
+                }</span>` : ''}
+            </div>
+            ${table(__('Items'), rows(items, 'item_code', 'item_name'), items.length)}
+            ${table(__('Flower Items'), rows(flowers, 'flower_item', 'flower_item'), flowers.length)}
+            ${!items.length && !flowers.length
+                ? `<div class="narjes-customer-empty">${__('No lines on this order yet.')}</div>` : ''}
+        </div>`;
+}
+
 function render_customer_info(frm) {
     const field = frm.get_field('custom_customer_info_html');
     if (!field) return;   // custom field not synced on this site yet
@@ -83,8 +146,21 @@ function render_customer_info(frm) {
     const empty = (msg) =>
         `<div class="narjes-customer-empty">${frappe.utils.escape_html(msg)}</div>`;
 
+    // Two independent blocks in one HTML field: the receipt repaints every
+    // time, the customer record is fetched once per customer.
+    let $host = field.$wrapper.find('.narjes-receipt-host');
+    if (!$host.length) {
+        field.$wrapper.html(
+            `<div class="narjes-receipt-host"></div><div class="narjes-customer-host"></div>`
+        );
+        $host = field.$wrapper.find('.narjes-receipt-host');
+    }
+    $host.html(render_receipt_block(frm));
+
+    const $customer = field.$wrapper.find('.narjes-customer-host');
+
     if (!frm.doc.customer) {
-        field.$wrapper.html(empty(__('Select a customer to see their details here.')));
+        $customer.html(empty(__('Select a customer to see their details here.')));
         return;
     }
 
@@ -98,7 +174,7 @@ function render_customer_info(frm) {
     }).then((r) => {
         const data = r && r.message;
         if (!data || !data.groups || !data.groups.length) {
-            field.$wrapper.html(empty(__('No customer details to show.')));
+            $customer.html(empty(__('No customer details to show.')));
             return;
         }
 
@@ -116,7 +192,7 @@ function render_customer_info(frm) {
                 </section>`;
         }).join('');
 
-        field.$wrapper.html(`
+        $customer.html(`
             <div class="narjes-customer-info">
                 <div class="narjes-customer-head">
                     <span class="narjes-customer-name">${esc(data.customer_name || data.customer)}</span>
@@ -127,7 +203,7 @@ function render_customer_info(frm) {
             </div>`);
     }).catch(() => {
         field.$wrapper.data('narjes-loaded-for', null);
-        field.$wrapper.html(empty(__('Could not load customer details.')));
+        $customer.html(empty(__('Could not load customer details.')));
     });
 }
 
@@ -159,8 +235,13 @@ function update_weekday_label(frm, fieldname) {
 // "worked" on the second save because by then the zeros were persisted.
 // flt() normalises null/undefined/"" to 0, and rounding to the field's own
 // precision also stops float dust (0.1+0.2) from re-dirtying the form.
+// `frm.precision()` does not exist on frappe.ui.form.Form (v16) — calling it
+// threw "frm.precision is not a function" and aborted calculate_custom_totals
+// before it ever wrote a field, so the live preview silently stopped working.
+// frappe.meta.get_field_precision is the supported lookup.
 function set_if_changed(frm, fieldname, value) {
-    const precision = frm.precision(fieldname) ?? 2;
+    const df = frappe.meta.get_docfield(frm.doctype, fieldname, frm.docname);
+    const precision = (df ? frappe.meta.get_field_precision(df, frm.doc) : null) ?? 2;
     if (flt(frm.doc[fieldname], precision) !== flt(value, precision)) {
         frappe.model.set_value(frm.doctype, frm.docname, fieldname, value);
         return true;
@@ -193,7 +274,10 @@ function calculate_custom_totals(frm) {
     // so this client-side preview can never silently drift from what an
     // admin has configured (see NARJES_STORE_SYSTEM.md §14.5/§14.6).
     let fee = 0;
-    if (frm.doc.governorate_of_delivery) {
+    // Prepaid orders go out by taxi and the customer pays the driver directly,
+    // so the shop never handles a delivery fee — mirrors the same rule in
+    // api.sales_order_before_validate so the form and the saved doc agree.
+    if (frm.doc.governorate_of_delivery && frm.doc.payment !== 'Prepayment') {
         let ns = (frappe.boot && frappe.boot.narjes_settings) || {};
         if (frm.doc.governorate_of_delivery === 'بغداد') {
             fee = ns.baghdad_delivery_fee || 0;
@@ -230,19 +314,22 @@ function calculate_custom_totals(frm) {
 
     set_if_changed(frm, 'total_qty', combined_qty);
 
-    // 2. Calculate Total with Delivery Fees
-    let total_with_fee = combined_total + fee;
-
-    set_if_changed(frm, 'total_with_delivery_fees', total_with_fee);
-
-    // 3. Calculate Grand Total
+    // 2. Grand Total — WITHOUT the delivery fee.
+    //
+    // The courier collects the delivery portion and keeps it; it never reaches
+    // the shop, so it is not part of what the shop charges and must not sit in
+    // grand_total (which is what feeds the ledger). The discount likewise
+    // applies to the shop's own goods, never to the courier's fee.
     let discount = frm.doc.discount_amount || 0;
     if (frm.doc.additional_discount_percentage && !frm.doc.discount_amount) {
-        discount = (total_with_fee * frm.doc.additional_discount_percentage) / 100;
+        discount = (combined_total * frm.doc.additional_discount_percentage) / 100;
     }
-    
-    let grand_total = total_with_fee - discount;
+
+    let grand_total = combined_total - discount;
     set_if_changed(frm, 'grand_total', grand_total);
+
+    // 3. What the customer hands to the courier — the sticker figure.
+    set_if_changed(frm, 'total_with_delivery_fees', grand_total + fee);
 }
 
 function render_custom_gallery(frm) {
@@ -361,7 +448,7 @@ function render_custom_gallery(frm) {
 
         images.forEach((img, idx) => {
             let $item = $(`
-                <div class="custom-gallery-item" data-name="${img.name}" data-url="${img.file_url}" data-idx="${idx}">
+                <div class="custom-gallery-item" data-name="${img.name}" data-url="${img.file_url}" data-idx="${idx}" data-filename="${frappe.utils.escape_html(img.file_name || '')}">
                     <div class="custom-gallery-item-selector" title="Select">${narjes_icon('square', {size: 'lg'})}</div>
                     <img src="${img.file_url}" />
                     <div class="custom-gallery-item-overlay">
@@ -407,16 +494,14 @@ function bind_gallery_item_events(frm, $gallery, images) {
 
     $gallery.find('.btn-gallery-download').on('click', function(e) {
         e.stopPropagation();
-        let name = $(this).closest('.custom-gallery-item').data('name');
-        let url = $(this).closest('.custom-gallery-item').data('url');
-        
-        let link = document.createElement('a');
-        link.href = url;
-        link.download = name;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const $item = $(this).closest('.custom-gallery-item');
+        download_images([{
+            url: $item.data('url'),
+            // data('name') is the File DOCNAME — a random hash. Downloading
+            // under it is what renamed every saved image to gibberish. The
+            // real upload name is file_name, carried in data-filename.
+            filename: $item.data('filename') || $item.data('name'),
+        }]);
     });
 
     $gallery.find('.custom-gallery-item img').on('click', function(e) {
@@ -431,7 +516,8 @@ function bulk_action(frm, $gallery, action) {
         let $item = $(this);
         selected.push({
             name: $item.data('name'),
-            url: $item.data('url')
+            url: $item.data('url'),
+            filename: $item.data('filename') || $item.data('name'),
         });
     });
 
@@ -447,17 +533,109 @@ function bulk_action(frm, $gallery, action) {
             Promise.all(promises).then(() => frm.reload_doc());
         });
     } else if (action === 'download') {
-        selected.forEach((item, i) => {
-            setTimeout(() => {
-                let link = document.createElement('a');
-                link.href = item.url;
-                link.download = item.name;
-                link.target = '_blank';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }, i * 300);
+        download_images(selected);
+    }
+}
+
+// ── Downloading ──────────────────────────────────────────────────────────
+// Two things the old implementation got wrong:
+//   * it saved under the File docname (a random hash) instead of the
+//     uploaded file name;
+//   * it fired the download straight into the browser's download folder with
+//     no chance to choose where it lands.
+//
+// The File System Access API fixes the second: showSaveFilePicker for a
+// single image, showDirectoryPicker for a batch, both of which open the real
+// Finder/Explorer dialog. It needs a secure context and a user gesture — both
+// true here — and is unsupported in Firefox and older Safari, so the classic
+// anchor download stays as a fallback. That fallback now at least uses the
+// correct name.
+function _anchor_download(items) {
+    items.forEach((item, i) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = item.url;
+            link.download = item.filename || item.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, i * 300);
+    });
+}
+
+async function _fetch_blob(url) {
+    // same-origin, cookies included so /private/files works
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return await res.blob();
+}
+
+async function download_images(items) {
+    if (!items || !items.length) return;
+
+    const single = items.length === 1;
+    const can_pick = single ? !!window.showSaveFilePicker : !!window.showDirectoryPicker;
+
+    if (!can_pick) {
+        _anchor_download(items);
+        return;
+    }
+
+    try {
+        if (single) {
+            const name = items[0].filename || items[0].name;
+            const ext = (name.split('.').pop() || '').toLowerCase();
+            const handle = await window.showSaveFilePicker({
+                suggestedName: name,
+                types: ext ? [{
+                    description: __('Image'),
+                    accept: { [`image/${ext === 'jpg' ? 'jpeg' : ext}`]: [`.${ext}`] },
+                }] : undefined,
+            });
+            const blob = await _fetch_blob(items[0].url);
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            frappe.show_alert({ message: __('Saved {0}', [name]), indicator: 'green' });
+            return;
+        }
+
+        const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        let saved = 0;
+        const failed = [];
+        for (const item of items) {
+            const name = item.filename || item.name;
+            try {
+                const blob = await _fetch_blob(item.url);
+                const handle = await dir.getFileHandle(name, { create: true });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                saved++;
+            } catch (err) {
+                failed.push(name);
+            }
+        }
+        if (saved) {
+            frappe.show_alert({
+                message: __('Saved {0} image(s)', [saved]), indicator: 'green',
+            });
+        }
+        if (failed.length) {
+            frappe.msgprint({
+                title: __('Some images could not be saved'),
+                message: failed.map(frappe.utils.escape_html).join('<br>'),
+                indicator: 'orange',
+            });
+        }
+    } catch (err) {
+        // The user dismissing the picker is a normal outcome, not a failure.
+        if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+        frappe.show_alert({
+            message: __('Could not save — falling back to your downloads folder.'),
+            indicator: 'orange',
         });
+        _anchor_download(items);
     }
 }
 

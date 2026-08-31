@@ -158,9 +158,15 @@ def get_data(filters):
 
     data = []
     for row in orders:
-        # Selling Rate = Grand Total - Delivery Fees
+        # Selling Rate = Grand Total.
+        #
+        # The subtraction that used to be here is gone because the fee is no
+        # longer inside grand_total: delivery is display-only now, collected
+        # and kept by the courier, so grand_total is already purely the shop's
+        # own revenue. Subtracting again would have understated every order by
+        # its delivery fee. The column is still shown, for reference.
         delivery_fees = row.delivery_fees or 0
-        selling_rate = (row.grand_total or 0) - delivery_fees
+        selling_rate = row.grand_total or 0
 
         buying_rate = buying_rates.get(row.sales_order, 0) + flower_costs.get(row.sales_order, 0)
 

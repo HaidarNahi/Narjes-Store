@@ -115,8 +115,8 @@ var NarjesHomeDashboard = class {
                 <div class="narjes-kpi-grid" id="home-kpi-grid">
                     <div class="narjes-kpi-card">
                         <div class="narjes-kpi-info">
-                            <p>Today's Revenue</p>
-                            <h4 id="kpi-today-rev">0 IQD</h4>
+                            <p id="kpi-rev-label">This Month's Revenue</p>
+                            <h4 id="kpi-month-rev">0 IQD</h4>
                         </div>
                         <div class="narjes-kpi-icon kpi-icon-mint">${narjes_icon('currency-circle-dollar', {size: 'lg'})}</div>
                     </div>
@@ -271,7 +271,14 @@ var NarjesHomeDashboard = class {
                 const { kpis, charts } = r.message;
 
                 // Update KPI Cards
-                $('#kpi-today-rev').text(format_currency(kpis.today_revenue, 'IQD', 0));
+                $('#kpi-month-rev').text(format_currency(kpis.month_revenue, 'IQD', 0));
+                // Name the window on the card itself, so "this month" is never
+                // ambiguous on the 1st or when a screenshot is read days later.
+                if (kpis.month_start) {
+                    $('#kpi-rev-label').text(
+                        `${frappe.datetime.str_to_user(kpis.month_start)} \u2192 ${__("today")}`
+                    );
+                }
                 $('#kpi-today-orders').text(kpis.today_orders);
                 $('#kpi-pending-del').text(kpis.pending_deliveries);
                 $('#kpi-customers').text(kpis.total_customers);

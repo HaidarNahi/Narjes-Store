@@ -10,20 +10,59 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<title>{% block title %}{{ storefront_title }}{% endblock %}</title>
 	<meta name="description" content="{% block description %}{{ storefront_description }}{% endblock %}">
-	{%- if noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+	{#- Stated in both directions rather than only on refusal: "index" is the
+	    default anyway, but max-image-preview:large is what lets a catalogue
+	    built entirely on photography show a full-size thumbnail in results,
+	    and that opt-in only travels on an explicit robots tag (plan W10.3). -#}
+	{%- if noindex %}
+	<meta name="robots" content="noindex, nofollow">
+	{%- else %}
+	<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+	{%- endif %}
 	<meta name="theme-color" content="#FBFCFA" media="(prefers-color-scheme: light)">
 	<meta name="theme-color" content="#0F1411" media="(prefers-color-scheme: dark)">
 	<link rel="icon" href="/assets/narjes_custom/images/favicon.svg" type="image/svg+xml">
-	<link rel="canonical" href="{{ frappe.utils.get_url() }}/{{ lang }}{{ canonical_path or '' }}">
+	{%- set canonical_url = frappe.utils.get_url() + '/' + lang + (canonical_path or '') %}
+	{#- Only on indexable pages: a canonical or hreflang alongside `noindex`
+	    is a contradiction (one says "don't index me", the other says "index
+	    this URL instead"), and noindex wins anyway. The order-confirmation
+	    page in particular has no meaningful canonical to point at. -#}
+	{%- if not noindex %}
+	<link rel="canonical" href="{{ canonical_url }}">
 	<link rel="alternate" hreflang="ar" href="{{ frappe.utils.get_url() }}/ar{{ canonical_path or '' }}">
 	<link rel="alternate" hreflang="en" href="{{ frappe.utils.get_url() }}/en{{ canonical_path or '' }}">
 	<link rel="alternate" hreflang="x-default" href="{{ frappe.utils.get_url() }}/ar{{ canonical_path or '' }}">
+	{%- endif %}
 
+	{#- share_image: the product page overrides this with the product's own
+	    photo. A link pasted into WhatsApp or Instagram is this shop's main
+	    distribution channel, so the preview must show the item, not the
+	    shop-wide OG card (plan W10.3). -#}
+	{#- Already resolved in core.base_context, which drops /private/ uploads
+	    that 403 for every visitor. -#}
 	<meta property="og:type" content="{% block og_type %}website{% endblock %}">
+	<meta property="og:site_name" content="{{ 'النرجس' if lang == 'ar' else 'Narjes Store' }}">
+	<meta property="og:locale" content="{{ 'ar_IQ' if lang == 'ar' else 'en_US' }}">
+	<meta property="og:locale:alternate" content="{{ 'en_US' if lang == 'ar' else 'ar_IQ' }}">
+	<meta property="og:url" content="{{ canonical_url }}">
 	<meta property="og:title" content="{{ self.title() }}">
 	<meta property="og:description" content="{{ self.description() }}">
-	{%- if s.og_image %}<meta property="og:image" content="{{ frappe.utils.get_url() }}{{ s.og_image }}">{% endif %}
+	{%- if share_image %}
+	<meta property="og:image" content="{{ share_image if share_image.startswith('http') else frappe.utils.get_url() + share_image }}">
+	<meta property="og:image:alt" content="{{ self.title() }}">
+	{%- endif %}
 	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="{{ self.title() }}">
+	<meta name="twitter:description" content="{{ self.description() }}">
+	{%- if share_image %}
+	<meta name="twitter:image" content="{{ share_image if share_image.startswith('http') else frappe.utils.get_url() + share_image }}">
+	{%- endif %}
+
+	{#- One script, one @graph, built in storefront/seo.py — see the module
+	    docstring for why the nodes are merged rather than emitted separately. -#}
+	{%- if jsonld %}
+	<script type="application/ld+json">{{ jsonld | tojson }}</script>
+	{%- endif %}
 
 	{{ include_style('storefront.bundle.css') }}
 	{% block head %}{% endblock %}

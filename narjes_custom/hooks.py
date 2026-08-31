@@ -177,6 +177,16 @@ after_install = [
 # holding a pre-Phosphor-reskin emoji value.
 after_migrate = [
 	"narjes_custom.setup.custom_fields.run",
+	"narjes_custom.setup.naming.run",
+	# Must follow custom_fields: the board's columns mirror the order_phase
+	# Select options, and its `fields` list is what the Kanban actually
+	# SELECTs — a card field missing from it renders blank rather than
+	# erroring, which is exactly the kind of silent prod-only drift §12
+	# describes. Idempotent; only writes when something is genuinely missing.
+	"narjes_custom.setup.kanban_board.run",
+	# The placeholder line a flowers-only order needs in its mandatory items
+	# table, so flowers never have to leave custom_flower_items.
+	"narjes_custom.setup.flower_placeholder.run",
 	"narjes_custom.setup.ai_intake_defaults.run",
 	"narjes_custom.setup.storefront.run",
 	"narjes_custom.setup.branding.run",
@@ -255,7 +265,10 @@ doc_events = {
 	"Sales Order": {
 		"before_validate": "narjes_custom.api.sales_order_before_validate",
 		"validate": "narjes_custom.api.sales_order_validate",
-		"on_submit": "narjes_custom.api.automate_so_flow"
+		"on_submit": "narjes_custom.api.automate_so_flow",
+		# cancelling an order must take its cost entries with it, otherwise the
+		# expense stays on the P&L against an order that no longer exists
+		"on_cancel": "narjes_custom.api.cancel_order_cost_entries",
 	},
 	"Sales Invoice": {
 		"before_validate": "narjes_custom.api.sales_order_before_validate",

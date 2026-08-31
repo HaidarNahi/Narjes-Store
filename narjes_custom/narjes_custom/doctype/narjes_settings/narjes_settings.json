@@ -7,6 +7,7 @@
  "field_order": [
   "appearance_section",
   "theme_accent",
+  "desk_font_scale",
   "column_break_appearance_1",
   "appearance_note",
   "custom_accent_section",
@@ -28,6 +29,10 @@
   "column_break_biz_4",
   "default_packaging_cost",
   "business_constants_note",
+  "low_balance_section",
+  "low_balance_threshold_nos",
+  "column_break_lowbal_1",
+  "low_balance_threshold_cm",
   "shortcuts_section",
   "quick_shortcuts",
   "sidebar_section",
@@ -48,6 +53,14 @@
    "default": "Fern",
    "reqd": 1,
    "description": "The Narjes Ledger theme's accent — drives every primary button, link, active sidebar item, and \"done\" status color across the whole system, in both light and dark mode."
+  },
+  {
+   "fieldname": "desk_font_scale",
+   "fieldtype": "Select",
+   "label": "Font Size",
+   "options": "100%\n110%\n125%\n150%",
+   "default": "100%",
+   "description": "Scales text across the desk. Raise it for staff who find the default type hard to read."
   },
   {
    "fieldname": "column_break_appearance_1",
@@ -162,6 +175,29 @@
    "fieldname": "business_constants_note",
    "fieldtype": "HTML",
    "options": "<p style='color: var(--text-muted); font-size: 12px;'>All fields above are live: delivery fees are used on every Sales Order / Sales Invoice / Delivery Note, and the painting rate / sheet rate / default packaging cost are read directly by the canvas/sheet costing calculation and the packaging-cost default (see api.py's sales_order_before_validate / sales_order_validate). Change a value here and it takes effect on the next order — none of these are hardcoded in code anymore.</p>"
+  },
+  {
+   "fieldname": "low_balance_section",
+   "fieldtype": "Section Break",
+   "label": "Low Stock Warning"
+  },
+  {
+   "fieldname": "low_balance_threshold_nos",
+   "fieldtype": "Float",
+   "label": "Low Balance Threshold (pieces)",
+   "default": "15",
+   "description": "Items counted in pieces turn red in the Items Balance report at or below this balance."
+  },
+  {
+   "fieldname": "column_break_lowbal_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "low_balance_threshold_cm",
+   "fieldtype": "Float",
+   "label": "Low Balance Threshold (centimetres)",
+   "default": "2500",
+   "description": "Same warning for items measured by length, which run in far larger numbers than pieces."
   },
   {
    "fieldname": "shortcuts_section",

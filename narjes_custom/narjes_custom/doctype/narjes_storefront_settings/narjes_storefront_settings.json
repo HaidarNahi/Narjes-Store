@@ -13,6 +13,8 @@
   "default_language",
   "orders_enabled",
   "sb_brand",
+  "shop_name_en",
+  "shop_name_ar",
   "hero_title_en",
   "hero_title_ar",
   "hero_subtitle_en",
@@ -82,6 +84,20 @@
    "label": "Brand & Hero"
   },
   {
+   "fieldname": "shop_name_en",
+   "fieldtype": "Data",
+   "label": "Shop Name (English)",
+   "default": "Narjes Store",
+   "description": "The business name itself — used as the Organization and brand name in search-engine structured data. Not a slogan; keep it short (e.g. \"Narjes Store\")."
+  },
+  {
+   "fieldname": "shop_name_ar",
+   "fieldtype": "Data",
+   "label": "Shop Name (العربية)",
+   "default": "النرجس",
+   "description": "اسم المتجر نفسه — يُستخدم كاسم المنشأة والعلامة في بيانات محركات البحث. ليس شعاراً؛ اجعله قصيراً (مثل \"النرجس\")."
+  },
+  {
    "fieldname": "hero_title_en",
    "fieldtype": "Data",
    "label": "Hero Title (English)"
@@ -89,7 +105,7 @@
   {
    "fieldname": "hero_title_ar",
    "fieldtype": "Data",
-   "label": "Hero Title (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Hero Title (العربية)"
   },
   {
    "fieldname": "hero_subtitle_en",
@@ -99,7 +115,7 @@
   {
    "fieldname": "hero_subtitle_ar",
    "fieldtype": "Small Text",
-   "label": "Hero Subtitle (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Hero Subtitle (العربية)"
   },
   {
    "fieldname": "cb_brand",
@@ -118,7 +134,7 @@
   {
    "fieldname": "announcement_ar",
    "fieldtype": "Data",
-   "label": "Announcement Bar (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Announcement Bar (العربية)"
   },
   {
    "fieldname": "sb_contact",
@@ -158,7 +174,7 @@
   {
    "fieldname": "address_ar",
    "fieldtype": "Small Text",
-   "label": "Address (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Address (العربية)"
   },
   {
    "fieldname": "working_hours",
@@ -178,7 +194,7 @@
   {
    "fieldname": "meta_title_ar",
    "fieldtype": "Data",
-   "label": "Meta Title (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Meta Title (العربية)"
   },
   {
    "fieldname": "cb_seo",
@@ -192,13 +208,13 @@
   {
    "fieldname": "meta_description_ar",
    "fieldtype": "Small Text",
-   "label": "Meta Description (\u0627\u0644\u0639\u0631\u0628\u064a\u0629)"
+   "label": "Meta Description (العربية)"
   },
   {
    "fieldname": "og_image",
    "fieldtype": "Attach Image",
    "label": "Share Image",
-   "description": "Shown when a link is pasted into Instagram or WhatsApp. 1200\u00d7630."
+   "description": "Shown when a link is pasted into Instagram or WhatsApp. 1200×630."
   }
  ],
  "index_web_pages_for_search": 1,

@@ -1,62 +1,256 @@
 // P6.6 — Kanban "Order Phases", the flagship view. Board canvas + column
 // chrome here; the card itself is custom-rendered markup (.so-kanban-card,
-// absorbed from narjes_kanban.css and re-pointed at --n-* tokens).
-// The three !important rules the old file needed live in _shame.scss.
+// built in public/js/sales_order_list.js).
+// The two !important rules the old file needed live in _shame.scss.
 
 body.narjes-ledger {
 	.kanban {
-		// columns: Micro-caps title + count, phase underline
+		gap: 14px;
+		align-items: flex-start;
+
+		// Stated outright rather than inherited: a column's horizontal
+		// gesture chains up to THIS element, so it has to be the x scroller.
+		// (Frappe only sets overflow-y: hidden and leans on the spec quirk
+		// that makes overflow-x compute to auto — too load-bearing to leave
+		// implicit now that the cards depend on it.)
+		overflow-x: auto;
+
+		// Horizontal board scroll must not hand the gesture to the page —
+		// on iPad that is what rubber-banded the whole view (issue #1).
+		overscroll-behavior-x: contain;
+
+		// columns: Micro-caps title + live count, phase underline
 		.kanban-column {
-			background: transparent;
+			background: var(--n-surface);
+			border: 1px solid var(--n-border);
+			border-radius: var(--n-radius-md);
+			padding: 0;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			transition: width var(--n-dur-3) var(--n-ease),
+				min-width var(--n-dur-3) var(--n-ease),
+				max-width var(--n-dur-3) var(--n-ease);
 
 			.kanban-column-header {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				margin: 0;
+				padding: 12px 12px 10px;
 				border-block-end: 2px solid var(--n-border-strong);
-				padding-block-end: 8px;
 			}
 
 			.kanban-column-title {
 				font-family: var(--n-font-mono);
-				font-size: 11px;
-				font-weight: 500;
+				font-size: calc(11px * var(--n-font-scale, 1));
+				font-weight: 600;
 				text-transform: uppercase;
-				letter-spacing: 0.08em;
+				letter-spacing: 0.07em;
+				color: var(--n-text);
+				flex: 1;
+				min-width: 0;
+				margin: 0;
+				padding: 0;
 
-				.indicator::before {
-					height: 6px;
-					width: 6px;
+				.kanban-title {
+					margin: 0;
+					font-size: inherit;
+					font-weight: inherit;
+					font-family: inherit;
+				}
+
+				.indicator-pill {
+					width: 8px;
+					height: 8px;
+					padding: 0;
+					flex: none;
+
+					&::before {
+						height: 8px;
+						width: 8px;
+						margin: 0;
+					}
 				}
 			}
 
-			// per-column count in mono
-			.kanban-count,
-			.count {
-				font-family: var(--n-font-mono);
-				color: var(--n-text-3);
-			}
-
 			.add-card {
+				margin: 0 10px 10px;
+				height: auto;
+				padding: 7px;
 				border: 1px dashed var(--n-border-strong);
-				border-radius: var(--n-radius-md);
+				border-radius: var(--n-radius-sm);
+				background: transparent;
 				color: var(--n-text-3);
+				font-size: calc(12.5px * var(--n-font-scale, 1));
 
 				&:hover {
 					border-color: var(--n-fern-400);
 					color: var(--n-primary);
+					background: transparent;
+					box-shadow: none;
 				}
 			}
 		}
 
-		.kanban-board {
-			gap: 20px;
+		// ── The vertical scroller. This is half of the iPad fix (issue #1):
+		// the column body has to be a real scroll container that keeps the
+		// gesture to itself, and it must accept a vertical pan so a swipe
+		// scrolls instead of being swallowed by the drag layer. The other
+		// half (SortableJS delay) is in sales_order_list.js.
+		.kanban-cards {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			margin: 0;
+			padding: 10px;
+			height: auto;
+			max-height: calc(100vh - var(--navbar-height, 60px) - var(--page-head-height, 60px) - 150px);
+			min-height: 0;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+
+			// Per-axis, and the distinction matters. `overscroll-behavior:
+			// contain` (both axes) is what stopped you panning the board
+			// sideways with the pointer over a card: .kanban-cards is itself
+			// a scroll container in x — it just has nothing to scroll — so a
+			// horizontal gesture died there instead of chaining out to
+			// .kanban. Keep `contain` on y, where it stops the page
+			// rubber-banding; leave x free to chain to the board.
+			overscroll-behavior-y: contain;
+			overscroll-behavior-x: auto;
+
+			// Same story for touch: `pan-y` alone told the browser this
+			// element only ever pans vertically, so a sideways swipe that
+			// started on a ticket did nothing at all. Allow both — Sortable's
+			// 180ms hold still wins for an actual card drag, because a swipe
+			// that moves before the delay elapses cancels the drag and hands
+			// the gesture back to the browser.
+			touch-action: pan-x pan-y;
+
+			// a thin, on-brand scrollbar instead of Frappe's hidden one —
+			// on a tablet you want to see that the column has more below
+			scrollbar-width: thin;
+			scrollbar-color: var(--n-border-strong) transparent;
+
+			&::-webkit-scrollbar {
+				display: block;
+				width: 6px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+				background: var(--n-border-strong);
+				border-radius: var(--n-radius-pill);
+			}
+
+			&::-webkit-scrollbar-track {
+				background: transparent;
+			}
 		}
 
-		// vertical rhythm between cards (issue #8)
+		// vertical rhythm is the flex gap now, not per-card margins
 		.kanban-card-wrapper {
-			margin-block: var(--n-space-1) var(--n-space-3);
+			margin: 0;
+
+			&:last-child .kanban-card {
+				margin-bottom: 0;
+			}
 		}
 	}
 
-	// ---- the card (mock-exact custom markup) ----
+	// ── live ticket count (issue #9) ──────────────────────────────────
+	.so-column-count {
+		font-family: var(--n-font-mono);
+		font-size: calc(11px * var(--n-font-scale, 1));
+		font-weight: 500;
+		font-variant-numeric: tabular-nums;
+		background: var(--n-sunken);
+		color: var(--n-text-2);
+		border-radius: var(--n-radius-pill);
+		padding: 2px 8px;
+		min-width: 24px;
+		text-align: center;
+		flex: none;
+		transition: background var(--n-dur-2) var(--n-ease),
+			color var(--n-dur-2) var(--n-ease);
+
+		&.is-bumped {
+			background: var(--n-selection);
+			color: var(--n-primary);
+		}
+	}
+
+	// ── collapse toggle (issue #8) ────────────────────────────────────
+	.so-column-collapse {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 26px;
+		height: 26px;
+		flex: none;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: var(--n-text-3);
+		border-radius: var(--n-radius-xs);
+		cursor: pointer;
+		transition: background var(--n-dur-1) var(--n-ease),
+			color var(--n-dur-1) var(--n-ease);
+
+		&:hover {
+			background: var(--n-sunken);
+			color: var(--n-text);
+		}
+
+		svg {
+			width: 16px;
+			height: 16px;
+		}
+	}
+
+	// collapsed: a 48px rail carrying the phase colour, vertical title and
+	// the count, so a parked column still reports its size at a glance
+	.kanban .kanban-column.so-collapsed {
+		min-width: 48px !important;
+		max-width: 48px !important;
+		width: 48px !important;
+		min-height: 340px;
+
+		.kanban-column-header {
+			flex-direction: column;
+			justify-content: flex-start;
+			height: 100%;
+			padding: 12px 0;
+			gap: 12px;
+			border-block-end: none;
+			border-inline-start: 3px solid var(--n-border-strong);
+		}
+
+		.kanban-column-title {
+			writing-mode: vertical-rl;
+			text-orientation: mixed;
+			flex: 0 1 auto;
+			max-height: 240px;
+			overflow: hidden;
+			letter-spacing: 0.1em;
+
+			.indicator-pill {
+				display: none;
+			}
+		}
+
+		.kanban-cards,
+		.add-card,
+		.new-card-area,
+		.column-options {
+			display: none !important;
+		}
+	}
+
+	// ---- the card ----------------------------------------------------
+	// 288px column (down from 400px, issue #3). The width came from
+	// deleting the old vertical icon rail + divider — markers now sit
+	// inline on the totals row.
 	.so-kanban-card {
 		position: relative;
 		display: flex;
@@ -65,17 +259,15 @@ body.narjes-ledger {
 		border-radius: var(--n-radius-md);
 		box-shadow: var(--n-e1);
 		border: 1px solid var(--n-border);
-		min-height: 200px;
-		padding: 20px 20px 56px;
+		padding: 12px 12px 0;
 		font-family: var(--n-font-body);
 		cursor: grab;
-		overflow: hidden;
 		transition: box-shadow var(--n-dur-1) var(--n-ease),
 			transform var(--n-dur-1) var(--n-ease);
 
 		&:hover {
 			box-shadow: var(--n-e2);
-			transform: translateY(-2px);
+			transform: translateY(-1px);
 		}
 
 		&:active {
@@ -83,28 +275,23 @@ body.narjes-ledger {
 		}
 	}
 
-	.so-content-row {
+	.so-head {
 		display: flex;
-		width: 100%;
-		flex: 1;
-	}
-
-	.so-left {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-		min-width: 0;
+		align-items: flex-start;
+		gap: 8px;
 	}
 
 	// customer name — the display moment (Fraunces, Amiri for Arabic names)
 	.so-title-row {
 		font-family: var(--n-font-display);
-		font-size: 16px;
+		font-size: calc(15px * var(--n-font-scale, 1));
 		font-weight: 600;
 		color: var(--n-text);
-		line-height: 1.3;
+		line-height: 1.25;
+		flex: 1;
+		min-width: 0;
 		unicode-bidi: plaintext;
+		word-break: break-word;
 
 		a {
 			color: inherit;
@@ -116,10 +303,55 @@ body.narjes-ledger {
 		}
 	}
 
-	// ID / DLV rows in ledger mono
+	// ── open-the-order button (issue #7) ──────────────────────────────
+	// Top-right, opposite the name: the one unambiguous "go to the record"
+	// target now that the card carries other clickable things.
+	.so-open-btn {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		margin: -3px -3px 0 0;
+		border: 1px solid var(--n-border);
+		border-radius: var(--n-radius-sm);
+		background: var(--n-bg);
+		color: var(--n-text-2);
+		transition: background var(--n-dur-1) var(--n-ease),
+			border-color var(--n-dur-1) var(--n-ease),
+			color var(--n-dur-1) var(--n-ease);
+
+		&:hover,
+		&:focus-visible {
+			background: var(--n-primary);
+			border-color: var(--n-primary);
+			color: var(--n-primary-text-on);
+			text-decoration: none;
+		}
+
+		svg {
+			width: 15px;
+			height: 15px;
+		}
+	}
+
+	// ID / DLV / date rows in ledger mono. Rows are emitted only when the
+	// field has a value (issue #11), so there is nothing to hide here.
+	.so-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		margin-top: 7px;
+
+		&:empty {
+			margin-top: 0;
+		}
+	}
+
 	.so-info-row {
 		font-family: var(--n-font-mono);
-		font-size: 12px;
+		font-size: calc(11px * var(--n-font-scale, 1));
 		font-variant-numeric: tabular-nums;
 		color: var(--n-text-2);
 		line-height: 1.4;
@@ -130,80 +362,272 @@ body.narjes-ledger {
 
 	.so-time-ago {
 		color: var(--n-text-3);
-		font-size: 12px;
-		font-style: normal;
 	}
 
-	.so-divider {
-		width: 1px;
-		background-color: var(--n-border);
-		margin-block: 0;
-		margin-inline: 18px;
-		align-self: stretch;
-	}
-
-	// right-edge icon rail (flag, flower, gift — order-type markers)
-	.so-right {
+	// ── grand total + marker rail (issues #4, #6) ─────────────────────
+	.so-money-row {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 14px;
-		padding-block-start: 2px;
+		justify-content: space-between;
+		gap: 8px;
+		margin-top: 10px;
+		padding-top: 9px;
+		border-top: 1px solid var(--n-border);
 	}
 
-	.so-icon {
+	.so-total-value {
+		font-family: var(--n-font-mono);
+		font-size: calc(13.5px * var(--n-font-scale, 1));
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--n-text);
+		white-space: nowrap;
+	}
+
+	.so-total-currency {
+		font-size: calc(10px * var(--n-font-scale, 1));
+		font-weight: 500;
+		color: var(--n-text-3);
+		margin-inline-start: 3px;
+	}
+
+	.so-markers {
 		display: flex;
+		gap: 5px;
+		flex: none;
+	}
+
+	// ── priority flag, in the header beside the open button ───────────
+	// Separated from the content markers on purpose: flower/stand/gift
+	// describe what the order contains, priority describes how urgent it is.
+	// Sitting at the top-right it reads as triage information next to the
+	// primary action, instead of as a fourth "this order has a…" badge.
+	.so-priority {
+		flex: none;
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 24px;
-		height: 24px;
-		color: var(--n-text-2);
+		width: 22px;
+		height: 28px;
+		margin-top: -3px;
+		color: var(--n-text-3);
+
+		svg {
+			display: block;
+			width: 17px;
+			height: 17px;
+		}
+
+		// grades ride the Narjes ramps; the palette has no blue, so fern
+		// carries "low / informational"
+		&.pri-high {
+			color: var(--n-danger);
+		}
+
+		&.pri-medium {
+			color: var(--n-accent);
+		}
+
+		&.pri-low {
+			color: var(--n-fern-400);
+		}
+	}
+
+	.so-marker {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 19px;
+		height: 19px;
+		color: var(--n-text-3);
 
 		svg {
 			display: block;
 			width: 100%;
 			height: 100%;
 		}
-	}
 
-	// heart bottom-left
-	.so-heart-btn {
-		position: absolute;
-		bottom: 16px;
-		inset-inline-start: 20px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 28px;
-		height: 28px;
-		color: var(--n-text-2);
-		transition: transform var(--n-dur-1) var(--n-ease);
+		&.mk-flower {
+			color: var(--n-fern-500);
+		}
 
-		&:hover {
-			transform: scale(1.15);
+		&.mk-stand {
+			color: var(--n-accent-text);
+		}
+
+		&.mk-gift {
+			color: var(--n-stamp-500);
 		}
 	}
 
-	// assignee chip bottom-right: Ink bg / Paper text (fixed dark values on
-	// purpose — it must stay an ink stamp in both modes)
-	.so-creator-badge {
-		position: absolute;
-		bottom: 0;
-		inset-inline-end: 0;
-		background-color: var(--n-ink);
-		color: var(--n-neutral-100);
-		font-size: 12px;
-		font-weight: 500;
-		padding-block: 8px;
-		padding-inline: 16px;
-		border-start-start-radius: var(--n-radius-md);
-		border-end-end-radius: var(--n-radius-md);
-		letter-spacing: 0.3px;
-		max-width: 140px;
+	// ── footer: assignee (left) + creator stamp (right) ───────────────
+	// flex-end, not center: the stamp sits flush into the card's bottom
+	// corner while the assignee chip lifts clear of it.
+	.so-foot {
+		display: flex;
+		align-items: flex-end;
+		gap: 6px;
+		margin: 9px -12px 0;
+		padding-inline-start: 10px;
+	}
+
+	.so-foot-spacer {
+		flex: 1;
+	}
+
+	// assignee chip — occupies the slot the favourite icon vacated (#10)
+	.so-assignee {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		border: 1px solid transparent;
+		background: transparent;
+		border-radius: var(--n-radius-pill);
+		padding: 3px 8px 3px 3px;
+		margin-bottom: 8px;
+		cursor: pointer;
+		font-family: var(--n-font-body);
+		font-size: calc(11.5px * var(--n-font-scale, 1));
+		color: var(--n-text-2);
+		max-width: 132px;
+		transition: background var(--n-dur-1) var(--n-ease),
+			border-color var(--n-dur-1) var(--n-ease);
+
+		&:hover,
+		&:focus-visible {
+			border-color: var(--n-border-strong);
+			background: var(--n-bg);
+		}
+
+		&.is-unassigned .so-assignee-name {
+			color: var(--n-text-3);
+			font-style: italic;
+		}
+	}
+
+	.so-assignee-name {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.so-avatar {
+		width: 21px;
+		height: 21px;
+		border-radius: 50%;
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--n-font-mono);
+		font-size: calc(9px * var(--n-font-scale, 1));
+		font-weight: 600;
+		color: #fff;
+		letter-spacing: 0.02em;
+
+		&.so-avatar-empty {
+			background: transparent !important;
+			border: 1px dashed var(--n-border-strong);
+			color: var(--n-text-3);
+
+			svg {
+				width: 12px;
+				height: 12px;
+			}
+		}
+	}
+
+	// creator stamp: Ink bg / Paper text (fixed dark values on purpose —
+	// it must stay an ink stamp in both modes). Now the full name (#2).
+	.so-creator-badge {
+		background-color: var(--n-ink);
+		color: var(--n-neutral-100);
+		font-size: calc(11px * var(--n-font-scale, 1));
+		font-weight: 500;
+		padding: 6px 11px;
+		border-start-start-radius: var(--n-radius-md);
+		border-end-end-radius: var(--n-radius-md);
+		letter-spacing: 0.01em;
+		max-width: 132px;
+		flex: none;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	// ── assignee picker popover (issue #5) ────────────────────────────
+	.so-assignee-pop {
+		position: fixed;
+		z-index: var(--n-z-popover);
+		min-width: 214px;
+		max-width: 280px;
+		background: var(--n-raised);
+		border: 1px solid var(--n-border-strong);
+		border-radius: var(--n-radius-md);
+		box-shadow: var(--n-e3);
+		padding: 6px;
+		font-family: var(--n-font-body);
+	}
+
+	.so-pop-head {
+		font-family: var(--n-font-mono);
+		font-size: calc(10px * var(--n-font-scale, 1));
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--n-text-3);
+		padding: 6px 8px 7px;
+	}
+
+	.so-pop-list {
+		max-height: 264px;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: thin;
+	}
+
+	.so-pop-item {
+		display: flex;
+		align-items: center;
+		gap: 9px;
+		width: 100%;
+		border: none;
+		background: transparent;
+		border-radius: var(--n-radius-sm);
+		padding: 7px 8px;
+		cursor: pointer;
+		text-align: start;
+		font-size: calc(13px * var(--n-font-scale, 1));
+		color: var(--n-text);
+
+		&:hover,
+		&:focus-visible {
+			background: var(--n-selection);
+		}
+
+		&.is-active {
+			color: var(--n-primary);
+			font-weight: 500;
+		}
+	}
+
+	.so-pop-name {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.so-pop-check {
+		width: 14px;
+		height: 14px;
+		flex: none;
+		color: var(--n-primary);
+	}
+
+	.so-pop-sep {
+		border-top: 1px solid var(--n-border);
+		margin: 5px 4px;
 	}
 }
 
@@ -212,6 +636,348 @@ body.narjes-ledger {
 	.so-creator-badge {
 		background-color: var(--n-well);
 		color: var(--n-text);
-		border-start-start-radius: var(--n-radius-md);
+	}
+}
+
+// ── Sales Order overlay (issue #4) ───────────────────────────────────────
+// Deliberately NOT scoped to body.narjes-ledger: the overlay is appended to
+// <body> and must render even if the theme class is toggled off.
+#narjes-order-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: var(--n-z-modal, 1050);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(8px, 2.5vh, 32px);
+	background: rgba(var(--n-shadow-rgb, 27, 33, 29), 0.45);
+	backdrop-filter: blur(2px);
+	animation: narjes-overlay-in var(--n-dur-2, 180ms) var(--n-ease, ease) both;
+
+	&.is-closing {
+		animation: narjes-overlay-out 150ms var(--n-ease, ease) both;
+	}
+}
+
+.narjes-overlay-panel {
+	position: relative;
+	width: min(1360px, 100%);
+	height: 100%;
+	background: var(--n-bg, #fff);
+	border-radius: var(--n-radius-lg, 16px);
+	box-shadow: var(--n-e3, 0 12px 32px rgba(0, 0, 0, 0.3));
+	overflow: hidden;
+	animation: narjes-panel-in var(--n-dur-3, 240ms) var(--n-ease, ease) both;
+}
+
+// The panel's own action bar — everything the desk header carried that is
+// actually needed in here (Save, Submit, close), and nothing else.
+.narjes-overlay-bar {
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline: 0;
+	z-index: 3;
+	height: 46px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding-inline: 14px;
+	background: var(--n-surface, #fff);
+	border-block-end: 1px solid var(--n-border, #e7eae6);
+}
+
+.narjes-overlay-title {
+	font-family: var(--n-font-mono, monospace);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--n-text, #1b211d);
+	white-space: nowrap;
+}
+
+.narjes-overlay-status {
+	font-family: var(--n-font-mono, monospace);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	padding: 2px 8px;
+	border-radius: var(--n-radius-pill, 999px);
+	background: var(--n-sunken, #e7eae6);
+	color: var(--n-text-3, #6a736c);
+
+	&[data-state="dirty"] {
+		background: var(--n-accent-bg, #fbf3e7);
+		color: var(--n-accent-text, #875618);
+	}
+
+	&[data-state="submitted"] {
+		background: var(--n-success-bg, #eef4f0);
+		color: var(--n-primary, #2e5c46);
+	}
+
+	&[data-state="cancelled"] {
+		background: var(--n-danger-bg, #f9efef);
+		color: var(--n-danger, #9b3b3b);
+	}
+}
+
+.narjes-overlay-spacer {
+	flex: 1;
+}
+
+.narjes-overlay-btn {
+	font-family: var(--n-font-body, sans-serif);
+	font-size: 12.5px;
+	font-weight: 500;
+	padding: 6px 14px;
+	border-radius: var(--n-radius-sm, 8px);
+	border: 1px solid var(--n-border-strong, #d7dcd7);
+	background: var(--n-raised, #fff);
+	color: var(--n-text, #1b211d);
+	cursor: pointer;
+	transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+
+	&:hover:not(:disabled) {
+		border-color: var(--n-fern-400, #5e8f77);
+		color: var(--n-primary, #2e5c46);
+	}
+
+	&:disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+
+	&.is-primary {
+		background: var(--n-primary, #2e5c46);
+		border-color: var(--n-primary, #2e5c46);
+		color: var(--n-primary-text-on, #fff);
+
+		&:hover:not(:disabled) {
+			background: var(--n-primary-hover, #264c3a);
+			color: var(--n-primary-text-on, #fff);
+		}
+	}
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+.narjes-overlay-frame {
+	width: 100%;
+	// the bar sits above it
+	height: calc(100% - 46px);
+	margin-block-start: 46px;
+	border: 0;
+	display: block;
+	opacity: 0;
+	transition: opacity var(--n-dur-2, 180ms) var(--n-ease, ease);
+
+	#narjes-order-overlay.is-loaded & {
+		opacity: 1;
+	}
+}
+
+.narjes-overlay-loading {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--n-font-mono, monospace);
+	font-size: calc(12px * var(--n-font-scale, 1));
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--n-text-3, #888);
+
+	#narjes-order-overlay.is-loaded & {
+		display: none;
+	}
+}
+
+.narjes-overlay-close {
+	flex: none;
+	width: 30px;
+	height: 30px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: 1px solid var(--n-border-strong, #ddd);
+	border-radius: var(--n-radius-pill, 999px);
+	background: var(--n-raised, #fff);
+	color: var(--n-text-2, #444);
+	cursor: pointer;
+	box-shadow: var(--n-e1, 0 1px 2px rgba(0, 0, 0, 0.06));
+	transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+
+	&:hover,
+	&:focus-visible {
+		background: var(--n-danger, #9b3b3b);
+		border-color: var(--n-danger, #9b3b3b);
+		color: #fff;
+		transform: rotate(90deg);
+	}
+
+	svg {
+		width: 17px;
+		height: 17px;
+	}
+}
+
+@keyframes narjes-overlay-in {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+
+@keyframes narjes-overlay-out {
+	from { opacity: 1; }
+	to   { opacity: 0; }
+}
+
+@keyframes narjes-panel-in {
+	from { opacity: 0; transform: translateY(10px) scale(0.985); }
+	to   { opacity: 1; transform: none; }
+}
+
+// The form as rendered INSIDE the overlay frame: same form, minus the desk
+// chrome that the panel already replaces. The class is stamped on <body> by
+// the opener once the frame loads.
+body.narjes-embedded-form {
+	// Zero the two heights the desk reserves for chrome we just removed.
+	// Hiding the elements is not enough on its own: the sticky form tab bar
+	// parks itself at `calc(var(--navbar-height) + var(--page-head-height))`,
+	// so with the real values still in place it floated ~60px down the panel
+	// and the form scrolled visibly through the transparent gap above it.
+	// Fixing the variables fixes every rule that reserves that space at once.
+	--navbar-height: 0px;
+	--page-head-height: 0px;
+
+	// Everything the panel replaces. The overlay supplies its own close
+	// button and the card already said which order this is, so the desk
+	// chrome is pure duplication in here.
+	.body-sidebar-container,   // left rail: logo, search, bell, profile, shortcuts
+	.body-sidebar,
+	.body-sidebar-placeholder,
+	.navbar,
+	.page-head,                // breadcrumbs, status pill, Submit, ⋯ menu
+	.form-message,             // "Submit this document to confirm" headline
+	.layout-side-section,      // the form's own right-hand sidebar
+	#navbar-breadcrumbs {
+		display: none !important;
+	}
+
+	// Reclaim the space the sidebar and page head reserved. Written for both
+	// possible layouts — flex row, or a fixed rail with a margin on #body —
+	// because a display:none only collapses the first kind on its own.
+	#body,
+	.main-section,
+	.page-container,
+	.page-body {
+		margin-block-start: 0 !important;
+		padding-block-start: 0 !important;
+		margin-inline-start: 0 !important;
+		padding-inline-start: 0 !important;
+		width: 100% !important;
+		max-width: 100% !important;
+	}
+
+	.layout-main-section-wrapper {
+		width: 100%;
+		max-width: 100%;
+		flex: 0 0 100%;
+		margin: 0;
+	}
+
+	// breathing room at the top now that nothing sits above the form, and
+	// clearance on the end side so the overlay's close button never lands on
+	// top of a field
+	.layout-main-section {
+		padding-block-start: var(--n-space-6, 24px);
+		padding-inline-end: var(--n-space-8, 32px);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Multi-select and bulk moves
+//
+// The checkbox lives inside a draggable card, so it needs a generous hit area
+// of its own — a bare 13px input on a tablet is a coin toss between ticking
+// the ticket and dragging it. The wrapper label provides that target and the
+// JS stops pointer events on it so a tick never starts a drag.
+// ---------------------------------------------------------------------------
+
+.so-select-wrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	// 32px is the smallest comfortable touch target that still fits the card
+	// header without pushing the customer name onto a second line.
+	min-width: 32px;
+	min-height: 32px;
+	margin: -6px 0 -6px -6px;
+	cursor: pointer;
+	flex: none;
+
+	input {
+		width: 15px;
+		height: 15px;
+		cursor: pointer;
+		accent-color: var(--n-primary);
+		margin: 0;
+	}
+}
+
+.so-column-select {
+	margin-inline-start: 0;
+	margin-inline-end: 2px;
+}
+
+// A selected card is outlined rather than filled: the cards already use
+// background to carry priority and badge colour, so tinting them here would
+// collide with meaning that is already on screen.
+.kanban-card-wrapper.is-selected .so-kanban-card {
+	outline: 2px solid var(--n-primary);
+	outline-offset: 1px;
+}
+
+#narjes-bulk-bar {
+	position: fixed;
+	// Anchored bottom-centre, clear of the desk's own footer chrome.
+	inset-block-end: 24px;
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	z-index: 1030;
+
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 10px 16px;
+
+	background: var(--n-bg);
+	border: 1px solid var(--n-border-strong);
+	border-radius: var(--n-radius-pill, 999px);
+	box-shadow: var(--n-e3);
+	font-family: var(--n-font-body);
+
+	.nbb-count {
+		font-size: calc(13px * var(--n-font-scale, 1));
+		font-weight: 500;
+		color: var(--n-ink);
+		white-space: nowrap;
+	}
+
+	.nbb-actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	// On a narrow screen the bar spans the width instead of floating, so it
+	// cannot push itself off the edge on a phone held in portrait.
+	@media (max-width: 600px) {
+		inset-inline-start: 12px;
+		inset-inline-end: 12px;
+		transform: none;
+		border-radius: var(--n-radius-3, 12px);
+		justify-content: space-between;
 	}
 }

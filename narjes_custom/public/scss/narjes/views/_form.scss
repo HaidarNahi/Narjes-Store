@@ -199,7 +199,135 @@ body.narjes-ledger {
 		margin-block-start: var(--n-space-6);
 	}
 
-	// ---- read-only "Customer" tab on Sales Order ----
+	// ---- read-only "Receipt Info" tab on Sales Order ----
+	// The receipt block leads: what this order is worth and what is on it,
+	// before the customer record underneath it.
+	.narjes-receipt {
+		padding-block: var(--n-space-2) var(--n-space-4);
+		border-block-end: 1px solid var(--n-border);
+		margin-block-end: var(--n-space-4);
+	}
+
+	.narjes-receipt-total {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--n-space-4);
+		padding: var(--n-space-3) var(--n-space-4);
+		background: var(--n-sunken);
+		border-radius: var(--n-radius-md);
+		margin-block-end: var(--n-space-4);
+	}
+
+	.narjes-receipt-total-label {
+		font-family: var(--n-font-mono);
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--n-text-3);
+	}
+
+	.narjes-receipt-total-value {
+		font-family: var(--n-font-mono);
+		font-size: 20px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--n-text);
+	}
+
+	// The headline figure is what the customer hands over, so it includes the
+	// courier's fee. This spells that out rather than leaving staff to wonder
+	// why it disagrees with Grand Total on the Details tab — they are different
+	// numbers on purpose: one is the shop's revenue, this one is the cash
+	// collected at the door.
+	.narjes-receipt-total-note {
+		flex-basis: 100%;
+		font-family: var(--n-font-mono);
+		font-size: 10.5px;
+		letter-spacing: 0.04em;
+		color: var(--n-text-3);
+		text-align: end;
+	}
+
+	.narjes-receipt-group {
+		margin-block-end: var(--n-space-4);
+
+		h5 {
+			display: flex;
+			align-items: center;
+			gap: var(--n-space-2);
+			font-family: var(--n-font-mono);
+			font-size: 11px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--n-text-3);
+			margin-block-end: var(--n-space-2);
+		}
+	}
+
+	.narjes-receipt-count {
+		font-variant-numeric: tabular-nums;
+		background: var(--n-sunken);
+		color: var(--n-text-2);
+		border-radius: var(--n-radius-pill);
+		padding: 1px 7px;
+		letter-spacing: 0;
+	}
+
+	// wide tables scroll inside their own box, never the form
+	.narjes-receipt-scroll {
+		overflow-x: auto;
+		border: 1px solid var(--n-border);
+		border-radius: var(--n-radius-sm);
+	}
+
+	.narjes-receipt-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+
+		th,
+		td {
+			padding: var(--n-space-2) var(--n-space-3);
+			text-align: start;
+			border-block-end: 1px solid var(--n-border);
+			white-space: nowrap;
+		}
+
+		th {
+			font-family: var(--n-font-mono);
+			font-size: 10px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--n-text-3);
+			background: var(--n-bg);
+		}
+
+		tbody tr:last-child td {
+			border-block-end: none;
+		}
+	}
+
+	.narjes-receipt-num {
+		text-align: end !important;
+		font-family: var(--n-font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.narjes-receipt-item {
+		white-space: normal !important;
+		unicode-bidi: plaintext;
+	}
+
+	.narjes-receipt-sub {
+		display: block;
+		font-size: 11px;
+		color: var(--n-text-3);
+	}
+
 	.narjes-customer-info {
 		padding-block: var(--n-space-2);
 	}

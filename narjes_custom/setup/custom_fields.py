@@ -39,6 +39,20 @@ GOVERNORATE_OPTIONS = "\n".join(IRAQ_GOVERNORATES)
 
 
 CUSTOM_FIELDS = {
+    # Sale-time cost entries used to reference their order only as a phrase in
+    # user_remark, so they could not be reported on, filtered, or cleaned up on
+    # cancellation. This makes the relationship a real one.
+    "Journal Entry": [
+        {
+            "fieldname": "custom_sales_order",
+            "label": "Sales Order",
+            "fieldtype": "Link",
+            "options": "Sales Order",
+            "insert_after": "user_remark",
+            "read_only": 1,
+            "description": "Set automatically when this entry books a cost for an order.",
+        },
+    ],
     "Customer": [
         {
             "fieldname": "main_phone_number",
@@ -234,12 +248,20 @@ CUSTOM_FIELDS = {
             "insert_after": "custom_flower_total",
         },
         # --- Painting costs (canvas + sheet), auto-calculated ---
+        # --- Painting costs: computed, but hidden from the form ---
+        # Canvas and sheet painting are internal costs the shop does not bill
+        # separately; the whole block is still calculated on every save and
+        # still posted as a Painting Costs journal entry on submit, and the
+        # Sales Revenue Report still reads it. It is hidden because seven
+        # read-only cost fields sat between the operator and the numbers they
+        # actually use. Unhide by dropping "hidden" from these entries.
         {
             "fieldname": "custom_painting_section",
             "fieldtype": "Section Break",
             "label": "Painting Costs (Auto Calculated)",
             "insert_after": "taxes_and_charges",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_painting_items",
             "fieldtype": "Table",
@@ -247,21 +269,24 @@ CUSTOM_FIELDS = {
             "label": "Canvas Items",
             "read_only": 1,
             "insert_after": "custom_painting_section",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_total_canvas_area",
             "fieldtype": "Int",
             "label": "Total Canvas Area (cm²)",
             "read_only": 1,
             "insert_after": "custom_painting_items",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_canvas_painting_cost",
             "fieldtype": "Currency",
             "label": "Canvas Painting Cost",
             "read_only": 1,
             "insert_after": "custom_total_canvas_area",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_sheet_items",
             "fieldtype": "Table",
@@ -269,21 +294,24 @@ CUSTOM_FIELDS = {
             "label": "Sheet Items",
             "read_only": 1,
             "insert_after": "custom_canvas_painting_cost",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_sheet_painting_cost",
             "fieldtype": "Currency",
             "label": "Sheet Painting Cost",
             "read_only": 1,
             "insert_after": "custom_sheet_items",
-        },
+                    "hidden": 1,
+},
         {
             "fieldname": "custom_total_painting_cost",
             "fieldtype": "Currency",
             "label": "Total Painting Cost",
             "read_only": 1,
             "insert_after": "custom_sheet_painting_cost",
-        },
+                    "hidden": 1,
+},
         # --- Totals / fees ---
         {
             "fieldname": "delivery_fees",
@@ -293,10 +321,22 @@ CUSTOM_FIELDS = {
             "insert_after": "total",
         },
         {
+            # The figure staff read out loud and print on the box sticker — it
+            # is what the customer hands to the courier. `bold` renders it in
+            # Frappe's large emphasised style, and the label says who pays
+            # rather than restating the arithmetic, because on a form that
+            # already shows Total, Delivery Fees and Grand Total the useful
+            # distinction is which number is the customer's.
             "fieldname": "total_with_delivery_fees",
             "fieldtype": "Currency",
-            "label": "Total with Delivery Fees",
+            "label": "Customer Pays (with Delivery)",
+            "options": "currency",
+            "bold": 1,
             "read_only": 1,
+            "description": (
+                "Order total plus the courier's delivery fee. This is the amount "
+                "written on the box sticker and collected by the deliveryman."
+            ),
             "insert_after": "delivery_fees",
         },
         {
@@ -309,7 +349,12 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "label": "Packaging Costs (IQD)",
             "options": "currency",
-            "bold": 1,
+            # Hidden from the form, NOT removed: the value still defaults from
+            # Narjes Settings and is still booked as a Packaging Expenses
+            # journal entry on submit. It is internal cost, so it was only
+            # adding noise to a tab staff use to read money owed.
+            "hidden": 1,
+            "bold": 0,
             "description": "Packaging costs added to the order total. Defaults from Narjes Settings if left blank.",
             "insert_after": "total_with_delivery_fees",
         },
@@ -327,13 +372,18 @@ CUSTOM_FIELDS = {
             # lands as the SECOND tab — right next to Details.
             "fieldname": "custom_customer_tab",
             "fieldtype": "Tab Break",
-            "label": "Customer",
+            # Renamed from "Customer": the tab now leads with the order's own
+            # receipt (total, items, flowers) and carries the customer record
+            # underneath, so it is no longer just a customer view.
+            # The fieldname is deliberately left alone — renaming it would
+            # orphan the existing Custom Field and drop the tab.
+            "label": "Receipt Info",
             "insert_after": "pricing_rules",
         },
         {
             "fieldname": "custom_customer_info_html",
             "fieldtype": "HTML",
-            "label": "Customer Information",
+            "label": "Receipt Information",
             "insert_after": "custom_customer_tab",
         },
     ],

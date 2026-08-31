@@ -27,6 +27,8 @@ ITEMS = [
 	{"type": "Link", "label": "Items", "link_type": "DocType", "link_to": "Item", "icon": "package"},
 	{"type": "Link", "label": "Customers", "link_type": "DocType", "link_to": "Customer", "icon": "users-three"},
 	{"type": "Link", "label": "Deliveries", "link_type": "DocType", "link_to": "Delivery Note", "icon": "truck"},
+	{"type": "Section Break", "label": "Money", "collapsible": 1},
+	{"type": "Link", "label": "Expenses", "link_type": "DocType", "link_to": "Narjes Expense", "icon": "receipt"},
 	{"type": "Section Break", "label": "Insights", "collapsible": 1},
 	{"type": "Link", "label": "Revenue Report", "link_type": "Report", "link_to": "Sales Revenue Report", "icon": "chart-line-up"},
 	{"type": "Link", "label": "AI Order Intake", "link_type": "Page", "link_to": "ai-intake", "icon": "sparkle"},

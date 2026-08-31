@@ -5,6 +5,8 @@ selection is explicit and allow-listed throughout — cost, valuation and
 supplier data must never reach a public page (plan W10.1).
 """
 
+import re
+
 import frappe
 from frappe.utils import cint, flt
 
@@ -144,8 +146,46 @@ def stock_map(item_codes):
 
 # --------------------------------------------------------------- catalogue
 
+def public_file(path):
+	"""A stored file path, or None if a guest cannot actually fetch it.
+
+	Files uploaded as *private* 403 for everyone who is not logged in.
+	home.html already guards the hero image this way; the share image did not,
+	so a privately-uploaded logo became a broken `og:image` on every page and
+	a broken Organization `image` in the JSON-LD — invisible to the person who
+	uploaded it, who is signed in, and broken for every visitor and crawler.
+	"""
+	if not path or path.startswith("/private/"):
+		return None
+	return path
+
+
 def slug_for(item):
-	return item.get("custom_web_route") or frappe.scrub(item.get("item_code", "")).replace("_", "-")
+	return sanitize_slug(
+		item.get("custom_web_route") or frappe.scrub(item.get("item_code", "")).replace("_", "-")
+	)
+
+
+# Reserved and unsafe URL-path characters. Item codes are warehouse strings —
+# "MDF 50*80", "FRAME (A3)" — and scrubbing them only handled spaces, so the
+# rest reached the URL verbatim. A `*` or `?` in a path breaks robots.txt
+# pattern matching and forces percent-encoding into every canonical, sitemap
+# entry and shared link (plan W10.3 asks for readable slugs).
+#
+# Non-ASCII is deliberately preserved: an Arabic slug is a legitimate, and for
+# this shop a preferable, URL — it is percent-encoded only where a spec
+# demands it, such as the sitemap.
+_SLUG_STRIP = re.compile(r"[^\w-]+", re.UNICODE)
+
+
+def sanitize_slug(slug):
+	"""Collapse URL-unsafe runs into single dashes.
+
+	Underscores become dashes *before* the runs are collapsed — doing it after
+	turns "a__b" into "a--b" instead of "a-b".
+	"""
+	slug = _SLUG_STRIP.sub("-", (slug or "").strip()).replace("_", "-")
+	return re.sub(r"-{2,}", "-", slug).strip("-")
 
 
 def decorate(items, lang, prices=None, stocks=None):
@@ -276,8 +316,16 @@ def guard(context):
 		raise frappe.DoesNotExistError
 
 
-def base_context(context, lang, *, title=None, description=None):
-	"""Shared context for every storefront page."""
+def base_context(context, lang, *, title=None, description=None, noindex=False):
+	"""Shared context for every storefront page.
+
+	`noindex=True` marks a page that must stay out of the index no matter what
+	the shop's global switch says — the cart, checkout, favourites and order
+	confirmation are per-visitor or duplicate surfaces with nothing to rank,
+	and letting them compete with the catalogue only dilutes it (plan W10.3).
+	The global switch can force noindex on, but a page can never opt itself
+	back in.
+	"""
 	s = settings()
 	context.no_cache = 1
 	context.lang = lang
@@ -289,7 +337,10 @@ def base_context(context, lang, *, title=None, description=None):
 	context.storefront_description = description or pick(s, "meta_description", lang) or ""
 	context.announcement = pick(s, "announcement", lang)
 	context.orders_enabled = orders_enabled()
-	context.noindex = bool(cint(s.get("noindex", 1))) if s else True
+	context.noindex = noindex or (bool(cint(s.get("noindex", 1))) if s else True)
+	context.canonical_path = ""
+	# Pages override this with something more specific (the product photo).
+	context.share_image = public_file(s.get("og_image"))
 	context.placeholder = PLACEHOLDER
 	context.whatsapp = (s.get("whatsapp") or "").strip()
 	context.t = translations(lang)

@@ -35,6 +35,73 @@ def _get_cost_center(company):
     return cost_center
 
 
+
+# Sale-time cost entries (packaging, painting) book the cost of materials the
+# shop already owns but never recorded as a purchase.
+#
+# They used to credit Cash, which asserted that money left the till at the
+# moment of sale. It did not: the canvas was bought on some other day, in bulk,
+# and that purchase was never on the books at all. The two never cancel, so
+# book cash drifted away from the cash box by a growing amount that no report
+# explained (479,080 across 205 entries by the time it was found).
+#
+# Crediting a liability instead states what is actually true: the cost has been
+# incurred, and it has not been paid through any recorded transaction. When the
+# real bulk purchases are entered, they clear this account.
+MATERIAL_COST_CREDIT_ACCOUNT = "Accrued Expenses"
+
+
+def _book_cost_je(doc, expense_account, amount, remark):
+    """One Journal Entry for a sale-time material cost, linked to its order.
+
+    The link is a real field rather than a phrase in user_remark: without it
+    these entries cannot be reported on, filtered, or cleaned up when an order
+    is cancelled — which is exactly how 13 of them were left stranded against
+    cancelled orders, overstating expenses by 47,650.
+    """
+    je = frappe.get_doc({
+        "doctype": "Journal Entry",
+        "voucher_type": "Journal Entry",
+        "posting_date": frappe.utils.today(),
+        "company": doc.company,
+        "user_remark": remark,
+        "custom_sales_order": doc.name,
+        "accounts": [
+            {
+                "account": _get_account(expense_account, doc.company),
+                "debit_in_account_currency": amount,
+            },
+            {
+                "account": _get_account(MATERIAL_COST_CREDIT_ACCOUNT, doc.company),
+                "credit_in_account_currency": amount,
+            },
+        ],
+    })
+    je.insert(ignore_permissions=True)
+    je.submit()
+    return je
+
+
+def cancel_order_cost_entries(doc, method=None):
+    """Cancel the cost entries a Sales Order created, when the order is cancelled.
+
+    Without this the expense stays on the P&L forever against an order that no
+    longer exists.
+    """
+    for name in frappe.get_all(
+        "Journal Entry",
+        filters={"custom_sales_order": doc.name, "docstatus": 1},
+        pluck="name",
+    ):
+        try:
+            frappe.get_doc("Journal Entry", name).cancel()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Could not cancel cost entry {name} for {doc.name}",
+            )
+
+
 def automate_po_flow(doc, method):
     try:
         pr = make_purchase_receipt(doc.name)
@@ -150,25 +217,12 @@ def automate_so_flow(doc, method):
         # 4. Book Packaging Expenses Journal Entry
         packaging_costs = doc.get("packaging_costs") or 0
         if packaging_costs > 0:
-            je = frappe.get_doc({
-                "doctype": "Journal Entry",
-                "voucher_type": "Journal Entry",
-                "posting_date": frappe.utils.today(),
-                "company": doc.company,
-                "user_remark": f"Packaging Expenses for Sales Order {doc.name}",
-                "accounts": [
-                    {
-                        "account": _get_account("Packaging Expenses", doc.company),
-                        "debit_in_account_currency": packaging_costs
-                    },
-                    {
-                        "account": _get_account("Cash", doc.company),
-                        "credit_in_account_currency": packaging_costs
-                    }
-                ]
-            })
-            je.insert(ignore_permissions=True)
-            je.submit()
+            _book_cost_je(
+                doc,
+                "Packaging Expenses",
+                packaging_costs,
+                f"Packaging Expenses for Sales Order {doc.name}",
+            )
 
         # 5. Book Painting Costs (Canvas + Sheet combined)
         total_painting_cost = doc.get("custom_total_painting_cost") or 0
@@ -195,48 +249,24 @@ def automate_so_flow(doc, method):
             pc.insert(ignore_permissions=True)
             pc.submit()
             
-            je_painting = frappe.get_doc({
-                "doctype": "Journal Entry",
-                "voucher_type": "Journal Entry",
-                "posting_date": frappe.utils.today(),
-                "company": doc.company,
-                "user_remark": f"Painting Costs for Sales Order {doc.name} (Canvas: {doc.get('custom_canvas_painting_cost') or 0}, Sheet: {doc.get('custom_sheet_painting_cost') or 0})",
-                "accounts": [
-                    {
-                        "account": _get_account("Painting Costs", doc.company),
-                        "debit_in_account_currency": total_painting_cost
-                    },
-                    {
-                        "account": _get_account("Cash", doc.company),
-                        "credit_in_account_currency": total_painting_cost
-                    }
-                ]
-            })
-            je_painting.insert(ignore_permissions=True)
-            je_painting.submit()
+            je_painting = _book_cost_je(
+                doc,
+                "Painting Costs",
+                total_painting_cost,
+                f"Painting Costs for Sales Order {doc.name} "
+                f"(Canvas: {doc.get('custom_canvas_painting_cost') or 0}, "
+                f"Sheet: {doc.get('custom_sheet_painting_cost') or 0})",
+            )
 
         # 6. Book Flower COGS Journal Entry
         flower_total = doc.get("custom_flower_total") or 0
         if flower_total > 0:
-            je_flower = frappe.get_doc({
-                "doctype": "Journal Entry",
-                "voucher_type": "Journal Entry",
-                "posting_date": frappe.utils.today(),
-                "company": doc.company,
-                "user_remark": f"Flower COGS for Sales Order {doc.name}",
-                "accounts": [
-                    {
-                        "account": _get_account("Cost of Goods Sold", doc.company),
-                        "debit_in_account_currency": flower_total
-                    },
-                    {
-                        "account": _get_account("Cash", doc.company),
-                        "credit_in_account_currency": flower_total
-                    }
-                ]
-            })
-            je_flower.insert(ignore_permissions=True)
-            je_flower.submit()
+            _book_cost_je(
+                doc,
+                "Cost of Goods Sold",
+                flower_total,
+                f"Flower COGS for Sales Order {doc.name}",
+            )
 
         frappe.msgprint(
             f"Auto-generated Delivery Note, Sales Invoice, Payment Entry, and all expense JEs for {doc.name}")
@@ -259,6 +289,9 @@ def automate_so_flow(doc, method):
 #                 item.rate = last_rate
 #                 # ERPNext will automatically recalculate the total amounts
 
+PREPAYMENT = "Prepayment"
+
+
 def sales_order_before_validate(doc, method):
     # has_flower drives the flower icon on the Sales Order kanban card.
     # It is read from the dedicated `custom_flower_items` child table — the
@@ -271,6 +304,18 @@ def sales_order_before_validate(doc, method):
         has_flower = 1 if any(
             row.get("flower_item") for row in doc.get("custom_flower_items", [])
         ) else 0
+
+    # custom_flower_items is the intended home for flowers and AI intake never
+    # puts them anywhere else. This is a safety net for orders typed by hand:
+    # if someone adds a flower Item straight into `items`, the order really
+    # does contain flowers, and the kanban icon should say so rather than the
+    # flag depending on which table the operator happened to use.
+    if not has_flower:
+        codes = [i.get("item_code") for i in doc.get("items", []) if i.get("item_code")]
+        if codes and frappe.db.get_value(
+            "Item", {"name": ("in", codes), "custom_is_flower": 1}, "name"
+        ):
+            has_flower = 1
 
     # has_stand still scans the main items table: stands are ordinary items
     # there, with no child table of their own.
@@ -305,10 +350,19 @@ def sales_order_before_validate(doc, method):
     settings = frappe.get_cached_doc("Narjes Settings")
     fee = compute_delivery_fee(gov, settings.baghdad_delivery_fee, settings.other_governorate_delivery_fee)
 
+    # Prepaid orders carry no delivery fee at all.
+    #
+    # These are the urgent ones sent by taxi (Baly Box, Careem) instead of the
+    # courier: the customer has already paid the goods online, and pays the
+    # driver directly on arrival. The shop never touches the delivery money —
+    # it is not collected, not owed, and not remitted — so unlike a courier
+    # order there is nothing to display either. Showing a fee here would put a
+    # number on the sticker that nobody is going to hand over.
+    if (doc.get("payment") or "") == PREPAYMENT:
+        fee = 0
+
     if doc.meta.has_field("delivery_fees"):
         doc.delivery_fees = fee
-    if doc.meta.has_field("total_with_delivery_fees"):
-        doc.total_with_delivery_fees = (doc.get("total") or 0) + fee
 
     # Packaging cost defaults from Narjes Settings when left blank, for the
     # same reason (§14.5) — no static field default, so a rate change in
@@ -317,28 +371,21 @@ def sales_order_before_validate(doc, method):
     if doc.doctype == "Sales Order" and doc.meta.has_field("packaging_costs") and not doc.get("packaging_costs"):
         doc.packaging_costs = settings.default_packaging_cost or 0
 
-    # The ONLY ERPNext-compliant way to add a fee to grand_total without breaking GL entries
-    # is to add it to the Taxes and Charges table.
-    if fee > 0 and getattr(doc, "taxes", None) is not None:
-        delivery_account = _get_account("Service", doc.company)
-        cost_center = _get_cost_center(doc.company)
-
-        # Check if we already have a delivery fee tax row
-        found = False
-        for tax in doc.taxes:
-            if tax.account_head == delivery_account and tax.description == "Delivery Fees":
-                tax.tax_amount = fee
-                found = True
-                break
-                
-        if not found:
-            doc.append("taxes", {
-                "charge_type": "Actual",
-                "account_head": delivery_account,
-                "cost_center": cost_center,
-                "description": "Delivery Fees",
-                "tax_amount": fee
-            })
+    # The delivery fee is DISPLAY ONLY. It is deliberately not a charges row,
+    # not income, and not a liability — because the money never reaches the
+    # shop at any point.
+    #
+    # How it actually works: the third-party courier collects the whole amount
+    # in cash from the customer, keeps the delivery portion, and remits only
+    # the goods value. So the shop never holds that cash and is never owed it;
+    # booking it as revenue (which a charges row against the "Service" income
+    # account did) invented profit that does not exist, and booking it as a
+    # liability would invent a debt the shop does not owe either.
+    #
+    # It still has to be SHOWN: the total the customer hands to the courier is
+    # printed on the sticker that goes on the box, so `delivery_fees` and
+    # `total_with_delivery_fees` are carried on the order purely for that.
+    _strip_delivery_charge(doc)
     
     # --- Flower Items: calculate amounts ---
     if doc.doctype == "Sales Order":
@@ -354,6 +401,25 @@ def sales_order_before_validate(doc, method):
 
     # Set the discount apply setting so standard Frappe calculates discount from the full total correctly
     doc.apply_discount_on = "Grand Total"
+
+
+DELIVERY_CHARGE_DESCRIPTION = "Delivery Fees"
+
+
+def _strip_delivery_charge(doc):
+    """Remove any delivery-fee row from the charges table.
+
+    Not just a no-op for new orders: every order created before this change
+    carries the row, and re-saving one of those drafts has to clean it up
+    rather than silently leave the phantom income in place.
+    """
+    if getattr(doc, "taxes", None) is None:
+        return
+    remaining = [t for t in doc.taxes if (t.description or "").strip() != DELIVERY_CHARGE_DESCRIPTION]
+    if len(remaining) != len(doc.taxes):
+        doc.set("taxes", remaining)
+        for idx, row in enumerate(doc.taxes, start=1):
+            row.idx = idx
 
 
 FLOWER_CHARGE_DESCRIPTION = "Flower Items"
@@ -403,7 +469,23 @@ def _sync_flower_charge(doc, flower_total):
 def sales_order_validate(doc, method):
     if doc.doctype != "Sales Order":
         return
-        
+
+    # "Done" means submitted. Enforced here rather than only in the kanban's
+    # drag handler, because the phase is an ordinary field that can also be
+    # changed straight on the form — and a draft sitting in the Done column is
+    # precisely the inconsistency the board could not recover from.
+    #
+    # This does not fire during submit(): Frappe sets docstatus = 1 before
+    # running validate, so the transition itself is allowed. It only blocks
+    # parking a draft in Done.
+    if doc.get("order_phase") == "Done" and doc.docstatus == 0:
+        frappe.throw(
+            "An order reaches the Done phase by being submitted. "
+            "Submit this order instead of setting the phase by hand — "
+            "on the board, drag it into Done and confirm."
+        )
+
+
     # --- Add flower qty to the standard qty total ---
     flower_qty = sum([fl.qty or 0 for fl in (doc.get("custom_flower_items") or [])])
     if flower_qty > 0:
@@ -481,6 +563,15 @@ def sales_order_validate(doc, method):
     
     # --- Combined Total ---
     doc.custom_total_painting_cost = canvas_cost + sheet_cost
+
+    # What the customer hands to the courier: everything the shop is actually
+    # charging, plus the courier's own fee. Computed here rather than in
+    # before_validate because grand_total does not exist yet at that point —
+    # the old version added the fee to `total` (items only), so any order with
+    # flowers or a discount printed a sticker figure that did not match what
+    # was collected.
+    if doc.meta.has_field("total_with_delivery_fees"):
+        doc.total_with_delivery_fees = (doc.get("grand_total") or 0) + (doc.get("delivery_fees") or 0)
 
     warn_insufficient_stock(doc)
 
@@ -616,6 +707,20 @@ def get_customer_info(customer):
 	# question was never asked rather than never answered.
 	always_show = {"channal"}
 
+	# Accounting/plumbing flags nobody on the floor acts on. This tab is a
+	# receipt view for staff taking and fulfilling orders — an ERPNext
+	# internal-customer flag or a print-language override is noise there, and
+	# noise is what makes the useful rows hard to find.
+	skip_fields = {
+		"is_internal_customer",
+		"so_required",   # Allow Sales Invoice Creation Without Sales Order
+		"dn_required",   # Allow Sales Invoice Creation Without Delivery Note
+		"disabled",
+		"is_frozen",
+		"default_commission_rate",
+		"language",      # Print Language
+	}
+
 	groups = []
 	current = {"label": frappe._("Details"), "fields": []}
 
@@ -627,6 +732,9 @@ def get_customer_info(customer):
 			continue
 
 		if field.fieldtype in skip_types or field.hidden:
+			continue
+
+		if field.fieldname in skip_fields:
 			continue
 
 		value = doc.get(field.fieldname)
@@ -657,6 +765,112 @@ def item_validate(doc, method):
     """Prevent an item from being both Canvas and Sheet at the same time."""
     if doc.get("custom_is_canvas") and doc.get("custom_is_sheet"):
         frappe.throw("An item cannot be both a Canvas and a Sheet. Please select only one.")
+
+@frappe.whitelist()
+def submit_and_mark_done(docname):
+    """Submit a Sales Order and move it to the Done phase, atomically.
+
+    The board used to do this as two separate requests: set order_phase =
+    "Done", then submit. A failure in the second — short stock being the usual
+    one — left the first committed, so the ticket sat in the Done column as a
+    Draft, and the board disagreed with ERPNext about whether the order had
+    happened at all.
+
+    Both writes belong to one request here. Frappe rolls a request back on an
+    unhandled exception, so if `submit()` throws, the phase change never
+    lands and the order stays exactly where the operator left it. The
+    exception propagates untouched so the operator still sees ERPNext's real
+    message (which items, which warehouse, how short) rather than a summary.
+
+    `order_phase` is `allow_on_submit`, so writing it after submit is legal.
+    """
+    frappe.has_permission("Sales Order", doc=docname, ptype="submit", throw=True)
+
+    doc = frappe.get_doc("Sales Order", docname)
+    if doc.docstatus == 2:
+        frappe.throw("Cancelled orders cannot be submitted.")
+
+    if doc.docstatus == 0:
+        doc.submit()
+
+    # Re-read rather than reusing `doc`: submit() ran on_submit, which creates
+    # and submits the Delivery Note, Sales Invoice and Payment Entry, and any
+    # of those can touch the order. set_value writes the one field without
+    # re-running validation on a now-submitted document.
+    frappe.db.set_value("Sales Order", docname, "order_phase", "Done")
+    return {"docstatus": 1, "order_phase": "Done"}
+
+
+@frappe.whitelist()
+def bulk_move_phase(docnames, phase):
+    """Move several Sales Orders to one phase in a single request.
+
+    The board can only drag one card at a time, which makes a normal day's
+    tidying — five tickets that all went out for delivery together — five
+    drags, five confirmations, five page reloads.
+
+    Each order gets its own savepoint. Without one, a single failure (short
+    stock on a move into Done is the common case) would roll back the whole
+    request and silently undo the orders that had already moved, so the
+    operator would see "1 failed" and lose the other four as well. Here a
+    failure costs exactly the one order it belongs to, and the caller is told
+    which ones and why.
+
+    The per-order rules are the same ones the drag handler enforces, applied
+    server-side so a bulk move cannot be used to sidestep them.
+    """
+    docnames = frappe.parse_json(docnames) if isinstance(docnames, str) else docnames
+    if not docnames:
+        return {"moved": [], "failed": []}
+
+    frappe.has_permission("Sales Order", ptype="write", throw=True)
+
+    moved, failed = [], []
+    for index, docname in enumerate(docnames):
+        save_point = f"bulk_move_{index}"
+        try:
+            frappe.db.savepoint(save_point)
+            _move_one_phase(docname, phase)
+            moved.append(docname)
+        except Exception as e:
+            frappe.db.rollback(save_point=save_point)
+            # The message is shown next to the order's name in the result
+            # dialog, so it has to survive without the HTML frappe.throw adds.
+            failed.append({"name": docname, "error": _strip_html(str(e))})
+
+    return {"moved": moved, "failed": failed}
+
+
+def _move_one_phase(docname, phase):
+    """Apply one phase move, honouring the same rules as a drag."""
+    docstatus = frappe.db.get_value("Sales Order", docname, "docstatus")
+
+    if docstatus == 2:
+        frappe.throw("Cancelled orders cannot be moved.")
+
+    if phase == "Done":
+        submit_and_mark_done(docname)
+        return
+
+    if phase == "Cancelled":
+        if docstatus == 0:
+            discard_draft(docname)
+        else:
+            cancel_sales_order_and_links(docname)
+        return
+
+    if docstatus == 1:
+        frappe.throw("A submitted order can only move to Cancelled.")
+
+    frappe.has_permission("Sales Order", doc=docname, ptype="write", throw=True)
+    frappe.db.set_value("Sales Order", docname, "order_phase", phase)
+
+
+def _strip_html(message):
+    import re
+
+    return re.sub(r"<[^>]+>", "", message or "").strip()
+
 
 @frappe.whitelist()
 def discard_draft(docname):
@@ -698,11 +912,20 @@ def cancel_sales_order_and_links(docname):
         doc = frappe.get_doc("Delivery Note", dn)
         doc.cancel()
         
-    # 4. Cancel the Sales Order
+    # 4. Cancel Linked Painting Costs
+    # `Painting Cost` is submittable and holds a Link to Sales Order (created by
+    # automate_so_flow step 5), so a submitted one makes frappe's
+    # check_no_back_links_exist raise LinkExistsError and blocks the cancel below.
+    pc_names = frappe.get_all("Painting Cost", filters={"sales_order": docname, "docstatus": 1}, pluck="name")
+    for pc in pc_names:
+        doc = frappe.get_doc("Painting Cost", pc)
+        doc.cancel()
+
+    # 5. Cancel the Sales Order
     so = frappe.get_doc("Sales Order", docname)
     if so.docstatus == 1:
         so.cancel()
-        
+
     return True
 
 
@@ -792,11 +1015,18 @@ def get_home_dashboard_data():
     # Sales Order isn't a confirmed order yet, so `docstatus != 2` (which
     # counted drafts alongside submitted ones) overstated "today's revenue"
     # with unconfirmed orders (see NARJES_STORE_SYSTEM.md audit follow-up).
-    today_rev = frappe.db.sql("""
+    # Month-to-date, not a rolling 30 days: the shop reads this against the
+    # calendar month it is actually living in, so on the 3rd it should show
+    # three days' takings and reset to zero on the 1st. A rolling window would
+    # quietly carry most of last month into that number and never reset.
+    #
+    # Bounded at today at both ends — a future-dated order is not money taken
+    # yet, so it stays out until its day arrives.
+    month_rev = frappe.db.sql("""
         SELECT COALESCE(SUM(grand_total), 0)
         FROM `tabSales Order`
-        WHERE transaction_date = %s AND docstatus = 1
-    """, (today_str,))[0][0] or 0.0
+        WHERE transaction_date BETWEEN %s AND %s AND docstatus = 1
+    """, (first_day_of_month, today_str))[0][0] or 0.0
 
     today_orders_count = frappe.db.count("Sales Order", filters={"transaction_date": today_str, "docstatus": 1})
 
@@ -846,7 +1076,8 @@ def get_home_dashboard_data():
 
     return {
         "kpis": {
-            "today_revenue": today_rev,
+            "month_revenue": month_rev,
+            "month_start": str(first_day_of_month),
             "today_orders": today_orders_count,
             "pending_deliveries": pending_deliveries_count,
             "total_customers": total_customers_count
@@ -956,6 +1187,21 @@ def _resolve_theme(settings):
 
 
 @frappe.whitelist()
+def _font_scale(settings):
+	"""Narjes Settings → Appearance → Font Size, as a multiplier.
+
+	Clamped rather than trusted: the field is a Select today, but a bad value
+	(hand-edited, or a future free-text field) must not be able to render the
+	desk unusable at 10x or 0.
+	"""
+	raw = (getattr(settings, "desk_font_scale", None) or "100%").strip().rstrip("%")
+	try:
+		pct = float(raw)
+	except (TypeError, ValueError):
+		return 1.0
+	return round(max(100.0, min(pct, 200.0)) / 100.0, 4)
+
+
 def extend_bootinfo(bootinfo):
     """Force default home page to be our custom dashboard, and expose
     Narjes Settings' Home Dashboard defaults + Quick Shortcuts for
@@ -975,6 +1221,9 @@ def extend_bootinfo(bootinfo):
     settings = frappe.get_cached_doc("Narjes Settings")
     bootinfo.narjes_theme = _resolve_theme(settings)
     bootinfo.narjes_settings = {
+        # Desk type scale, as a plain multiplier the client can hand to calc().
+        # Stored as "125%" so the setting reads plainly in the form.
+        "font_scale": _font_scale(settings),
         "default_show_ai_intake": bool(settings.default_show_ai_intake),
         "default_show_shortcuts": bool(settings.default_show_shortcuts),
         "default_show_analytics": bool(settings.default_show_analytics),

@@ -2,31 +2,21 @@
 
 {% block og_type %}product{% endblock %}
 
-{% block head %}
-<script type="application/ld+json">
-{{ {
-	"@context": "https://schema.org",
-	"@type": "Product",
-	"name": p.title,
-	"image": [frappe.utils.get_url() + p.image],
-	"description": p.short or "",
-	"sku": p.item_code,
-	"brand": {"@type": "Brand", "name": "Narjes"},
-	"offers": {
-		"@type": "Offer",
-		"price": p.rate,
-		"priceCurrency": "IQD",
-		"availability": "https://schema.org/InStock" if p.in_stock else "https://schema.org/OutOfStock"
-	} if p.has_price else None
-} | tojson }}
-</script>
-{% endblock %}
+{#- The Product/Offer/BreadcrumbList graph is built in storefront/seo.py and
+    emitted once by the base template. It used to be assembled inline here,
+    which meant an item with no price emitted `"offers": null` — invalid
+    enough for Google to drop the whole Product node. -#}
 
 {% block content %}
 <div class="s-wrap">
 	<nav class="s-eyebrow" style="padding-block:18px" aria-label="breadcrumb">
-		<a href="/{{ lang }}">{{ t.home }}</a> ·
-		<a href="/{{ lang }}/shop">{{ t.shop }}</a>
+		{%- for name, path in crumbs %}
+		{%- if not loop.last %}
+		<a href="/{{ lang }}{{ path }}">{{ name }}</a> ·
+		{%- else %}
+		<span aria-current="page">{{ name }}</span>
+		{%- endif %}
+		{%- endfor %}
 	</nav>
 
 	<div class="s-product">

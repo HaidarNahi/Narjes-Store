@@ -37,9 +37,16 @@ COLUMN_COLORS = {
 
 # Extra fields the custom Kanban card renderer (sales_order_list.js) needs
 # beyond what Frappe fetches for a Kanban board by default.
+#
+# owner/creation/_assign are NOT listed: Frappe's KanbanView.set_fields()
+# already adds those itself, and the assignee chip reads the parsed
+# _assign that prepare_card() hands over.
 EXTRA_CARD_FIELDS = [
     "customer", "username", "delivery_id", "delivery_date",
     "gift", "has_flower", "has_stand", "priority",
+    # the card shows the order value; currency comes along so the amount is
+    # labelled in the order's own currency rather than a guessed default
+    "grand_total", "currency",
 ]
 
 

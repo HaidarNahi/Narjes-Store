@@ -3,11 +3,36 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
-# Minimum balance thresholds — a row is highlighted red once its balance
-# drops to or below the threshold matching the item's stock UOM.
-LOW_BALANCE_THRESHOLD_NOS = 15
-LOW_BALANCE_THRESHOLD_CENTIMETER = 2500
+# Fallbacks only. The live thresholds come from Narjes Settings so the shop can
+# retune them as stock habits change — these values are what a brand-new site
+# starts with, and what the report falls back to if Settings cannot be read.
+DEFAULT_LOW_BALANCE_NOS = 15
+DEFAULT_LOW_BALANCE_CENTIMETER = 2500
+
+
+def get_thresholds():
+    """Low-balance thresholds, read live from Narjes Settings.
+
+    Two of them because the units are not comparable: an item counted in
+    pieces is short at 15, while one measured by the centimetre is short at
+    2500. One shared number would either scream about every roll of paper or
+    stay silent until the shelves were empty.
+
+    A blank or zero field falls back to the default rather than being taken
+    literally — a threshold of 0 would silently disable the warning, which is
+    never what leaving a field empty is meant to express.
+    """
+    try:
+        settings = frappe.get_cached_doc("Narjes Settings")
+    except Exception:
+        return DEFAULT_LOW_BALANCE_NOS, DEFAULT_LOW_BALANCE_CENTIMETER
+
+    return (
+        flt(settings.get("low_balance_threshold_nos")) or DEFAULT_LOW_BALANCE_NOS,
+        flt(settings.get("low_balance_threshold_cm")) or DEFAULT_LOW_BALANCE_CENTIMETER,
+    )
 
 
 def execute(filters=None):
@@ -89,6 +114,7 @@ def get_data():
     }
 
     prices = get_item_prices(item_codes)
+    thresholds = get_thresholds()
 
     data = []
     for item in row_items:
@@ -107,7 +133,7 @@ def get_data():
             "selling_rate": price.get("selling_rate") or item.standard_rate or 0,
             "purchase_uom": price.get("purchase_uom") or item.purchase_uom or item.stock_uom,
             "purchase_rate": price.get("purchase_rate") or item.last_purchase_rate or 0,
-            "is_low_balance": is_low_balance(balance, item.stock_uom),
+            "is_low_balance": is_low_balance(balance, item.stock_uom, thresholds),
         })
 
     return data
@@ -153,10 +179,11 @@ def get_item_prices(item_codes):
     return prices
 
 
-def is_low_balance(balance, stock_uom):
+def is_low_balance(balance, stock_uom, thresholds=None):
+    nos_threshold, cm_threshold = thresholds or get_thresholds()
     uom = (stock_uom or "").strip().lower()
     if "centimeter" in uom or uom == "cm":
-        threshold = LOW_BALANCE_THRESHOLD_CENTIMETER
+        threshold = cm_threshold
     else:
-        threshold = LOW_BALANCE_THRESHOLD_NOS
+        threshold = nos_threshold
     return balance <= threshold

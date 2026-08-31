@@ -25,6 +25,7 @@ from narjes_custom.ai_intake.extraction import (
 from narjes_custom.ai_intake import settings as ai_settings
 from narjes_custom.ai_intake.matching import match_customer
 from narjes_custom.business_logic import is_discount_excessive
+from narjes_custom.setup import flower_placeholder
 
 # Fallback for the discount guardrail, used only when AI Intake Settings
 # can't be read. A discount above this percentage of the order subtotal
@@ -44,21 +45,56 @@ def _hash_text(raw_text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def _usable_warehouse(name):
+    """True if `name` is a warehouse orders may actually be fulfilled from.
+
+    Transit warehouses are excluded. "Goods In Transit" is a staging area for
+    stock moving between branches — it is never where sellable stock lives, so
+    an order pointing at it is guaranteed to fail at submit with "Insufficient
+    Stock" no matter how much stock the shop actually holds.
+    """
+    if not name:
+        return False
+    row = frappe.db.get_value(
+        "Warehouse", name, ["is_group", "disabled", "warehouse_type"], as_dict=True
+    )
+    return bool(row) and not row.is_group and not row.disabled and row.warehouse_type != "Transit"
+
+
 def _get_default_so_items_params(settings=None):
     """
     Warehouse and UOM for Sales Order lines built from an intake.
 
-    Both come from AI Intake Settings. The warehouse falls back to the first
-    enabled non-group warehouse if none is configured — which is arbitrary
-    (it is whatever the DB returns first), so the setting exists precisely to
-    make that choice explicit.
+    The warehouse is resolved in a fixed order of preference, and every
+    candidate is checked with `_usable_warehouse` before it is accepted:
+
+        1. AI Intake Settings.default_warehouse — the explicit choice.
+        2. Stock Settings.default_warehouse — what the rest of ERPNext uses.
+        3. The alphabetically first non-group, non-transit warehouse.
+
+    Step 3 used to be `get_all(..., limit=1)` with no `order_by`, which meant
+    Frappe's default of `modified desc` — so the warehouse an order was
+    assigned to was whichever warehouse someone had edited most recently, and
+    it silently CHANGED as staff touched warehouse records. That is how orders
+    ended up demanding stock from "Goods In Transit": moving stock around to
+    satisfy the previous error re-ordered the table and moved the target.
+    Ordering by name makes the fallback stable and repeatable; excluding
+    transit makes it correct.
     """
     default_warehouse = ai_settings.get_setting("default_warehouse", settings)
-    if not default_warehouse or not frappe.db.exists("Warehouse", default_warehouse):
-        warehouses = frappe.get_all(
-            "Warehouse", filters={"is_group": 0, "disabled": 0}, pluck="name", limit=1
+
+    if not _usable_warehouse(default_warehouse):
+        default_warehouse = frappe.db.get_single_value("Stock Settings", "default_warehouse")
+
+    if not _usable_warehouse(default_warehouse):
+        candidates = frappe.get_all(
+            "Warehouse",
+            filters={"is_group": 0, "disabled": 0, "warehouse_type": ("!=", "Transit")},
+            pluck="name",
+            order_by="name asc",
+            limit=1,
         )
-        default_warehouse = warehouses[0] if warehouses else None
+        default_warehouse = candidates[0] if candidates else None
 
     default_uom = ai_settings.get_str("default_uom", settings) or "Nos"
     return default_warehouse, default_uom
@@ -413,7 +449,11 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
         
         if is_flower:
             flower_items.append({
-                "item_code": item_code,
+                # The Flower Item child doctype's Link field is `flower_item`,
+                # not `item_code`. Writing item_code left the mandatory link
+                # empty, so every intake containing a flower died on insert
+                # with "Flower Item Row #1: Value missing for: Item".
+                "flower_item": item_code,
                 "qty": qty,
                 "rate": rate,
                 "amount": qty * rate,
@@ -431,18 +471,30 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 "additional_notes": item.get("notes") or "",
             })
 
-    # If all items are flowers, populate so_items to satisfy ERPNext mandatory table rule
+    # An order that is nothing but flowers still needs a row in `items`:
+    # ERPNext marks Sales Order.items mandatory, and an empty table does not
+    # even fail cleanly — it crashes inside the totals calculation.
+    #
+    # Flowers stay where they belong. custom_flower_items is the only place a
+    # flower is ever recorded, so `items` gets a single zero-value placeholder
+    # line instead (see narjes_custom.setup.flower_placeholder for why it has
+    # to be a priceless item of its own rather than the flower at rate 0).
+    #
+    # Net effect: net_total 0, flowers billed exactly once through the
+    # "Flower Items" charge row, grand total as quoted.
     if not so_items and flower_items:
-        for f in flower_items:
-            so_items.append({
-                "item_code": f["item_code"],
-                "item_name": f["item_code"],
-                "description": f["item_code"],
-                "qty": f["qty"],
-                "rate": f["rate"],
-                "uom": default_uom,
-                "warehouse": default_warehouse,
-            })
+        so_items.append({
+            "item_code": flower_placeholder.ensure(),
+            "qty": 1,
+            "rate": 0,
+            "price_list_rate": 0,
+            # belt and braces: rate 0, price 0, and explicitly not chargeable,
+            # so the line cannot start billing if an Item Price ever appears
+            "is_free_item": 1,
+            "uom": default_uom,
+            "warehouse": default_warehouse,
+            "delivery_date": data.get("delivery_date") or today(),
+        })
 
     # ── Discount sanity check ───────────────────────────────────────────────
     # discount_amount and every item's rate come straight from AI-extracted

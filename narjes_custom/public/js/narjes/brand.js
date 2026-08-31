@@ -107,8 +107,61 @@ function apply_narjes_accent() {
 	window.NARJES_BRAND.chartPalette[0] = theme.light.fern;
 }
 
-if (window.frappe && frappe.boot) {
+// Desk type scale (Narjes Settings → Appearance → Font Size).
+//
+// Rewrites Frappe's own --text-* ramp rather than zooming the page. `zoom`
+// was the tempting one-liner, but it scales the coordinate space too, which
+// silently breaks anything positioning itself from getBoundingClientRect —
+// the kanban assignee popover among them. Scaling the type tokens changes
+// only type, so every layout calculation stays honest.
+//
+// The ramp is Frappe's (espresso/_typography.scss); --n-* type sizes ride
+// along through the same multiplier so the custom kanban card scales with
+// everything else.
+const NARJES_TEXT_STEPS = {
+	"--text-tiny": 11, "--text-2xs": 12, "--text-xs": 12, "--text-sm": 13,
+	"--text-md": 14, "--text-base": 14, "--text-lg": 16, "--text-xl": 18,
+	"--text-2xl": 20, "--text-3xl": 24, "--text-4xl": 26, "--text-5xl": 28,
+	"--text-6xl": 32, "--text-7xl": 40, "--text-8xl": 44, "--text-9xl": 48,
+};
+
+function apply_narjes_font_scale() {
+	const settings = (frappe.boot && frappe.boot.narjes_settings) || {};
+	const scale = Number(settings.font_scale) || 1;
+
+	const style_id = "narjes-font-scale";
+	let tag = document.getElementById(style_id);
+
+	if (scale === 1) {
+		if (tag) tag.remove();
+		document.documentElement.style.removeProperty("--n-font-scale");
+		return;
+	}
+
+	if (!tag) {
+		tag = document.createElement("style");
+		tag.id = style_id;
+		document.head.appendChild(tag);
+	}
+
+	const steps = Object.entries(NARJES_TEXT_STEPS)
+		.map(([name, px]) => `${name}:${Math.round(px * scale * 100) / 100}px;`)
+		.join("");
+
+	tag.textContent =
+		`:root{${steps}--n-font-scale:${scale};}` +
+		// Frappe's desk sets an explicit base size on body; keep it in step so
+		// anything inheriting rather than using a token scales too.
+		`body{font-size:${Math.round(14 * scale * 100) / 100}px;}`;
+}
+
+function apply_narjes_appearance() {
 	apply_narjes_accent();
+	apply_narjes_font_scale();
+}
+
+if (window.frappe && frappe.boot) {
+	apply_narjes_appearance();
 } else {
-	$(document).on("app_ready", apply_narjes_accent);
+	$(document).on("app_ready", apply_narjes_appearance);
 }
