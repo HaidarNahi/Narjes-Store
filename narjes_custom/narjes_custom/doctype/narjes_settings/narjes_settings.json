@@ -1,7 +1,6 @@
 {
  "actions": [],
- "allow_rename": 0,
- "creation": "2026-07-27 00:00:00.000000",
+ "creation": "2026-07-27 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -37,7 +36,19 @@
   "quick_shortcuts",
   "sidebar_section",
   "sidebar_links_note",
-  "sidebar_links"
+  "sidebar_links",
+  "salaries_section",
+  "emergency_share_percent",
+  "column_break_sal_1",
+  "growth_share_percent",
+  "profit_shares_section",
+  "profit_shares",
+  "commission_section",
+  "commission_per_piece",
+  "column_break_sal_2",
+  "commission_person_name",
+  "column_break_sal_3",
+  "commission_user"
  ],
  "fields": [
   {
@@ -46,21 +57,22 @@
    "label": "Appearance"
   },
   {
+   "default": "Fern",
+   "description": "The Narjes Ledger theme's accent \u2014 drives every primary button, link, active sidebar item, and \"done\" status color across the whole system, in both light and dark mode.",
    "fieldname": "theme_accent",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Accent Color",
    "options": "Fern\nPlum\nTeal\nOchre\nCustom",
-   "default": "Fern",
-   "reqd": 1,
-   "description": "The Narjes Ledger theme's accent — drives every primary button, link, active sidebar item, and \"done\" status color across the whole system, in both light and dark mode."
+   "reqd": 1
   },
   {
+   "default": "100%",
+   "description": "Scales text across the desk. Raise it for staff who find the default type hard to read.",
    "fieldname": "desk_font_scale",
    "fieldtype": "Select",
    "label": "Font Size",
-   "options": "100%\n110%\n125%\n150%",
-   "default": "100%",
-   "description": "Scales text across the desk. Raise it for staff who find the default type hard to read."
+   "options": "100%\n110%\n125%\n150%"
   },
   {
    "fieldname": "column_break_appearance_1",
@@ -69,20 +81,20 @@
   {
    "fieldname": "appearance_note",
    "fieldtype": "HTML",
-   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Takes effect on next page refresh — no rebuild needed. Light/dark mode itself is switched from the user menu (top right) and follows the system theme by default; this setting only controls the accent color used in whichever mode is active.</p>"
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>Takes effect on next page refresh \u2014 no rebuild needed. Light/dark mode itself is switched from the user menu (top right) and follows the system theme by default; this setting only controls the accent color used in whichever mode is active.</p>"
   },
   {
+   "depends_on": "eval:doc.theme_accent==\"Custom\"",
    "fieldname": "custom_accent_section",
    "fieldtype": "Section Break",
-   "label": "Custom Accent",
-   "depends_on": "eval:doc.theme_accent==\"Custom\""
+   "label": "Custom Accent"
   },
   {
+   "depends_on": "eval:doc.theme_accent==\"Custom\"",
+   "description": "Pick one color \u2014 a matching hover shade, tint, and dark-mode variant are derived automatically and contrast-checked.",
    "fieldname": "custom_accent_color",
    "fieldtype": "Color",
-   "label": "Accent Color",
-   "depends_on": "eval:doc.theme_accent==\"Custom\"",
-   "description": "Pick one color — a matching hover shade, tint, and dark-mode variant are derived automatically and contrast-checked."
+   "label": "Accent Color"
   },
   {
    "fieldname": "home_dashboard_section",
@@ -90,30 +102,30 @@
    "label": "Home Dashboard Defaults"
   },
   {
+   "default": "1",
    "fieldname": "default_show_ai_intake",
    "fieldtype": "Check",
-   "label": "Show AI Order Intake Section by Default",
-   "default": "1"
+   "label": "Show AI Order Intake Section by Default"
   },
   {
    "fieldname": "column_break_home_1",
    "fieldtype": "Column Break"
   },
   {
+   "default": "1",
    "fieldname": "default_show_shortcuts",
    "fieldtype": "Check",
-   "label": "Show Shortcuts Bar by Default",
-   "default": "1"
+   "label": "Show Shortcuts Bar by Default"
   },
   {
    "fieldname": "column_break_home_2",
    "fieldtype": "Column Break"
   },
   {
+   "default": "1",
    "fieldname": "default_show_analytics",
    "fieldtype": "Check",
-   "label": "Show Analytics & Charts by Default",
-   "default": "1"
+   "label": "Show Analytics & Charts by Default"
   },
   {
    "fieldname": "business_constants_section",
@@ -121,60 +133,62 @@
    "label": "Business Constants"
   },
   {
+   "default": "4000",
+   "description": "Applied to Sales Orders / Invoices / Delivery Notes when governorate of delivery is Baghdad.",
    "fieldname": "baghdad_delivery_fee",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Baghdad Delivery Fee",
-   "default": "4000",
-   "reqd": 1,
-   "description": "Applied to Sales Orders / Invoices / Delivery Notes when governorate of delivery is Baghdad."
+   "reqd": 1
   },
   {
    "fieldname": "column_break_biz_1",
    "fieldtype": "Column Break"
   },
   {
+   "default": "6000",
+   "description": "Applied when governorate of delivery is set and is not Baghdad.",
    "fieldname": "other_governorate_delivery_fee",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Other Governorate Delivery Fee",
-   "default": "6000",
-   "reqd": 1,
-   "description": "Applied when governorate of delivery is set and is not Baghdad."
+   "reqd": 1
   },
   {
    "fieldname": "section_break_biz_2",
    "fieldtype": "Section Break"
   },
   {
+   "default": "0.95",
    "fieldname": "painting_rate_per_cm",
    "fieldtype": "Float",
-   "label": "Painting Rate per cm²",
-   "precision": "2",
-   "default": "0.95"
+   "label": "Painting Rate per cm\u00b2",
+   "precision": "2"
   },
   {
    "fieldname": "column_break_biz_3",
    "fieldtype": "Column Break"
   },
   {
+   "default": "250",
    "fieldname": "sheet_rate_per_item",
    "fieldtype": "Currency",
-   "label": "Sheet Rate per Item",
-   "default": "250"
+   "label": "Sheet Rate per Item"
   },
   {
    "fieldname": "column_break_biz_4",
    "fieldtype": "Column Break"
   },
   {
+   "default": "1250",
    "fieldname": "default_packaging_cost",
    "fieldtype": "Currency",
-   "label": "Default Packaging Cost",
-   "default": "1250"
+   "label": "Default Packaging Cost"
   },
   {
    "fieldname": "business_constants_note",
    "fieldtype": "HTML",
-   "options": "<p style='color: var(--text-muted); font-size: 12px;'>All fields above are live: delivery fees are used on every Sales Order / Sales Invoice / Delivery Note, and the painting rate / sheet rate / default packaging cost are read directly by the canvas/sheet costing calculation and the packaging-cost default (see api.py's sales_order_before_validate / sales_order_validate). Change a value here and it takes effect on the next order — none of these are hardcoded in code anymore.</p>"
+   "options": "<p style='color: var(--text-muted); font-size: 12px;'>All fields above are live: delivery fees are used on every Sales Order / Sales Invoice / Delivery Note, and the painting rate / sheet rate / default packaging cost are read directly by the canvas/sheet costing calculation and the packaging-cost default (see api.py's sales_order_before_validate / sales_order_validate). Change a value here and it takes effect on the next order \u2014 none of these are hardcoded in code anymore.</p>"
   },
   {
    "fieldname": "low_balance_section",
@@ -182,22 +196,22 @@
    "label": "Low Stock Warning"
   },
   {
+   "default": "15",
+   "description": "Items counted in pieces turn red in the Items Balance report at or below this balance.",
    "fieldname": "low_balance_threshold_nos",
    "fieldtype": "Float",
-   "label": "Low Balance Threshold (pieces)",
-   "default": "15",
-   "description": "Items counted in pieces turn red in the Items Balance report at or below this balance."
+   "label": "Low Balance Threshold (pieces)"
   },
   {
    "fieldname": "column_break_lowbal_1",
    "fieldtype": "Column Break"
   },
   {
+   "default": "2500",
+   "description": "Same warning for items measured by length, which run in far larger numbers than pieces.",
    "fieldname": "low_balance_threshold_cm",
    "fieldtype": "Float",
-   "label": "Low Balance Threshold (centimetres)",
-   "default": "2500",
-   "description": "Same warning for items measured by length, which run in far larger numbers than pieces."
+   "label": "Low Balance Threshold (centimetres)"
   },
   {
    "fieldname": "shortcuts_section",
@@ -205,11 +219,11 @@
    "label": "Quick Shortcuts (Home Dashboard)"
   },
   {
+   "description": "Shown on the Home Dashboard's Quick Shortcuts section. Leave Role blank to show a shortcut to everyone; set it to only show that shortcut to users with that role.",
    "fieldname": "quick_shortcuts",
    "fieldtype": "Table",
    "label": "Quick Shortcuts",
-   "options": "Narjes Quick Shortcut",
-   "description": "Shown on the Home Dashboard's Quick Shortcuts section. Leave Role blank to show a shortcut to everyone; set it to only show that shortcut to users with that role."
+   "options": "Narjes Quick Shortcut"
   },
   {
    "fieldname": "sidebar_section",
@@ -226,12 +240,79 @@
    "fieldtype": "Table",
    "label": "Sidebar Links",
    "options": "Narjes Sidebar Link"
+  },
+  {
+   "description": "How each month's net profit is divided. The shares below should add up to 100%; the dashboard warns you if they do not.",
+   "fieldname": "salaries_section",
+   "fieldtype": "Section Break",
+   "label": "Revenue & Salaries"
+  },
+  {
+   "default": "15",
+   "description": "Kept aside for hard situations \u2014 a printer breaking, and days like it.",
+   "fieldname": "emergency_share_percent",
+   "fieldtype": "Percent",
+   "label": "Emergencies Box %"
+  },
+  {
+   "fieldname": "column_break_sal_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "25",
+   "description": "Reinvested in the business.",
+   "fieldname": "growth_share_percent",
+   "fieldtype": "Percent",
+   "label": "Growth & Development %"
+  },
+  {
+   "fieldname": "profit_shares_section",
+   "fieldtype": "Section Break",
+   "label": "Partners"
+  },
+  {
+   "description": "Each partner's share of the same net profit.",
+   "fieldname": "profit_shares",
+   "fieldtype": "Table",
+   "label": "Profit Shares",
+   "options": "Narjes Profit Share"
+  },
+  {
+   "description": "Paid on every item ticked 'Pays Commission' on the Item form. Recorded as a real monthly expense, so it comes out of profit before the shares above are worked out.",
+   "fieldname": "commission_section",
+   "fieldtype": "Section Break",
+   "label": "Piece Commission"
+  },
+  {
+   "default": "1000",
+   "fieldname": "commission_per_piece",
+   "fieldtype": "Currency",
+   "label": "Commission per Piece"
+  },
+  {
+   "fieldname": "column_break_sal_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Walaa",
+   "fieldname": "commission_person_name",
+   "fieldtype": "Data",
+   "label": "Paid To"
+  },
+  {
+   "fieldname": "column_break_sal_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "commission_user",
+   "fieldtype": "Link",
+   "label": "Their System User",
+   "options": "User"
   }
  ],
- "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-27 00:00:00.000000",
+ "modified": "2026-09-04 15:44:01.559622",
  "modified_by": "Administrator",
  "module": "Narjes Custom",
  "name": "Narjes Settings",

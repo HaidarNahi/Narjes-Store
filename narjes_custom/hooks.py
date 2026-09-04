@@ -161,6 +161,7 @@ doctype_list_js = {"Sales Order" : "public/js/sales_order_list.js"}
 # before_install = "narjes_custom.install.before_install"
 # after_install = "narjes_custom.install.after_install"
 after_install = [
+	"narjes_custom.setup.accounts.run",
 	"narjes_custom.setup.custom_fields.run",
 	"narjes_custom.setup.ai_intake_defaults.run",
 	"narjes_custom.setup.branding.run",
@@ -176,6 +177,10 @@ after_install = [
 # remembered and run by hand. Also self-heals any Quick Shortcut rows still
 # holding a pre-Phosphor-reskin emoji value.
 after_migrate = [
+	# Accounts first: the sale automation and Narjes Expense both post to
+	# these heads, and a misclassified one silently distorts every money
+	# report (see setup/accounts.py).
+	"narjes_custom.setup.accounts.run",
 	"narjes_custom.setup.custom_fields.run",
 	"narjes_custom.setup.naming.run",
 	# Must follow custom_fields: the board's columns mirror the order_phase
@@ -195,6 +200,10 @@ after_migrate = [
 	"narjes_custom.setup.sidebar_layout.run",
 	"narjes_custom.setup.workspace_sidebar.run",
 	"narjes_custom.setup.fix_legacy_ui.run",
+	# Seeds the profit shares and ticks Item.custom_pays_commission for
+	# anything matching the MDF/frame/stand rule. Additive only — it never
+	# overwrites a share or unticks an item someone judged by hand.
+	"narjes_custom.setup.salary_defaults.run",
 	"narjes_custom.setup_narjes_settings_defaults.migrate_shortcut_icons_to_phosphor",
 ]
 

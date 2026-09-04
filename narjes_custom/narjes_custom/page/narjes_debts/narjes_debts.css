@@ -1,0 +1,151 @@
+/* Debts — same token base as the salaries page, so both stay in step with
+   the desk theme without either knowing about light or dark. */
+
+.ndbt { font-family: var(--n-font-body, inherit); padding-bottom: 48px; }
+
+/* ---------------------------------------------------------------- loading */
+
+@keyframes ndbt-shimmer {
+	0%   { opacity: .55; }
+	50%  { opacity: .95; }
+	100% { opacity: .55; }
+}
+.ndbt-skel {
+	background: var(--n-sunken, #E7EAE6);
+	border-radius: var(--n-radius-sm, 4px);
+	animation: ndbt-shimmer 1.4s ease-in-out infinite;
+}
+.ndbt-skel--line { height: 12px; margin: 6px 0; }
+.ndbt-skel--val  { height: 24px; width: 70%; margin-top: 10px; }
+.ndbt-skel--row  { height: 40px; margin-bottom: 6px; }
+
+@keyframes ndbt-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: none; }
+}
+.ndbt-in { animation: ndbt-in .22s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+	.ndbt-skel, .ndbt-in { animation: none; }
+}
+
+.ndbt-body { transition: opacity .15s; }
+.ndbt-body.is-busy { opacity: .45; pointer-events: none; }
+
+/* ------------------------------------------------------------------ header */
+
+.ndbt-head {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 14px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.ndbt-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.ndbt-btn {
+	border: 1px solid var(--n-border-strong, #D7DCD7);
+	background: var(--n-surface, #fff); color: var(--n-text, #1B211D);
+	border-radius: var(--n-radius-sm, 4px); padding: 5px 11px;
+	cursor: pointer; font-size: 13px;
+}
+.ndbt-btn:hover { background: var(--n-sunken, #E7EAE6); }
+.ndbt-btn.is-on {
+	background: var(--n-primary, #2E5C46); border-color: var(--n-primary, #2E5C46);
+	color: #fff; font-weight: 500;
+}
+.ndbt-btn--primary {
+	background: var(--n-primary, #2E5C46); border-color: var(--n-primary, #2E5C46);
+	color: #fff; font-weight: 500;
+}
+.ndbt-btn--primary:hover { background: var(--n-primary-hover, #264C3A); }
+
+/* ------------------------------------------------------------------- cards */
+
+.ndbt-cards {
+	display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px;
+}
+@media (max-width: 900px) { .ndbt-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .ndbt-cards { grid-template-columns: 1fr; } }
+
+.ndbt-card {
+	background: var(--n-surface, #fff);
+	border: 1px solid var(--n-border, #E7EAE6);
+	border-top: 2.5px solid var(--n-border-strong, #D7DCD7);
+	border-radius: var(--n-radius-md, 6px); padding: 13px 15px;
+}
+.ndbt-card--in   { border-top-color: var(--n-primary, #2E5C46); }
+.ndbt-card--out  { border-top-color: var(--n-danger, #9B3B3B); }
+.ndbt-card--net  { border-top-color: var(--n-accent, #C8842A); }
+.ndbt-card--late { border-top-color: var(--n-danger, #9B3B3B); }
+.ndbt-card__lbl {
+	font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+	color: var(--n-text-3, #6A736C); font-weight: 600;
+}
+.ndbt-card__val {
+	font-family: var(--n-font-mono, monospace); font-variant-numeric: tabular-nums;
+	font-size: 21px; font-weight: 600; margin-top: 8px; letter-spacing: -.02em;
+}
+.ndbt-card--in .ndbt-card__val   { color: var(--n-primary-hover, #264C3A); }
+.ndbt-card--out .ndbt-card__val  { color: var(--n-danger-text, #6A2626); }
+.ndbt-card--late .ndbt-card__val { color: var(--n-danger-text, #6A2626); }
+.ndbt-card__sub { font-size: 11.5px; color: var(--n-text-3, #6A736C); margin-top: 5px; }
+
+/* ------------------------------------------------------------------ table */
+
+.ndbt-tablewrap {
+	overflow-x: auto; border: 1px solid var(--n-border, #E7EAE6);
+	border-radius: var(--n-radius-md, 6px); background: var(--n-surface, #fff);
+}
+.ndbt-table { border-collapse: collapse; width: 100%; min-width: 780px; font-size: 13px; }
+.ndbt-table th {
+	text-align: left; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+	color: var(--n-text-3, #6A736C); font-weight: 600; padding: 9px 12px;
+	background: var(--n-sunken, #E7EAE6);
+	border-bottom: 1px solid var(--n-border-strong, #D7DCD7); white-space: nowrap;
+}
+.ndbt-table td { padding: 9px 12px; border-bottom: 1px solid var(--n-border, #E7EAE6); }
+.ndbt-table tbody tr:hover { background: var(--n-sunken, #E7EAE6); }
+.ndbt-num {
+	text-align: right; font-family: var(--n-font-mono, monospace);
+	font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* A severity stripe, so what needs attention reads before any number does. */
+.ndbt-row { border-left: 3px solid transparent; }
+.ndbt-row--overdue { border-left-color: var(--n-danger, #9B3B3B); }
+.ndbt-row--partly  { border-left-color: var(--n-accent, #C8842A); }
+.ndbt-row--open    { border-left-color: var(--n-border-strong, #D7DCD7); }
+.ndbt-row--settled { border-left-color: transparent; opacity: .6; }
+
+.ndbt-who { font-weight: 600; cursor: pointer; }
+.ndbt-who:hover { text-decoration: underline; }
+.ndbt-dir { font-size: 11.5px; color: var(--n-text-3, #6A736C); }
+
+.ndbt-pill {
+	display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+	padding: 2px 7px; border-radius: var(--n-radius-sm, 4px); white-space: nowrap;
+}
+.ndbt-pill--overdue { background: var(--n-danger-bg, #F9EFEF); color: var(--n-danger-text, #6A2626); }
+.ndbt-pill--partly  { background: var(--n-accent-bg, #FBF3E7); color: var(--n-accent-text, #875618); }
+.ndbt-pill--open    { background: var(--n-sunken, #E7EAE6); color: var(--n-text-2, #4C544E); }
+.ndbt-pill--settled { background: var(--n-success-bg, #EEF4F0); color: var(--n-success, #2E5C46); }
+
+/* -------------------------------------------------------- expanded plan */
+
+.ndbt-plan td { background: var(--n-sunken, #E7EAE6); padding: 0; }
+.ndbt-plan__inner { padding: 12px 16px 14px 20px; }
+.ndbt-plan table { border-collapse: collapse; width: 100%; max-width: 560px; font-size: 12.5px; }
+.ndbt-plan th {
+	background: transparent; border-bottom: 1px solid var(--n-border-strong, #D7DCD7);
+	padding: 6px 10px;
+}
+.ndbt-plan td.ndbt-plan__cell {
+	background: transparent; padding: 6px 10px;
+	border-bottom: 1px solid var(--n-border, #E7EAE6);
+}
+.ndbt-plan__loading { padding: 14px 20px; color: var(--n-text-3, #6A736C); font-size: 12.5px; }
+
+/* ------------------------------------------------------------------ empty */
+
+.ndbt-empty { text-align: center; padding: 56px 20px; color: var(--n-text-3, #6A736C); }
+.ndbt-empty__t {
+	font-family: var(--n-font-display, inherit); font-size: 18px;
+	color: var(--n-text, #1B211D); margin-bottom: 6px;
+}

@@ -1,0 +1,220 @@
+/* The Revenue & Salaries — built on the Narjes Ledger tokens in
+   public/css/narjes-vars.css, so light, dark and the theme kill switch are
+   all handled without this file knowing about any of them. */
+
+.nsal {
+	--gap: var(--n-space-4, 16px);
+	font-family: var(--n-font-body, inherit);
+	padding-bottom: 48px;
+}
+
+/* ---------------------------------------------------------------- loading */
+
+/* Skeletons, not a spinner. A spinner says "wait"; a skeleton says "here is
+   the shape of what is coming", and because it matches the real layout the
+   page does not jump when the data lands. */
+@keyframes nsal-shimmer {
+	0%   { opacity: .55; }
+	50%  { opacity: .95; }
+	100% { opacity: .55; }
+}
+.nsal-skel {
+	background: var(--n-sunken, #E7EAE6);
+	border-radius: var(--n-radius-sm, 4px);
+	animation: nsal-shimmer 1.4s ease-in-out infinite;
+}
+.nsal-skel--line { height: 12px; margin: 6px 0; }
+.nsal-skel--val  { height: 24px; width: 70%; margin-top: 10px; }
+.nsal-skel--row  { height: 44px; margin-bottom: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+	.nsal-skel { animation: none; }
+}
+
+/* Content fades in once, so the swap from skeleton reads as the same page
+   settling rather than as a second page replacing the first. */
+@keyframes nsal-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: none; }
+}
+.nsal-in { animation: nsal-in .22s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+	.nsal-in { animation: none; }
+}
+
+/* A refresh in place must not blank the screen — dim slightly instead, so
+   the numbers stay readable while the new ones are on their way. */
+.nsal-body.is-busy { opacity: .45; pointer-events: none; transition: opacity .15s; }
+.nsal-body { transition: opacity .15s; }
+
+/* ------------------------------------------------------------------ header */
+
+.nsal-head {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: var(--gap); flex-wrap: wrap; margin-bottom: var(--gap);
+}
+.nsal-month {
+	display: flex; align-items: center; gap: 6px;
+}
+.nsal-month__label {
+	font-family: var(--n-font-display, inherit);
+	font-size: 20px; font-weight: 500; min-width: 165px; text-align: center;
+}
+.nsal-btn {
+	border: 1px solid var(--n-border-strong, #D7DCD7);
+	background: var(--n-surface, #fff); color: var(--n-text, #1B211D);
+	border-radius: var(--n-radius-sm, 4px); padding: 5px 11px;
+	cursor: pointer; font-size: 13px; line-height: 1.4;
+}
+.nsal-btn:hover:not(:disabled) { background: var(--n-sunken, #E7EAE6); }
+.nsal-btn:disabled { opacity: .45; cursor: not-allowed; }
+.nsal-btn--primary {
+	background: var(--n-primary, #2E5C46); border-color: var(--n-primary, #2E5C46);
+	color: #fff; font-weight: 500;
+}
+.nsal-btn--primary:hover:not(:disabled) { background: var(--n-primary-hover, #264C3A); }
+
+/* ------------------------------------------------------------------- cards */
+
+.nsal-cards {
+	display: grid; grid-template-columns: repeat(3, 1fr);
+	gap: 10px; margin-bottom: var(--gap);
+}
+@media (max-width: 780px) { .nsal-cards { grid-template-columns: 1fr; } }
+
+.nsal-card {
+	background: var(--n-surface, #fff);
+	border: 1px solid var(--n-border, #E7EAE6);
+	border-top: 2.5px solid var(--n-border-strong, #D7DCD7);
+	border-radius: var(--n-radius-md, 6px); padding: 13px 15px;
+}
+.nsal-card--profit { border-top-color: var(--n-accent, #C8842A); }
+.nsal-card--people { border-top-color: var(--n-primary, #2E5C46); }
+.nsal-card--kept   { border-top-color: var(--n-info, #264C3A); }
+.nsal-card__lbl {
+	font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+	color: var(--n-text-3, #6A736C); font-weight: 600;
+}
+.nsal-card__val {
+	font-family: var(--n-font-mono, monospace); font-variant-numeric: tabular-nums;
+	font-size: 23px; font-weight: 600; margin-top: 8px; letter-spacing: -.02em;
+}
+.nsal-card--profit .nsal-card__val { color: var(--n-accent-text, #875618); }
+.nsal-card__sub { font-size: 11.5px; color: var(--n-text-3, #6A736C); margin-top: 5px; }
+
+/* -------------------------------------------------------------- allocation */
+
+.nsal-allocbar {
+	display: flex; height: 30px; border-radius: var(--n-radius-md, 6px);
+	overflow: hidden; border: 1px solid var(--n-border, #E7EAE6);
+	margin-bottom: var(--gap);
+}
+.nsal-allocbar span {
+	display: flex; align-items: center; justify-content: center;
+	font-size: 11px; font-weight: 600; color: #fff; letter-spacing: .03em;
+	min-width: 0; overflow: hidden; white-space: nowrap;
+}
+
+.nsal-split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .nsal-split { grid-template-columns: 1fr; } }
+
+.nsal-eyebrow {
+	font-size: 10.5px; letter-spacing: .11em; text-transform: uppercase;
+	color: var(--n-text-3, #6A736C); font-weight: 600; margin-bottom: 9px;
+}
+
+.nsal-person {
+	display: flex; align-items: center; gap: 12px; padding: 12px 13px;
+	border: 1px solid var(--n-border, #E7EAE6); background: var(--n-surface, #fff);
+	border-radius: var(--n-radius-md, 6px); margin-bottom: 9px;
+}
+.nsal-person__av {
+	width: 36px; height: 36px; border-radius: 50%; flex: none;
+	display: grid; place-items: center; font-weight: 600; font-size: 14px;
+	font-family: var(--n-font-display, inherit); color: #fff;
+	background: var(--n-primary, #2E5C46);
+}
+.nsal-person__who { flex: 1; min-width: 0; }
+.nsal-person__nm { font-weight: 600; font-size: 14px; }
+.nsal-person__rl { font-size: 11.5px; color: var(--n-text-3, #6A736C); }
+.nsal-person__amt {
+	font-family: var(--n-font-mono, monospace); font-variant-numeric: tabular-nums;
+	font-weight: 600; font-size: 17px; text-align: right; white-space: nowrap;
+}
+.nsal-person__dl {
+	font-size: 11.5px; text-align: right;
+	font-family: var(--n-font-mono, monospace); font-variant-numeric: tabular-nums;
+}
+
+.nsal-up   { color: var(--n-success, #2E5C46); font-weight: 600; }
+.nsal-down { color: var(--n-danger, #9B3B3B); font-weight: 600; }
+.nsal-flat { color: var(--n-text-3, #6A736C); }
+
+.nsal-boxrow { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+@media (max-width: 560px) { .nsal-boxrow { grid-template-columns: 1fr; } }
+.nsal-box {
+	border: 1px solid var(--n-border, #E7EAE6); background: var(--n-surface, #fff);
+	border-left: 3px solid var(--n-border-strong, #D7DCD7);
+	border-radius: var(--n-radius-md, 6px); padding: 12px 13px;
+}
+.nsal-box--emg { border-left-color: var(--n-danger, #9B3B3B); }
+.nsal-box--grw { border-left-color: var(--n-accent, #C8842A); }
+.nsal-box__val {
+	font-family: var(--n-font-mono, monospace); font-variant-numeric: tabular-nums;
+	font-size: 19px; font-weight: 600; margin-top: 5px;
+}
+
+/* ------------------------------------------------------------------ tables */
+
+.nsal-tablewrap {
+	overflow-x: auto; border: 1px solid var(--n-border, #E7EAE6);
+	border-radius: var(--n-radius-md, 6px); background: var(--n-surface, #fff);
+}
+.nsal-table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 13px; }
+.nsal-table th {
+	text-align: left; font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+	color: var(--n-text-3, #6A736C); font-weight: 600; padding: 9px 12px;
+	background: var(--n-sunken, #E7EAE6);
+	border-bottom: 1px solid var(--n-border-strong, #D7DCD7); white-space: nowrap;
+}
+.nsal-table td {
+	padding: 9px 12px; border-bottom: 1px solid var(--n-border, #E7EAE6);
+}
+.nsal-table tr:last-child td { border-bottom: 0; }
+.nsal-table tfoot td {
+	font-weight: 600; background: var(--n-sunken, #E7EAE6);
+	border-top: 1.5px solid var(--n-border-strong, #D7DCD7);
+}
+.nsal-num {
+	text-align: right; font-family: var(--n-font-mono, monospace);
+	font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.nsal-table tbody tr.is-current { background: var(--n-accent-bg, #FBF3E7); }
+
+/* ------------------------------------------------------------------ notice */
+
+.nsal-notice {
+	border: 1px solid var(--n-border, #E7EAE6);
+	border-left: 3px solid var(--n-accent, #C8842A);
+	background: var(--n-accent-bg, #FBF3E7);
+	border-radius: var(--n-radius-md, 6px);
+	padding: 12px 15px; margin-bottom: var(--gap); font-size: 13.5px;
+	display: flex; align-items: center; justify-content: space-between;
+	gap: 14px; flex-wrap: wrap;
+}
+.nsal-notice--warn {
+	border-left-color: var(--n-danger, #9B3B3B);
+	background: var(--n-danger-bg, #F9EFEF);
+}
+.nsal-notice__t { font-weight: 600; margin-bottom: 3px; }
+.nsal-notice__b { color: var(--n-text-2, #4C544E); }
+
+.nsal-empty {
+	text-align: center; padding: 56px 20px; color: var(--n-text-3, #6A736C);
+}
+.nsal-empty__t {
+	font-family: var(--n-font-display, inherit); font-size: 18px;
+	color: var(--n-text, #1B211D); margin-bottom: 6px;
+}
+
+.nsal-section { margin-top: 26px; }

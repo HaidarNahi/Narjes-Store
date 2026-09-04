@@ -982,36 +982,18 @@ def purchase_order_before_validate(doc, method):
             doc.taxes = [t for t in doc.taxes if t.description != description]
 
 def setup_packaging():
-    """Create the Packaging Expenses account used by automate_so_flow's
-    Journal Entry. The `packaging_costs` Sales Order field itself is created
-    by narjes_custom.setup.custom_fields.run() — this function no longer
-    duplicates that (see NARJES_STORE_SYSTEM.md §14.1/§14.2: having the same
-    field defined in more than one setup script is exactly the kind of
-    drift that made the schema unreliable)."""
-    company = frappe.get_all("Company", limit=1)[0].name
-    parent_account = frappe.get_all("Account", filters={"account_name": "Direct Income - NS", "company": company}, limit=1)
+    """Deprecated — kept so any saved bench console snippet still works.
 
-    if parent_account:
-        parent_account_name = parent_account[0].name
-        account_name = "Packaging Expenses - NS"
+    Every account this app books to is now declared in
+    narjes_custom.setup.accounts and created/corrected on every migrate.
+    This function used to create "Packaging Expenses" as an *Income* account
+    under Direct Income, while automate_so_flow() debited it as a cost, and
+    passed an already-suffixed account_name that would have produced
+    "Packaging Expenses - NS - NS".
+    """
+    from narjes_custom.setup import accounts
 
-        if not frappe.db.exists("Account", {"account_name": account_name, "company": company}):
-            doc = frappe.get_doc({
-                "doctype": "Account",
-                "account_name": account_name,
-                "parent_account": parent_account_name,
-                "company": company,
-                "root_type": "Income",
-                "is_group": 0,
-                "account_type": "Income Account"
-            })
-            doc.insert(ignore_permissions=True)
-            print(f"Created Account: {doc.name}")
-        else:
-            print("Account already exists.")
-    else:
-        print("Parent account 'Direct Income - NS' not found!")
-
+    accounts.run()
     frappe.db.commit()
 
 
@@ -1201,7 +1183,6 @@ def _resolve_theme(settings):
     return THEME_PRESETS.get(accent, THEME_PRESETS["Fern"])
 
 
-@frappe.whitelist()
 def _font_scale(settings):
 	"""Narjes Settings → Appearance → Font Size, as a multiplier.
 

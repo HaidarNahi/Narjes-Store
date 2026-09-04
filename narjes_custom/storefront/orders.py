@@ -10,6 +10,7 @@ import json
 
 import frappe
 from frappe.utils import cint, flt, now_datetime
+from frappe.rate_limiter import rate_limit
 
 from narjes_custom.ai_intake.matching import match_customer, normalize_phone
 from narjes_custom.storefront import core
@@ -17,6 +18,18 @@ from narjes_custom.storefront import core
 MAX_LINES = 30
 MAX_QTY_PER_LINE = 99
 ORDER_SOURCE = "From the Website"
+
+# Rate limits, per caller IP per window. Everything below is reachable without
+# an account, so without a ceiling one script can fill the shop with fake
+# orders, invent unlimited Customer records, or exhaust the disk one 5 MB
+# upload at a time — the likeliest way a small shop actually gets hurt here.
+#
+# The numbers are set well above what a real customer does (nobody places six
+# orders in an hour from one connection) and well below what a script needs to
+# be worth running.
+RATE_PLACE_ORDER = {"limit": 6, "seconds": 3600}
+RATE_DESIGN_REQUEST = {"limit": 10, "seconds": 3600}
+RATE_QUOTE = {"limit": 120, "seconds": 3600}
 
 
 class CheckoutError(frappe.ValidationError):
@@ -124,6 +137,7 @@ def price_cart(lines, lang="ar"):
 	return rows, {"total": total, "count": sum(r["qty"] for r in rows)}, dropped
 
 
+@rate_limit(**RATE_QUOTE)
 @frappe.whitelist(allow_guest=True)
 def quote(lines, governorate=None, lang=None):
 	"""Live cart/checkout summary: server prices + the delivery fee for the
@@ -203,6 +217,7 @@ def _resolve_customer(name, phone, governorate, address):
 # ---------------------------------------------------------------- place order
 
 
+@rate_limit(**RATE_PLACE_ORDER)
 @frappe.whitelist(allow_guest=True)
 def place_order(payload):
 	"""Create a Draft Sales Order from a guest cart.
@@ -309,6 +324,7 @@ def _notify_staff(order, name, phone, governorate):
 # --------------------------------------------------------- design requests
 
 
+@rate_limit(**RATE_DESIGN_REQUEST)
 @frappe.whitelist(allow_guest=True)
 def submit_design_request(payload):
 	"""Create a Narjes Design Request from the custom-design form."""

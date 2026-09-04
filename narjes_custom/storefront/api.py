@@ -10,10 +10,16 @@ Every method here is reachable by an unauthenticated visitor, so each one:
 import json
 
 import frappe
+from frappe.rate_limiter import rate_limit
 
 from narjes_custom.storefront import core
 
 MAX_ITEMS = 60
+
+# See storefront/orders.py for why these ceilings exist. Uploads are the
+# tightest: each one can land 5 MB on disk permanently.
+RATE_UPLOAD = {"limit": 20, "seconds": 3600}
+RATE_BROWSE = {"limit": 300, "seconds": 3600}
 
 
 def _render_cards(products, lang):
@@ -33,6 +39,7 @@ def _render_cards(products, lang):
 	return out
 
 
+@rate_limit(**RATE_BROWSE)
 @frappe.whitelist(allow_guest=True)
 def get_items(item_codes, lang=None):
 	"""Resolve a caller-supplied list of item codes to rendered product cards.
@@ -65,6 +72,7 @@ def get_items(item_codes, lang=None):
 	return _render_cards(products, lang)
 
 
+@rate_limit(**RATE_BROWSE)
 @frappe.whitelist(allow_guest=True)
 def search(q, lang=None):
 	"""Instant search over published items."""
@@ -92,6 +100,7 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
+@rate_limit(**RATE_UPLOAD)
 @frappe.whitelist(allow_guest=True)
 def upload_reference():
 	"""Accept a reference image for a custom-design request.

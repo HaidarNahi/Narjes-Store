@@ -190,6 +190,23 @@ def _default_selling_rate(item_code: str) -> float:
 # Endpoint 1: process_intake
 # ---------------------------------------------------------------------------
 
+def _require_intake_permission():
+	"""AI intake is order-entry, so it demands the same rights as order-entry.
+
+	`@frappe.whitelist()` only proves the caller is signed in — it says nothing
+	about what they may do. Without this, any account that can log in could
+	call confirm_intake() and submit a Sales Order, and submitting one runs
+	automate_so_flow(): a Delivery Note, a Sales Invoice, a Payment Entry and
+	several Journal Entries, all posted to the general ledger. That is write
+	access to the company's books from an unprivileged session.
+
+	process_intake() is gated too, for a different reason: every call spends
+	real money at Gemini, so leaving it open is an invitation to run up the
+	bill.
+	"""
+	frappe.has_permission("Sales Order", ptype="create", throw=True)
+
+
 @frappe.whitelist()
 def process_intake(raw_text: str) -> dict:
     """
@@ -203,6 +220,8 @@ def process_intake(raw_text: str) -> dict:
     Returns a dict with the intake record data for the frontend review screen.
     Never creates Customer or Sales Order — that only happens in confirm_intake().
     """
+    _require_intake_permission()
+
     if not ai_settings.is_enabled():
         frappe.throw(
             "AI Order Intake is turned off. A System Manager can re-enable it "
@@ -339,6 +358,8 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
     """
     Step 2 of the AI intake flow — called ONLY after human review.
     """
+    _require_intake_permission()
+
     settings = ai_settings.get_settings()
 
     intake = frappe.get_doc("AI Order Intake", intake_name)
@@ -557,6 +578,9 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
 @frappe.whitelist()
 def get_item_catalog_endpoint() -> list:
     """Return available items, with prices, for the frontend autocomplete."""
+    # Selling prices for the whole catalogue in one response — the same reason
+    # get_customers_for_search() checks before answering.
+    frappe.has_permission("Item", ptype="read", throw=True)
     return get_catalog_with_prices()
 
 

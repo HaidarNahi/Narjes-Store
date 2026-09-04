@@ -107,6 +107,21 @@ CUSTOM_FIELDS = {
             "allow_in_quick_entry": 1,
         },
     ],
+    # The monthly piece-commission expense is posted by
+    # narjes_custom.salaries.post_commission_expense(). This field is what
+    # makes it impossible to post twice for the same month: the check is a
+    # unique lookup on real data rather than a hopeful search of the
+    # description text.
+    "Narjes Expense": [
+        {
+            "fieldname": "custom_commission_month",
+            "label": "Commission Month",
+            "fieldtype": "Date",
+            "insert_after": "journal_entry",
+            "read_only": 1,
+            "description": "Set when this expense is the automatically posted monthly piece commission. Identifies the month it covers.",
+        },
+    ],
     "Item": [
         {
             "fieldname": "custom_is_canvas",
@@ -143,6 +158,25 @@ CUSTOM_FIELDS = {
             "label": "Is Row Item",
             "insert_after": "custom_is_flower",
             "description": "Check this if the item is tracked on the Items Balance report (stock sold/measured by roll — Nos or Centimeter).",
+        },
+        {
+            # Walaa is paid 1,000 IQD for every MDF, frame or stand sold, so
+            # something has to decide which items those are. A name search
+            # alone is not safe enough to pay someone on: "Stand" is a
+            # substring of "Standard", and this catalogue already has items
+            # whose item_name says nothing useful ("mdf 50*80" is named "m",
+            # "Metal Stand" is named "meta"), so the code and the name both
+            # have to be searched.
+            #
+            # So the name rule seeds this checkbox rather than replacing it —
+            # narjes_custom.salaries.sync_commission_flags() ticks what the
+            # rule finds, and a human can correct any item it gets wrong
+            # without editing code. The checkbox is what actually gets paid.
+            "fieldname": "custom_pays_commission",
+            "fieldtype": "Check",
+            "label": "Pays Commission",
+            "insert_after": "custom_is_row",
+            "description": "Selling one of these earns the commission set in Narjes Settings. Ticked automatically for items whose name contains MDF, frame or stand — untick if that is wrong.",
         },
     ],
     "Sales Order": [

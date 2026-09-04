@@ -1,0 +1,244 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "DEBT-.YYYY.-.#####",
+ "creation": "2026-09-04 15:41:40.298845",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_who",
+  "direction",
+  "party_type",
+  "party",
+  "party_name",
+  "cb_who",
+  "display_name",
+  "phone",
+  "sb_amount",
+  "amount",
+  "debt_date",
+  "due_date",
+  "cb_amount",
+  "paid_amount",
+  "outstanding",
+  "status",
+  "sb_what",
+  "description",
+  "sb_settle",
+  "settlements",
+  "sb_more",
+  "company",
+  "cb_more",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_who",
+   "fieldtype": "Section Break",
+   "label": "Who"
+  },
+  {
+   "default": "They owe us",
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Direction",
+   "options": "They owe us\nWe owe them",
+   "reqd": 1
+  },
+  {
+   "default": "Customer",
+   "fieldname": "party_type",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Customer\nSupplier\nOther",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.party_type!='Other'",
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "label": "Name",
+   "mandatory_depends_on": "eval:doc.party_type!='Other'",
+   "options": "party_type"
+  },
+  {
+   "depends_on": "eval:doc.party_type=='Other'",
+   "description": "For someone who is not a Customer or Supplier in the system.",
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Who (free text)",
+   "mandatory_depends_on": "eval:doc.party_type=='Other'"
+  },
+  {
+   "fieldname": "cb_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "bold": 1,
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Debtor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "sb_amount",
+   "fieldtype": "Section Break",
+   "label": "The debt"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "debt_date",
+   "fieldtype": "Date",
+   "label": "Taken on",
+   "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Settle by"
+  },
+  {
+   "fieldname": "cb_amount",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid so far",
+   "read_only": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "outstanding",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Still owed",
+   "read_only": 1
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nPartly settled\nSettled\nOverdue",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_what",
+   "fieldtype": "Section Break",
+   "label": "What it was for"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "sb_settle",
+   "fieldtype": "Section Break",
+   "label": "Settlement plan"
+  },
+  {
+   "description": "Leave empty if it will be paid in one go \u2014 record that payment as a single row. Add a row per instalment to schedule it.",
+   "fieldname": "settlements",
+   "fieldtype": "Table",
+   "label": "Instalments",
+   "options": "Narjes Debt Settlement"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sb_more",
+   "fieldtype": "Section Break",
+   "label": "More"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "cb_more",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-04 15:41:40.298845",
+ "modified_by": "Administrator",
+ "module": "Narjes Custom",
+ "name": "Narjes Debt",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "party_name,party,status",
+ "sort_field": "due_date",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "display_name",
+ "track_changes": 1
+}

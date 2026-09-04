@@ -28,9 +28,15 @@ ITEMS = [
 	{"type": "Link", "label": "Customers", "link_type": "DocType", "link_to": "Customer", "icon": "users-three"},
 	{"type": "Link", "label": "Deliveries", "link_type": "DocType", "link_to": "Delivery Note", "icon": "truck"},
 	{"type": "Section Break", "label": "Money", "collapsible": 1},
-	{"type": "Link", "label": "Expenses", "link_type": "DocType", "link_to": "Narjes Expense", "icon": "receipt"},
+	{"type": "Link", "label": "Expenses", "link_type": "DocType", "link_to": "Narjes Expense", "icon": "file-text"},
+	{"type": "Link", "label": "Debts", "link_type": "Page", "link_to": "narjes-debts", "icon": "wallet"},
 	{"type": "Section Break", "label": "Insights", "collapsible": 1},
-	{"type": "Link", "label": "Revenue Report", "link_type": "Report", "link_to": "Sales Revenue Report", "icon": "chart-line-up"},
+	# The three money reports, in the order a person reads them: what came
+	# in, what went out, and what is left.
+	{"type": "Link", "label": "Money In", "link_type": "Report", "link_to": "Money In", "icon": "currency-circle-dollar"},
+	{"type": "Link", "label": "Money Out", "link_type": "Report", "link_to": "Money Out", "icon": "trend-down"},
+	{"type": "Link", "label": "Revenue", "link_type": "Report", "link_to": "Revenue", "icon": "chart-line-up"},
+	{"type": "Link", "label": "Revenue & Salaries", "link_type": "Page", "link_to": "narjes-salaries", "icon": "users-three"},
 	{"type": "Link", "label": "AI Order Intake", "link_type": "Page", "link_to": "ai-intake", "icon": "sparkle"},
 ]
 

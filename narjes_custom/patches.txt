@@ -9,3 +9,4 @@ narjes_custom.patches.reconcile_done_phase_with_docstatus
 narjes_custom.patches.strip_delivery_charge_rows
 narjes_custom.patches.recompute_draft_order_totals
 narjes_custom.patches.link_and_clear_orphan_cost_entries
+narjes_custom.patches.reclassify_packaging_account
