@@ -31,7 +31,7 @@ Usage — always look before you leap:
 """
 
 import frappe
-from frappe.utils import flt, getdate
+from frappe.utils import getdate
 
 from narjes_custom.tools import misdated_orders
 
@@ -140,7 +140,7 @@ def _print_month_table(title, rows, expense_only=False):
 def apply(company=None):
 	"""Move the money vouchers. One order at a time, stopping on any failure."""
 	_guard()
-	moving, staying = _plan(company)
+	moving, _ = _plan(company)
 	if not moving:
 		print("\nNothing to move.\n")
 		return
