@@ -68,6 +68,11 @@ def build_pairings(sem, ramps, singles, mode="light"):
         ("chart tooltip value on panel", tip_value, tip_bg, 4.5),
         ("chart tooltip date on panel", tip_title, tip_bg, 4.5),
         ("chart tooltip label on panel", tip_label, tip_bg, 4.5),
+        # The explainer button sits on the report summary strip, which is the
+        # sunken ground rather than a card. 3.0 because it is a control, not body
+        # text — and it shipped once at 2.1:1, which is why it is listed here.
+        ("explainer button on summary strip", sem["text-2"], sem["sunken"], 3.0),
+        ("explainer button hover", sem["primary"], sem["sunken"], 3.0),
     ]
 
 
