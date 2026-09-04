@@ -121,6 +121,55 @@ def _date_document(target, order):
         target.posting_time = "23:59:59" if not target.get("posting_time") else target.posting_time
 
 
+
+def _submit_delivery_note(dn, order):
+    """Deliver on the order's date, but never let that block the order.
+
+    The Delivery Note is the one generated document that moves stock as well
+    as money, so backdating it is not free: if the goods were not in the
+    warehouse on the order's date, ERPNext refuses the movement outright.
+
+    That refusal is correct for stock and disastrous for the shop — a
+    three-week-old WhatsApp order entered through AI intake would simply fail
+    to submit, and the operator would be stuck with an error about warehouse
+    quantities that has nothing to do with what they were trying to do.
+
+    So the order's date is attempted first, and today is the fallback. The
+    money documents are dated by the order either way, so revenue and payment
+    always land in the right month; only the cost of goods can end up in the
+    month the stock actually moved. tools/misdated_orders.py reports any
+    order where that happened, so it stays visible rather than silent.
+    """
+    savepoint = "narjes_dn_backdate"
+    frappe.db.savepoint(savepoint)
+    try:
+        _date_document(dn, order)
+        dn.insert(ignore_permissions=True)
+        dn.submit()
+        return dn
+    except frappe.ValidationError as exc:
+        # NegativeStockError is a ValidationError subclass; so are the other
+        # "not available on that date" stock complaints. Anything else should
+        # still stop the order.
+        if "NegativeStock" not in type(exc).__name__ and "negative" not in str(exc).lower():
+            raise
+        frappe.db.rollback(save_point=savepoint)
+
+    retry = make_delivery_note(order.name)
+    retry.insert(ignore_permissions=True)
+    retry.submit()
+    frappe.log_error(
+        title=f"Delivery Note for {order.name} could not be dated {_posting_date(order)}",
+        message=(
+            f"The stock was not in the warehouse on {_posting_date(order)}, so the Delivery "
+            f"Note was posted on {frappe.utils.today()} instead. Revenue and payment are still "
+            f"dated to the order; only the cost of goods sits in the later month. "
+            f"See narjes_custom.tools.misdated_orders."
+        ),
+    )
+    return retry
+
+
 def cancel_order_cost_entries(doc, method=None):
     """Cancel the cost entries a Sales Order created, when the order is cancelled.
 
@@ -228,9 +277,7 @@ def automate_so_flow(doc, method):
             _append_flower_items(dn, stock_flowers, doc, None, only_stock_items=True, warehouse=warehouse)
 
         if len(dn.get("items") or []) > 0:
-            _date_document(dn, doc)
-            dn.insert(ignore_permissions=True)
-            dn.submit()
+            _submit_delivery_note(dn, doc)
 
         # 2. Create Sales Invoice directly from SO (includes all standard items and services)
         from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice as make_si_from_so
