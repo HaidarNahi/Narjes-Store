@@ -192,26 +192,64 @@ class SalariesDashboard {
 		// below are being worked out on money that is already owed to
 		// somebody else.
 		if (d.commission_pending) {
-			const amount = format_currency(d.commission.total, frappe.defaults.get_default("currency"));
+			const cur = frappe.defaults.get_default("currency");
+			const owed = format_currency(d.commission.outstanding, cur);
+			const already = d.commission.recorded;
+			const who = frappe.utils.escape_html(d.commission.person || __("Walaa"));
+
+			// Part-recorded reads very differently from not-recorded-at-all,
+			// and the difference decides whether pressing the button is
+			// finishing a job or starting one.
+			const heading = already
+				? __("{0} more of {1}'s commission still to record", [owed, who])
+				: __("{0}'s commission has not been recorded yet", [who]);
+			const detail = already
+				? __(
+						"{0} of the {1} earned this month is already recorded; the rest is from pieces sold since. Recording it brings net profit to {2}.",
+						[
+							format_currency(already, cur),
+							format_currency(d.commission.total, cur),
+							format_currency(d.commission.net_if_posted, cur),
+						]
+				  )
+				: __(
+						"Until it is, the shares below are worked out on {0} that is already owed. Recording it brings net profit to {1}.",
+						[owed, format_currency(d.commission.net_if_posted, cur)]
+				  );
+
 			html += `
 				<div class="nsal-notice">
 					<div>
-						<div class="nsal-notice__t">${__("{0}'s commission has not been recorded yet", [
-							frappe.utils.escape_html(d.commission.person || __("Walaa")),
-						])}</div>
-						<div class="nsal-notice__b">${__(
-							"Until it is, the shares below are worked out on {0} that is already owed. Recording it brings net profit to {1}.",
-							[amount, format_currency(d.commission.net_if_posted, frappe.defaults.get_default("currency"))]
+						<div class="nsal-notice__t">${heading}</div>
+						<div class="nsal-notice__b">${detail} ${__(
+							"It is saved as an expense, and you can record again later if more pieces sell this month."
 						)}</div>
 					</div>
 					${
 						data.can_post_commission
 							? `<button class="nsal-btn nsal-btn--primary" data-post-commission>${__(
 									"Record {0}",
-									[amount]
+									[owed]
 							  )}</button>`
 							: ""
 					}
+				</div>`;
+		}
+
+		if (d.commission.outstanding < 0) {
+			// More has been paid than was earned — an order cancelled after
+			// the fact. Never reversed automatically.
+			const cur = frappe.defaults.get_default("currency");
+			html += `
+				<div class="nsal-notice nsal-notice--warn">
+					<div>
+						<div class="nsal-notice__t">${__("{0} more commission is recorded than was earned", [
+							format_currency(-d.commission.outstanding, cur),
+						])}</div>
+						<div class="nsal-notice__b">${__(
+							"An order was probably cancelled after the commission was paid. Cancel one of this month's commission expenses to put it right — nothing is reversed automatically."
+						)}</div>
+					</div>
 				</div>`;
 		}
 
@@ -348,7 +386,15 @@ class SalariesDashboard {
 					<div class="nsal-person__rl">${__("{0} pieces × {1} — paid as an expense", [
 						c.pieces,
 						money(c.rate),
-					])}${c.posted ? "" : ` · <b>${__("not recorded yet")}</b>`}</div>
+					])}${
+						c.posted
+							? ""
+							: c.recorded
+							? ` · <b>${__("{0} recorded so far", [
+									format_currency(c.recorded, frappe.defaults.get_default("currency")),
+							  ])}</b>`
+							: ` · <b>${__("not recorded yet")}</b>`
+					}</div>
 				</div>
 				<div>
 					<div class="nsal-person__amt">${money(c.total)}</div>

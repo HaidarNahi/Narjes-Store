@@ -343,14 +343,19 @@ def distribution(from_date, to_date, company=None, detailed=True):
 
 	net = summary["net_profit"]
 
-	# Whether the commission has actually reached the books yet. If it has
-	# not, `net` still contains money that is already owed to somebody, and
-	# every share below is overstated — so this travels with the numbers
-	# rather than being left for the reader to know.
-	posted = commission_expense_for(from_date, company)
-	commission["posted"] = bool(posted)
-	commission["expense"] = posted.name if posted else None
-	commission["net_if_posted"] = net - commission["total"] if not posted else net
+	# How much of what is owed has actually reached the books. This is a
+	# running total rather than a yes/no, because a month can be recorded
+	# part-way through and then earn more commission afterwards — see
+	# post_commission_expense(). Anything still unrecorded is money already
+	# owed to somebody that `net` is still counting, so every share below is
+	# overstated by exactly that much.
+	recorded = commission_recorded(from_date, company)
+	outstanding = commission["total"] - recorded
+	commission["recorded"] = recorded
+	commission["outstanding"] = outstanding
+	commission["posted"] = outstanding <= 0
+	commission["expenses"] = commission_expenses_for(from_date, company)
+	commission["net_if_posted"] = net - outstanding
 
 	allocations = []
 	for share in settings["shares"]:
@@ -377,7 +382,7 @@ def distribution(from_date, to_date, company=None, detailed=True):
 		# money is either unassigned or promised twice, and the dashboard
 		# says so out loud.
 		"unallocated": net * (100.0 - allocated_percent) / 100.0,
-		"commission_pending": not commission["posted"] and bool(commission["total"]),
+		"commission_pending": commission["outstanding"] > 0,
 		"paid_to_people": sum(a["amount"] for a in allocations if a["kind"] == "person")
 		+ commission["total"],
 		"kept_in_business": sum(a["amount"] for a in allocations if a["kind"] == "fund"),
@@ -423,65 +428,108 @@ def _change_pct(period, previous):
 # --------------------------------------------------- paying the commission
 
 
-def commission_expense_for(month, company=None):
-	"""The posted commission expense for a month, if there is one."""
+def commission_expenses_for(month, company=None):
+	"""Every commission expense recorded against a month, oldest first.
+
+	A list, not a single document, because a month can legitimately be
+	recorded more than once — see post_commission_expense().
+	"""
 	company = company or finance.default_company()
-	name = frappe.db.get_value(
+	return frappe.get_all(
 		"Narjes Expense",
-		{
+		filters={
 			"custom_commission_month": get_first_day(getdate(month)),
 			"company": company,
-			"docstatus": ["<", 2],
+			"docstatus": 1,
 		},
-		"name",
+		fields=["name", "amount", "expense_date", "description"],
+		order_by="creation asc",
 	)
-	return frappe.get_doc("Narjes Expense", name) if name else None
+
+
+def commission_recorded(month, company=None):
+	"""How much commission has actually been booked for a month so far."""
+	return sum(flt(e.amount) for e in commission_expenses_for(month, company))
 
 
 @frappe.whitelist()
 def post_commission_expense(month, company=None):
-	"""Record the month's piece commission as a real expense, once.
+	"""Record whatever commission is still owed for a month.
 
-	Until this is posted the commission is only a calculation: it has not
-	reduced profit, so the partners' 30% each is being worked out on money
-	that is already owed to somebody else. The dashboard says so, and this is
-	the button that fixes it.
+	Records the *difference* between what has been earned and what has already
+	been booked — not a flat "has this month been done yet".
 
-	Idempotent by lookup, not by hope — `custom_commission_month` makes a
-	second posting for the same month impossible even if two people press the
-	button at the same moment.
+	That distinction is the whole point. Pressing this on the 4th of the month
+	and then selling twenty more frames on the 20th used to leave those twenty
+	unpaid forever, because the month already had an expense against it and a
+	second press was refused. Now the first press records what is owed so far
+	and the second records the rest, so the total booked always catches up to
+	the total earned.
+
+	It also handles the awkward case in the other direction: a backdated order
+	entered into a month that was already settled adds commission to a closed
+	month, and this records the top-up rather than pretending it does not
+	exist.
+
+	Nothing is ever unrecorded automatically. If commission goes *down* —
+	an order cancelled after the month was paid — the overpayment is reported
+	and left for a person to reverse, because clawing back somebody's wage
+	without them knowing is not a thing software should do quietly.
 	"""
 	frappe.has_permission("Narjes Expense", ptype="create", throw=True)
 
 	company = company or finance.default_company()
 	start = get_first_day(getdate(month))
 	end = get_last_day(start)
+	label = start.strftime("%B %Y")
 
-	existing = commission_expense_for(start, company)
-	if existing:
-		return {
-			"created": False,
-			"expense": existing.name,
-			"amount": existing.amount,
-			"message": _("{0} was already recorded for {1}.").format(
-				existing.name, start.strftime("%B %Y")
-			),
-		}
-
-	settings = get_settings()
 	commission = commission_for_period(start, end, company)
-	if not commission["total"]:
+	earned = flt(commission["total"])
+	recorded = commission_recorded(start, company)
+	owed = earned - recorded
+
+	if owed > 0:
+		return _record_commission(commission, owed, start, end, company, label, recorded)
+
+	if owed < 0:
 		return {
 			"created": False,
 			"expense": None,
 			"amount": 0,
-			"message": _("No commission-earning pieces were sold in {0}.").format(
-				start.strftime("%B %Y")
+			"message": _(
+				"{0} has {1} recorded but only {2} earned — {3} more than is owed. "
+				"An order was probably cancelled after the commission was paid. "
+				"Reverse the difference by cancelling one of the expenses on this month."
+			).format(
+				label,
+				frappe.format_value(recorded, {"fieldtype": "Currency"}),
+				frappe.format_value(earned, {"fieldtype": "Currency"}),
+				frappe.format_value(-owed, {"fieldtype": "Currency"}),
 			),
 		}
 
+	if not earned:
+		return {
+			"created": False,
+			"expense": None,
+			"amount": 0,
+			"message": _("No commission-earning pieces were sold in {0}.").format(label),
+		}
+
+	return {
+		"created": False,
+		"expense": None,
+		"amount": 0,
+		"message": _("All {0} of {1}'s commission is already recorded.").format(
+			frappe.format_value(earned, {"fieldtype": "Currency"}), label
+		),
+	}
+
+
+def _record_commission(commission, owed, start, end, company, label, already):
 	from narjes_custom.setup import accounts
 
+	settings = get_settings()
 	salary_account = accounts.resolve("Salary", company)
 	if not salary_account:
 		frappe.throw(
@@ -494,23 +542,32 @@ def post_commission_expense(month, company=None):
 	if not cash:
 		frappe.throw(_("No Cash account exists for {0}.").format(company))
 
+	topping_up = already > 0
+	description = (
+		_("Piece commission — further pieces in {0}").format(label)
+		if topping_up
+		else _("Piece commission — {0} pieces in {1}").format(commission["pieces"], label)
+	)
+
 	doc = frappe.get_doc(
 		{
 			"doctype": "Narjes Expense",
 			"company": company,
-			# Dated the last day of the month it covers, so it lands inside
-			# the period whose profit it is reducing rather than in the next
-			# one — which would flatter this month and punish the next.
-			"expense_date": end,
+			# Dated inside the month it covers, so it reduces that month's
+			# profit rather than the next one's. For a month still running,
+			# today is inside it; for a closed month, its last day is.
+			"expense_date": min(getdate(frappe.utils.today()), end),
 			"payee": settings["commission_person"],
-			"description": _("Piece commission — {0} pieces in {1}").format(
-				commission["pieces"], start.strftime("%B %Y")
-			),
-			"amount": commission["total"],
+			"description": description,
+			"amount": owed,
 			"expense_account": salary_account,
 			"paid_from": cash,
 			"custom_commission_month": start,
-			"notes": "\n".join(
+			"notes": _("Earned {0}, already recorded {1}, this entry {2}.").format(
+				commission["total"], already, owed
+			)
+			+ "\n"
+			+ "\n".join(
 				f"{line['qty']} \u00d7 {line['item_code']} = {line['amount']:,.0f}"
 				for line in commission["lines"]
 			),
@@ -519,16 +576,22 @@ def post_commission_expense(month, company=None):
 	doc.insert(ignore_permissions=True)
 	doc.submit()
 
-	return {
-		"created": True,
-		"expense": doc.name,
-		"amount": doc.amount,
-		"message": _("Recorded {0} for {1} — {2} pieces.").format(
-			frappe.format_value(doc.amount, {"fieldtype": "Currency"}),
-			start.strftime("%B %Y"),
+	message = (
+		_("Recorded a further {0} for {1}. {2} of {3} now booked.").format(
+			frappe.format_value(owed, {"fieldtype": "Currency"}),
+			label,
+			frappe.format_value(already + owed, {"fieldtype": "Currency"}),
+			frappe.format_value(commission["total"], {"fieldtype": "Currency"}),
+		)
+		if topping_up
+		else _("Recorded {0} for {1} — {2} pieces.").format(
+			frappe.format_value(owed, {"fieldtype": "Currency"}),
+			label,
 			commission["pieces"],
-		),
-	}
+		)
+	)
+
+	return {"created": True, "expense": doc.name, "amount": owed, "message": message}
 
 
 # ------------------------------------------------------------- dashboard API

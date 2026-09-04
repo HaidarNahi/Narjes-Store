@@ -58,11 +58,13 @@ def _book_cost_je(doc, expense_account, amount, remark):
     these entries cannot be reported on, filtered, or cleaned up when an order
     is cancelled — which is exactly how 13 of them were left stranded against
     cancelled orders, overstating expenses by 47,650.
+
+    Dated to the order, not to today — see _posting_date().
     """
     je = frappe.get_doc({
         "doctype": "Journal Entry",
         "voucher_type": "Journal Entry",
-        "posting_date": frappe.utils.today(),
+        "posting_date": _posting_date(doc),
         "company": doc.company,
         "user_remark": remark,
         "custom_sales_order": doc.name,
@@ -80,6 +82,43 @@ def _book_cost_je(doc, expense_account, amount, remark):
     je.insert(ignore_permissions=True)
     je.submit()
     return je
+
+
+
+def _posting_date(doc):
+    """The date a sale's paperwork belongs to: the day the order was taken.
+
+    ERPNext dates everything it generates "today", which is the day the
+    button was pressed rather than the day the business happened. An order
+    taken at 23:59 on 31 August and submitted on 1 September then puts its
+    revenue, its cost of goods and its payment into September, while the
+    order itself — and the piece commission earned on it — stay in August.
+    The two months stop balancing against each other, and August looks like
+    a month with commission to pay and nothing to pay it from.
+
+    Seventeen orders were sitting in exactly that state when this was found.
+
+    Using the order's own date makes the books agree with what happened, and
+    makes every report agree with every other one, including ERPNext's own
+    Profit and Loss.
+    """
+    return doc.transaction_date or frappe.utils.today()
+
+
+
+def _date_document(target, order):
+    """Post `target` on the order's date rather than today.
+
+    `set_posting_time` is what makes ERPNext honour a manually supplied
+    posting date instead of quietly overwriting it with now() on validate.
+    """
+    posting = _posting_date(order)
+    if target.meta.has_field("set_posting_time"):
+        target.set_posting_time = 1
+    if target.meta.has_field("posting_date"):
+        target.posting_date = posting
+    if target.meta.has_field("posting_time"):
+        target.posting_time = "23:59:59" if not target.get("posting_time") else target.posting_time
 
 
 def cancel_order_cost_entries(doc, method=None):
@@ -189,6 +228,7 @@ def automate_so_flow(doc, method):
             _append_flower_items(dn, stock_flowers, doc, None, only_stock_items=True, warehouse=warehouse)
 
         if len(dn.get("items") or []) > 0:
+            _date_document(dn, doc)
             dn.insert(ignore_permissions=True)
             dn.submit()
 
@@ -200,13 +240,15 @@ def automate_so_flow(doc, method):
         income_account = _get_account("Sales", doc.company)
         _append_flower_items(si, doc.get("custom_flower_items"), doc, income_account)
 
+        _date_document(si, doc)
         si.insert(ignore_permissions=True)
         si.submit()
 
         # 3. Create and Receive Payment Entry
         pe = get_payment_entry("Sales Invoice", si.name)
         pe.reference_no = f"AUTO-{doc.name}"
-        pe.reference_date = frappe.utils.today()
+        pe.reference_date = _posting_date(doc)
+        _date_document(pe, doc)
         if not pe.mode_of_payment:
             pe.mode_of_payment = frappe.db.get_value("Mode of Payment", {"type": "Cash"}, "name") or "Cash"
         if not pe.paid_to:
