@@ -69,14 +69,44 @@ body.narjes-ledger {
 			stroke: var(--n-border);
 		}
 
-		.graph-svg-tip {
-			background: var(--n-ink);
-			border-radius: var(--n-radius-xs);
+	}
 
-			.title,
-			.data-point-list {
-				font-family: var(--n-font-mono);
-			}
+	// Chart tooltips.
+	//
+	// Deliberately outside .chart-container: frappe-charts appends this to
+	// whichever wrapper the chart happens to sit in, and a report chart, a
+	// workspace widget and the home dashboard do not all use the same one.
+	// Scoping it to the theme instead means every chart in the desk gets the
+	// same tooltip.
+	//
+	// The tokens matter more than the background. frappe-charts colours the
+	// tooltip's own text from --charts-tooltip-value / -title / -label, and
+	// this theme used to set `background` directly while leaving those alone:
+	// the panel went dark, the text stayed near-black (#192734 on #1B211D),
+	// and the number nobody could read was the only thing the tooltip existed
+	// to show. Measured at 1.44:1 against a 4.5:1 requirement.
+	//
+	// Setting the tokens rather than the properties also fixes the little
+	// pointer triangle, which reads --charts-tooltip-bg on its own.
+	.graph-svg-tip {
+		--charts-tooltip-bg: var(--n-ink);
+		--charts-tooltip-value: var(--n-neutral-50);
+		--charts-tooltip-title: var(--n-neutral-300);
+		--charts-tooltip-label: var(--n-neutral-400);
+
+		border-radius: var(--n-radius-xs);
+
+		.title,
+		.data-point-list {
+			font-family: var(--n-font-mono);
+		}
+
+		// The swatch carries the series colour, which is chosen to sit on the
+		// page's light ground — fern and stamp are both dark, so on the ink
+		// panel they sink into it. A hairline ring keeps any series colour
+		// legible as a chip without altering the colour itself.
+		.tooltip-legend {
+			box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
 		}
 	}
 
@@ -108,8 +138,17 @@ body.narjes-ledger {
 		background: var(--n-fern-900);
 	}
 
-	.chart-container .graph-svg-tip {
-		background: var(--n-neutral-200);
-		color: var(--n-ink);
+	// Dark mode inverts the panel — a light tooltip against the dark desk —
+	// so every token flips with it. Same reasoning as the light-mode block:
+	// set the tokens, not the properties, or the text is left behind.
+	.graph-svg-tip {
+		--charts-tooltip-bg: var(--n-neutral-200);
+		--charts-tooltip-value: var(--n-ink);
+		--charts-tooltip-title: var(--n-neutral-800);
+		--charts-tooltip-label: var(--n-neutral-700);
+
+		.tooltip-legend {
+			box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+		}
 	}
 }

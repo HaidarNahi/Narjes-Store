@@ -32,9 +32,22 @@ def ratio(fg, bg):
     return (l1 + 0.05) / (l2 + 0.05)
 
 
-def build_pairings(sem, ramps, singles):
+def build_pairings(sem, ramps, singles, mode="light"):
     """(label, fg, bg, threshold) per mode — the promises P1.1 makes."""
     r = lambda name, stop: ramps[name][str(stop)]
+
+    # Chart tooltips invert the page: a dark panel on the light theme, a light
+    # panel on the dark one. That inversion is why they are listed explicitly
+    # rather than derived from `sem` — the panel is never the page's surface,
+    # so nothing in the semantic set describes it, and the one time it went
+    # unchecked the value sat at 1.44:1 and the number was invisible.
+    if mode == "light":
+        tip_bg = singles["ink"]
+        tip_value, tip_title, tip_label = r("neutral", 50), r("neutral", 300), r("neutral", 400)
+    else:
+        tip_bg = r("neutral", 200)
+        tip_value, tip_title, tip_label = singles["ink"], r("neutral", 800), r("neutral", 700)
+
     return [
         ("body text on canvas", sem["text"], sem["bg"], 4.5),
         ("body text on surface", sem["text"], sem["surface"], 4.5),
@@ -52,6 +65,9 @@ def build_pairings(sem, ramps, singles):
         ("focus ring on canvas (UI)", sem["focus"], sem["bg"], 3.0),
         ("border-strong on surface (UI)", sem["border-strong"], sem["surface"], 1.2),
         ("text on selection", sem["text"], sem["selection"], 4.5),
+        ("chart tooltip value on panel", tip_value, tip_bg, 4.5),
+        ("chart tooltip date on panel", tip_title, tip_bg, 4.5),
+        ("chart tooltip label on panel", tip_label, tip_bg, 4.5),
     ]
 
 
@@ -91,8 +107,8 @@ LIGHT = tokens["semantic"]["light"]
 DARK = tokens["semantic"]["dark"]
 
 rows, failures = [], []
-for mode, sem in (("Paper (light)", LIGHT), ("Ink (dark)", DARK)):
-    for label, fg, bg, threshold in build_pairings(sem, tokens["ramps"], tokens["singles"]):
+for mode, sem, mode_key in (("Paper (light)", LIGHT, "light"), ("Ink (dark)", DARK, "dark")):
+    for label, fg, bg, threshold in build_pairings(sem, tokens["ramps"], tokens["singles"], mode_key):
         value = ratio(fg, bg)
         ok = value >= threshold
         if not ok:

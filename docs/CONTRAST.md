@@ -20,6 +20,9 @@ WCAG AA: 4.5:1 body text, 3:1 large text / UI components.
 | Paper (light) | focus ring on canvas (UI) | `#3E7059` on `#F2F4F1` | 5.18 | 3.0 | ✅ |
 | Paper (light) | border-strong on surface (UI) | `#D7DCD7` on `#FFFFFF` | 1.39 | 1.2 | ✅ |
 | Paper (light) | text on selection | `#1B211D` on `#D8E6DE` | 12.71 | 4.5 | ✅ |
+| Paper (light) | chart tooltip value on panel | `#F7F8F6` on `#1B211D` | 15.38 | 4.5 | ✅ |
+| Paper (light) | chart tooltip date on panel | `#D7DCD7` on `#1B211D` | 11.79 | 4.5 | ✅ |
+| Paper (light) | chart tooltip label on panel | `#B7BFB9` on `#1B211D` | 8.71 | 4.5 | ✅ |
 | Ink (dark) | body text on canvas | `#ECEFEA` on `#121714` | 15.63 | 4.5 | ✅ |
 | Ink (dark) | body text on surface | `#ECEFEA` on `#1B211D` | 14.12 | 4.5 | ✅ |
 | Ink (dark) | body text on raised | `#ECEFEA` on `#232A25` | 12.66 | 4.5 | ✅ |
@@ -36,6 +39,9 @@ WCAG AA: 4.5:1 body text, 3:1 large text / UI components.
 | Ink (dark) | focus ring on canvas (UI) | `#A2D4C9` on `#121714` | 11.05 | 3.0 | ✅ |
 | Ink (dark) | border-strong on surface (UI) | `#3A423B` on `#1B211D` | 1.58 | 1.2 | ✅ |
 | Ink (dark) | text on selection | `#ECEFEA` on `#1F3D30` | 10.24 | 4.5 | ✅ |
+| Ink (dark) | chart tooltip value on panel | `#1B211D` on `#E7EAE6` | 13.50 | 4.5 | ✅ |
+| Ink (dark) | chart tooltip date on panel | `#333A35` on `#E7EAE6` | 9.63 | 4.5 | ✅ |
+| Ink (dark) | chart tooltip label on panel | `#4C544E` on `#E7EAE6` | 6.45 | 4.5 | ✅ |
 | Fern accent · Paper | button label on accent | `#FFFFFF` on `#2E5C46` | 7.68 | 4.5 | ✅ |
 | Fern accent · Paper | accent fill vs canvas (UI) | `#2E5C46` on `#F2F4F1` | 6.94 | 3.0 | ✅ |
 | Fern accent · Ink | button label on accent | `#121714` on `#7FD4AE` | 10.30 | 4.5 | ✅ |
