@@ -35,6 +35,8 @@ class DebtsDashboard {
 		// See the salaries page: two quick filter clicks otherwise let the
 		// slower response win and show rows that do not match the buttons.
 		this.request = 0;
+		this.label_seq = 0;
+		this.pending_info = [];
 
 		this.page.set_primary_action(__("New debt"), () =>
 			frappe.new_doc("Narjes Debt", {}, (doc) => {
@@ -134,31 +136,54 @@ class DebtsDashboard {
 		`);
 	}
 
+	// Placeholder now, button after the markup is in the DOM — the cards are
+	// assembled as an HTML string, and the copy must never be interpolated
+	// into one.
+	info(text, key) {
+		const spec = (this.explainers || {})[key];
+		if (!spec) return frappe.utils.escape_html(text);
+		const id = `ndbt-lbl-${++this.label_seq}`;
+		(this.pending_info = this.pending_info || []).push({ id, spec });
+		return `<span id="${id}">${frappe.utils.escape_html(text)}</span>`;
+	}
+
+	attach_info() {
+		(this.pending_info || []).forEach(({ id, spec }) => {
+			const host = document.getElementById(id);
+			if (!host || !window.narjes_explainer) return;
+			const $btn = window.narjes_explainer(spec);
+			if ($btn) $(host).append($btn);
+		});
+		this.pending_info = [];
+	}
+
 	render(data) {
 		const money = (v) => format_currency(v, frappe.defaults.get_default("currency"));
 		const s = data.summary;
+		this.explainers = data.explainers || {};
+		this.pending_info = [];
 
 		const cards = `
 			<div class="ndbt-cards">
 				<div class="ndbt-card ndbt-card--in">
-					<div class="ndbt-card__lbl">${__("Owed to us")}</div>
+					<div class="ndbt-card__lbl">${this.info(__("Owed to us"), "owed_to_us")}</div>
 					<div class="ndbt-card__val">${money(s.owed_to_us)}</div>
 					<div class="ndbt-card__sub">${__("{0} debtors", [s.owed_to_us_count])}</div>
 				</div>
 				<div class="ndbt-card ndbt-card--out">
-					<div class="ndbt-card__lbl">${__("We owe")}</div>
+					<div class="ndbt-card__lbl">${this.info(__("We owe"), "we_owe")}</div>
 					<div class="ndbt-card__val">${money(s.we_owe)}</div>
 					<div class="ndbt-card__sub">${__("{0} creditors", [s.we_owe_count])}</div>
 				</div>
 				<div class="ndbt-card ndbt-card--net">
-					<div class="ndbt-card__lbl">${__("Net position")}</div>
+					<div class="ndbt-card__lbl">${this.info(__("Net position"), "net_position")}</div>
 					<div class="ndbt-card__val">${s.net_position >= 0 ? "+" : ""}${money(s.net_position)}</div>
 					<div class="ndbt-card__sub">${
 						s.net_position >= 0 ? __("in your favour") : __("against you")
 					}</div>
 				</div>
 				<div class="ndbt-card ndbt-card--late">
-					<div class="ndbt-card__lbl">${__("Overdue")}</div>
+					<div class="ndbt-card__lbl">${this.info(__("Overdue"), "overdue")}</div>
 					<div class="ndbt-card__val">${money(s.overdue_total)}</div>
 					<div class="ndbt-card__sub">${
 						s.overdue_count
@@ -180,10 +205,12 @@ class DebtsDashboard {
 						}</div>
 					</div>
 				</div>`);
+			this.attach_info();
 			return;
 		}
 
 		this.$body.html(`<div class="ndbt-in">${cards}${this.table(data.debts, money)}</div>`);
+		this.attach_info();
 	}
 
 	table(debts, money) {

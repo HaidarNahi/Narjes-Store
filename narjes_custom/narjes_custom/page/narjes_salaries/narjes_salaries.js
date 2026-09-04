@@ -29,6 +29,8 @@ class SalariesDashboard {
 		this.page = page;
 		this.$main = $(wrapper).find(".layout-main-section");
 		this.month = frappe.datetime.month_start();
+		this.label_seq = 0;
+		this.pending_info = [];
 		// Guards against a slow response for an old month painting over a
 		// newer one. Clicking ‹ twice quickly fires two requests, and without
 		// this the first to *return* wins rather than the one that was asked
@@ -152,6 +154,8 @@ class SalariesDashboard {
 
 	render(data) {
 		const d = data.current;
+		this.explainers = data.explainers || {};
+		this.pending_info = [];
 		const money = (v) => format_currency(v, frappe.defaults.get_default("currency"));
 
 		const people = d.allocations.filter((a) => a.kind === "person");
@@ -183,6 +187,8 @@ class SalariesDashboard {
 				</div>
 			</div>
 		`);
+
+		this.attach_info();
 	}
 
 	notices(data, d) {
@@ -322,21 +328,49 @@ class SalariesDashboard {
 		return html;
 	}
 
+	// A label with its explainer button, when the server sent one for it.
+	// Built as a detached node and appended, so the copy is never interpolated
+	// into an HTML string.
+	label_with_info(text, key) {
+		const spec = (this.explainers || {})[key];
+		const id = `nsal-lbl-${++this.label_seq}`;
+		if (!spec) return { html: frappe.utils.escape_html(text), id: null, spec: null };
+		return { html: `<span id="${id}">${frappe.utils.escape_html(text)}</span>`, id, spec };
+	}
+
+	// Called after render(): walks the placeholders and drops the buttons in.
+	// Deferred because the markup is assembled as a string first.
+	attach_info() {
+		(this.pending_info || []).forEach(({ id, spec }) => {
+			const host = document.getElementById(id);
+			if (!host || !window.narjes_explainer) return;
+			const $btn = window.narjes_explainer(spec);
+			if ($btn) $(host).append($btn);
+		});
+		this.pending_info = [];
+	}
+
+	info(text, key) {
+		const { html, id, spec } = this.label_with_info(text, key);
+		if (id) (this.pending_info = this.pending_info || []).push({ id, spec });
+		return html;
+	}
+
 	cards(d, money) {
 		return `
 			<div class="nsal-cards">
 				<div class="nsal-card nsal-card--profit">
-					<div class="nsal-card__lbl">${__("Net profit to divide")}</div>
+					<div class="nsal-card__lbl">${this.info(__("Net profit to divide"), "net_profit")}</div>
 					<div class="nsal-card__val">${money(d.net_profit)}</div>
 					<div class="nsal-card__sub">${__("from {0} taken in", [money(d.money_in)])}</div>
 				</div>
 				<div class="nsal-card nsal-card--people">
-					<div class="nsal-card__lbl">${__("Paid to people")}</div>
+					<div class="nsal-card__lbl">${this.info(__("Paid to people"), "paid_to_people")}</div>
 					<div class="nsal-card__val">${money(d.paid_to_people)}</div>
 					<div class="nsal-card__sub">${__("partners and commission")}</div>
 				</div>
 				<div class="nsal-card nsal-card--kept">
-					<div class="nsal-card__lbl">${__("Kept in the business")}</div>
+					<div class="nsal-card__lbl">${this.info(__("Kept in the business"), "kept_in_business")}</div>
 					<div class="nsal-card__val">${money(d.kept_in_business)}</div>
 					<div class="nsal-card__sub">${__("emergencies and growth")}</div>
 				</div>
@@ -422,7 +456,7 @@ class SalariesDashboard {
 		const cls = /emerg/i.test(f.key) ? "nsal-box--emg" : "nsal-box--grw";
 		return `
 			<div class="nsal-box ${cls}">
-				<div class="nsal-card__lbl">${frappe.utils.escape_html(f.label)}</div>
+				<div class="nsal-card__lbl">${this.info(f.label, /emerg/i.test(f.key) ? "emergency" : "growth")}</div>
 				<div class="nsal-box__val">${money(f.amount)}</div>
 				<div class="nsal-card__sub">${f.percent}%</div>
 			</div>`;

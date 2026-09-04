@@ -9,6 +9,7 @@ Re-verify each row after every `bench update` (UPGRADE_NOTES.md). Target ≤ 10.
 | 3 | `js/narjes/boot.js` `set_search_placeholder` | `#navbar-search` placeholder attr | "Search orders, customers…" (P4.3) | v16.20 navbar DOM |
 | 4 | `js/narjes/boot.js` `stamp_terminal_indicator` | `.page-head .indicator-pill` classList | Applies `.n-stamp--stamped` to terminal states only (P5.4) — additive class, no API touched | v16.20 page-head DOM |
 | 5 | `js/narjes/boot.js` `remove_legacy_home_button` | removes `#narjes-navbar-home-btn` | Deletes the pre-theme duplicate Home button that stale browser caches of the un-versioned `customer_quick_entry.js` still inject. **Temporary** — delete a few releases after 2026-07-30 | our own markup, not Frappe |
+| 6 | `js/narjes/explainers.js` | `frappe.utils.build_summary_item` | Appends the "what is this?" button to report summary cards that ship an `explanation`. Additive — the original builds the card, the wrap adds to it, and a card with no explanation is returned untouched | v16.20 `utils.js` |
 
 Total: 5 of 10 budget (one of them self-expiring). `narjes.motion.*` and
 `narjes_icon()` are additive APIs, not shims.

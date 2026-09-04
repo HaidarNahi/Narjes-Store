@@ -17,6 +17,7 @@ import frappe
 from frappe import _
 
 from narjes_custom import finance
+from narjes_custom.reports_meta import card
 
 
 def execute(filters=None):
@@ -66,35 +67,15 @@ def _summary(rows):
 	correction = sum(r["amount"] for r in rows if r["bucket"] == "Correction")
 
 	cards = [
-		{
-			"label": _("Total out"),
-			"value": direct + operating,
-			"indicator": "Red",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Cost of goods"),
-			"value": direct,
-			"indicator": "Orange",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Running the shop"),
-			"value": operating,
-			"indicator": "Blue",
-			"datatype": "Currency",
-		},
-		{"label": _("Entries"), "value": len(rows), "datatype": "Int"},
+		card("Total out", direct + operating, indicator="Red", datatype="Currency"),
+		card("Cost of goods", direct, indicator="Orange", datatype="Currency"),
+		card("Running the shop", operating, indicator="Blue", datatype="Currency"),
+		card("Entries", len(rows), datatype="Int"),
 	]
 	if correction:
 		# Never folded into the total — see finance.STOCK_CORRECTION_ACCOUNT_TYPE.
 		cards.append(
-			{
-				"label": _("Stock corrections (not spending)"),
-				"value": correction,
-				"indicator": "Grey",
-				"datatype": "Currency",
-			}
+			card("Stock corrections (not spending)", correction, indicator="Grey", datatype="Currency")
 		)
 	return cards
 

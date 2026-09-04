@@ -5,5 +5,6 @@ import "./js/narjes/brand";
 import "./js/narjes/icons";
 import "./js/narjes/boot";
 import "./js/narjes/about";
+import "./js/narjes/explainers";
 import "./js/narjes/motion";
 import "./js/narjes/file_upload";

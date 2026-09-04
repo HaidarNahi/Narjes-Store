@@ -23,6 +23,7 @@ from frappe import _
 from frappe.utils import add_days, date_diff
 
 from narjes_custom import finance
+from narjes_custom.reports_meta import card
 
 # An em space (U+2003), written as an escape because an invisible
 # character in source is a trap for whoever edits this next.
@@ -132,42 +133,36 @@ def _is_direct(account_name, summary):
 
 def _summary(cur, prev):
 	cards = [
-		{"label": _("Money in"), "value": cur["money_in"], "indicator": "Green", "datatype": "Currency"},
-		{
-			"label": _("Cost of goods"),
-			"value": cur["direct_cost"],
-			"indicator": "Orange",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Gross profit"),
-			"value": cur["gross_profit"],
-			"indicator": "Blue",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Running costs"),
-			"value": cur["operating_cost"],
-			"indicator": "Orange",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Net profit"),
-			"value": cur["net_profit"],
-			"indicator": "Green" if cur["net_profit"] >= 0 else "Red",
-			"datatype": "Currency",
-		},
+		card("Money in", cur["money_in"], indicator="Green", datatype="Currency"),
+		card("Cost of goods", cur["direct_cost"], indicator="Orange", datatype="Currency"),
+		# Both profit lines take their colour from their sign. Gross profit used
+		# to be a fixed "Blue", which the desk renders in the same green as money
+		# coming in — so a gross loss of -255,276 was drawn exactly like a gain.
+		# A loss must never be able to look like one.
+		card(
+			"Gross profit",
+			cur["gross_profit"],
+			indicator="Blue" if cur["gross_profit"] >= 0 else "Red",
+			datatype="Currency",
+		),
+		card("Running costs", cur["operating_cost"], indicator="Orange", datatype="Currency"),
+		card(
+			"Net profit",
+			cur["net_profit"],
+			indicator="Green" if cur["net_profit"] >= 0 else "Red",
+			datatype="Currency",
+		),
 	]
 	if prev:
 		delta = cur["net_profit"] - prev["net_profit"]
 		pct = (delta / abs(prev["net_profit"]) * 100) if prev["net_profit"] else 0
 		cards.append(
-			{
-				"label": _("vs previous period"),
-				"value": pct,
-				"indicator": "Green" if delta >= 0 else "Red",
-				"datatype": "Percent",
-			}
+			card(
+				"vs previous period",
+				pct,
+				indicator="Green" if delta >= 0 else "Red",
+				datatype="Percent",
+			)
 		)
 	return cards
 

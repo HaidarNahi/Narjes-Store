@@ -15,6 +15,7 @@ import frappe
 from frappe import _
 
 from narjes_custom import finance
+from narjes_custom.reports_meta import card
 
 
 def execute(filters=None):
@@ -83,32 +84,13 @@ def _summary(rows, filters, company):
 	orders = len({r.voucher_no for r in rows})
 
 	cards = [
-		{
-			"label": _("Total in"),
-			"value": total,
-			"indicator": "Green",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Cash received"),
-			"value": collected,
-			"indicator": "Green",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Still owed"),
-			# Earned but not yet in the till. Floored at zero: collecting last
-			# month's invoice this month makes this genuinely negative, and
-			# "still owed: -40,000" reads as a bug rather than as good news.
-			"value": max(total - collected, 0),
-			"indicator": "Orange",
-			"datatype": "Currency",
-		},
-		{
-			"label": _("Average sale"),
-			"value": (total / orders) if orders else 0,
-			"datatype": "Currency",
-		},
+		card("Total in", total, indicator="Green", datatype="Currency"),
+		card("Cash received", collected, indicator="Green", datatype="Currency"),
+		# Earned but not yet in the till. Floored at zero: collecting last
+		# month's invoice this month makes this genuinely negative, and
+		# "still owed: -40,000" reads as a bug rather than as good news.
+		card("Still owed", max(total - collected, 0), indicator="Orange", datatype="Currency"),
+		card("Average sale", (total / orders) if orders else 0, datatype="Currency"),
 	]
 	return cards
 

@@ -615,9 +615,26 @@ def get_dashboard(month=None, history_months=6):
 	current = distribution(start, end)
 	rows = history(months=int(history_months), end=start)
 
+	from narjes_custom.reports_meta import explain
+
+	settings = get_settings()
+	shares = {sh["label"]: sh["percent"] for sh in settings["shares"]}
+	rate = settings["commission_per_piece"]
+
 	return {
 		"month": str(start),
 		"month_label": start.strftime("%B %Y"),
+		# The formulas quote the percentages actually configured, not the ones
+		# that happened to be true when the copy was written.
+		"explainers": {
+			"net_profit": explain("Net profit to divide"),
+			"paid_to_people": explain("Paid to people"),
+			"kept_in_business": explain("Kept in the business"),
+			"emergency": explain("Emergencies box", shares.get(_("Emergencies box"), 15)),
+			"growth": explain("Growth & development", shares.get(_("Growth & development"), 25)),
+			"commission": explain("Commission", f"{rate:,.0f}"),
+			"partner": explain("Partner share", ""),
+		},
 		"current": current,
 		"history": [
 			{

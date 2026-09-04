@@ -54,7 +54,18 @@ def get_dashboard(status=None, direction=None):
 			else 0
 		)
 
-	return {"debts": debts, "summary": _summary(debts)}
+	from narjes_custom.reports_meta import explain
+
+	return {
+		"debts": debts,
+		"summary": _summary(debts),
+		"explainers": {
+			"owed_to_us": explain("Owed to us"),
+			"we_owe": explain("We owe"),
+			"net_position": explain("Net position"),
+			"overdue": explain("Overdue"),
+		},
+	}
 
 
 def _settlement_counts(names):
