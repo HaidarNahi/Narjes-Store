@@ -1,5 +1,6 @@
 import frappe
 
+
 def run():
     so = frappe.get_meta("Sales Order")
     for f in so.fields:

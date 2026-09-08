@@ -21,7 +21,6 @@ from google.genai import types
 
 from narjes_custom.ai_intake import settings as ai_settings
 
-
 # ---------------------------------------------------------------------------
 # Dynamic item catalog — always fresh from the Item master
 # ---------------------------------------------------------------------------
@@ -471,14 +470,14 @@ def extract_order(raw_text: str) -> dict:
 
     if response is None:
         attempts = "1 attempt" if attempts_made == 1 else f"{attempts_made} attempts"
-        raise ExtractionError(f"Gemini API call failed after {attempts}: {str(last_error)}")
+        raise ExtractionError(f"Gemini API call failed after {attempts}: {last_error!s}")
 
     # Parse the structured response
     try:
         extracted = json.loads(response.text)
     except Exception as e:
         raise ExtractionError(
-            f"Failed to parse Gemini response as JSON: {str(e)}\n"
+            f"Failed to parse Gemini response as JSON: {e!s}\n"
             f"Raw: {getattr(response, 'text', 'N/A')}"
         )
 

@@ -1,5 +1,7 @@
 import frappe
+
 from narjes_custom.api import sales_order_before_validate
+
 
 def run():
     frappe.flags.in_test = True

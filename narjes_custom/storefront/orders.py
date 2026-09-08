@@ -9,8 +9,8 @@ published item and how many.
 import json
 
 import frappe
-from frappe.utils import cint, flt, now_datetime
 from frappe.rate_limiter import rate_limit
+from frappe.utils import cint, flt, now_datetime
 
 from narjes_custom.ai_intake.matching import match_customer, normalize_phone
 from narjes_custom.storefront import core
@@ -243,7 +243,7 @@ def place_order(payload):
 	if not name or not phone or not governorate:
 		_fail(frappe._("Please fill in your name, phone and governorate."))
 
-	rows, totals, dropped = price_cart(data.get("lines"), lang)
+	rows, _totals, dropped = price_cart(data.get("lines"), lang)
 	if not rows:
 		_fail(frappe._("Your cart is empty."))
 

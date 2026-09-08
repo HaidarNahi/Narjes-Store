@@ -34,7 +34,8 @@ def ratio(fg, bg):
 
 def build_pairings(sem, ramps, singles, mode="light"):
     """(label, fg, bg, threshold) per mode — the promises P1.1 makes."""
-    r = lambda name, stop: ramps[name][str(stop)]
+    def r(name, stop):
+        return ramps[name][str(stop)]
 
     # Chart tooltips invert the page: a dark panel on the light theme, a light
     # panel on the dark one. That inversion is why they are listed explicitly

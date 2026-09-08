@@ -43,13 +43,13 @@ frappe.ui.form.on('Sales Order', {
             };
         });
 
-        
+
         // Initialize weekday labels on load
         let date_fields = frm.meta.fields.filter(f => f.fieldtype === 'Date' || f.fieldtype === 'Datetime');
         date_fields.forEach(df => {
             update_weekday_label(frm, df.fieldname);
         });
-        
+
         setTimeout(() => calculate_custom_totals(frm), 500);
     },
     customer: function(frm) {
@@ -212,7 +212,7 @@ function update_weekday_label(frm, fieldname) {
     if ($wrapper.find('.weekday-label').length === 0) {
         $wrapper.find('.control-input').after('<div class="weekday-label text-muted small" style="margin-top: 4px; font-weight: 600;"></div>');
     }
-    
+
     let val = frm.doc[fieldname];
     if (val) {
         moment.locale('ar-iq'); // Default to Arabic (Iraq)
@@ -285,7 +285,7 @@ function calculate_custom_totals(frm) {
             fee = ns.other_governorate_delivery_fee || 0;
         }
     }
-    
+
     set_if_changed(frm, 'delivery_fees', fee);
 
     // Calculate Flower Total and Qty
@@ -304,7 +304,7 @@ function calculate_custom_totals(frm) {
     // Mutate Frappe standard total fields to include flowers (UI Only)
     let standard_total = frm.doc.items ? frm.doc.items.reduce((sum, row) => sum + (row.amount || 0), 0) : 0;
     let combined_total = standard_total + flower_total;
-    
+
     let standard_qty = frm.doc.items ? frm.doc.items.reduce((sum, row) => sum + (row.qty || 0), 0) : 0;
     let combined_qty = standard_qty + flower_qty;
 
@@ -339,9 +339,9 @@ function render_custom_gallery(frm) {
     if (!$wrapper || $wrapper.length === 0) {
         $wrapper = $(frm.fields_dict.items.wrapper);
     }
-    
+
     let $gallery = $wrapper.parent().find('.custom-gallery-container');
-    
+
     if (!$gallery.length) {
         $gallery = $(`
             <div class="custom-gallery-container">
@@ -366,7 +366,7 @@ function render_custom_gallery(frm) {
             </div>
         `);
         $gallery.insertBefore($wrapper);
-        
+
         // Event listeners
         $gallery.find('.btn-upload').on('click', () => {
             new frappe.ui.FileUploader({
@@ -403,7 +403,7 @@ function render_custom_gallery(frm) {
             e.stopPropagation();
             $gallery.addClass('dragover');
         });
-        
+
         $gallery.on('dragleave drop', function(e) {
             e.preventDefault();
             e.stopPropagation();

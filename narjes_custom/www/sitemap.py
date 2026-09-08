@@ -12,6 +12,7 @@ frappe, so this file is found first.
 """
 
 import frappe
+
 from narjes_custom.storefront import seo
 
 no_cache = 1

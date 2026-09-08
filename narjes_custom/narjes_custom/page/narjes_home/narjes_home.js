@@ -12,11 +12,11 @@ var NarjesHomeDashboard = class {
     constructor(page, wrapper) {
         this.page = page;
         this.wrapper = wrapper;
-        
+
         // Load settings from LocalStorage or defaults
         this.config = this.get_config();
         this.shortcuts = this.get_shortcuts();
-        
+
         this.init_page();
     }
 
@@ -79,10 +79,10 @@ var NarjesHomeDashboard = class {
                         <span style="font-size:12px;color:var(--narjes-muted);">Paste customer message below to extract order instantly</span>
                     </div>
                     <div class="narjes-ai-box">
-                        <textarea 
-                            class="narjes-ai-textarea" 
-                            id="home-ai-raw-text" 
-                            placeholder="Paste WhatsApp or informal customer order here... (e.g. احمد / 07701234567 / MDF 30*40 قطعتين / التوصيل بغداد...)" 
+                        <textarea
+                            class="narjes-ai-textarea"
+                            id="home-ai-raw-text"
+                            placeholder="Paste WhatsApp or informal customer order here... (e.g. احمد / 07701234567 / MDF 30*40 قطعتين / التوصيل بغداد...)"
                             dir="auto"
                         ></textarea>
                         <div class="narjes-ai-actions">

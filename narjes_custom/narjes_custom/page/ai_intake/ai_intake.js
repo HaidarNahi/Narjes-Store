@@ -87,7 +87,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
     .ai-match-none { background: var(--narjes-paper-sunken); color: var(--narjes-ink-muted); }
     .ai-status-Draft { background: var(--narjes-paper-sunken); color: var(--narjes-ink); }
     .ai-status-Review { background: #e7e5fb; color: #4c46a3; }
-    
+
     .ai-notes-box {
         background: #fffbeb;
         border: 1px solid #fbbf24;
@@ -97,7 +97,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         color: #92400e;
     }
     .ai-notes-box ul { margin: 4px 0 0 16px; padding: 0; }
-    
+
     .ai-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
     .ai-field-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
     .ai-field-group input, .ai-field-group select {
@@ -119,7 +119,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         margin-top: 4px;
         display: none;
     }
-    
+
     .ai-items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .ai-items-table th {
         text-align: left;
@@ -131,14 +131,14 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         border-bottom: 2px solid var(--border-color);
     }
     .ai-items-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-color); }
-    .ai-items-table input { 
-        width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); 
-        border-radius: 4px; font-size: 13px; background: var(--control-bg); color: var(--text-color); 
+    .ai-items-table input {
+        width: 100%; padding: 6px 8px; border: 1px solid var(--border-color);
+        border-radius: 4px; font-size: 13px; background: var(--control-bg); color: var(--text-color);
     }
     .ai-items-table input.has-error { border-color: var(--red); }
     .ai-items-table .btn-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 18px; padding: 0 4px; }
     .ai-total-row { font-weight: 600; background: var(--bg-light); }
-    
+
     .ai-autocomplete-wrap { position: relative; }
     .ai-autocomplete-dropdown {
         position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
@@ -150,7 +150,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color);
     }
     .ai-autocomplete-item:hover { background: var(--bg-light); }
-    
+
     .ai-spinner-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; gap: 16px; }
     .ai-loading-step { font-size: 14px; color: var(--text-muted); transition: color 0.3s; }
     .ai-loading-step.active { color: var(--primary); font-weight: 600; }
@@ -502,7 +502,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             $("#ai-back-btn, #ai-cancel-btn").on("click", () => this.render_intake_screen());
             $("#ai-add-item-btn").on("click", () => { this.add_item_row({}); this.update_totals(); });
             $("#ai-confirm-btn").on("click", () => this.handle_confirm());
-            
+
             // Recalculate totals when qty/price changes
             $("#ai-items-tbody").on("input", ".ai-item-qty, .ai-item-price", () => this.update_totals());
 
@@ -602,22 +602,22 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 const val = $input.val().toLowerCase();
                 $input.removeClass('has-error');
                 let matches = this.item_catalog;
-                
+
                 if (val) {
-                    matches = this.item_catalog.filter(i => 
-                        i.name.toLowerCase().includes(val) || 
+                    matches = this.item_catalog.filter(i =>
+                        i.name.toLowerCase().includes(val) ||
                         (i.item_name && i.item_name.toLowerCase().includes(val))
                     );
                 }
-                
+
                 // Show top 20 matches
-                const html = matches.slice(0, 20).map(i => 
+                const html = matches.slice(0, 20).map(i =>
                     `<div class="ai-autocomplete-item" data-val="${frappe.utils.escape_html(i.name)}">
                         <div style="font-weight:600;">${frappe.utils.escape_html(i.name)}</div>
                         ${i.item_group ? `<div style="font-size:11px;color:var(--text-muted);">${frappe.utils.escape_html(i.item_group)}</div>` : ''}
                     </div>`
                 ).join("");
-                
+
                 if (html) {
                     $dropdown.html(html).show();
                 } else {
@@ -665,12 +665,12 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             const catalogNames = new Set(this.item_catalog.map(i => i.name));
             const missing = [];
             let isValid = true;
-            
+
             $("#ai-items-tbody .ai-item-row").each((idx, row) => {
                 const $input = $(row).find(".ai-item-code");
                 const code = $input.val().trim();
                 const qty = parseFloat($(row).find(".ai-item-qty").val()) || 0;
-                
+
                 if (!code || qty <= 0) {
                     $input.addClass("has-error");
                     isValid = false;
@@ -680,7 +680,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     isValid = false;
                 }
             });
-            
+
             return { isValid, missing };
         }
 
@@ -688,7 +688,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             // Take the first missing item to show in the dialog
             const item = missingItems[0];
             const badCode = item.code;
-            
+
             // Suggest alternatives
             const suggestions = this.item_catalog
                 .map(i => ({ item: i, score: levenshtein(badCode.toLowerCase(), i.name.toLowerCase()) }))
@@ -696,7 +696,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                 .slice(0, 3)
                 .map(s => s.item);
 
-            const suggestionHtml = suggestions.map(s => 
+            const suggestionHtml = suggestions.map(s =>
                 `<button class="btn btn-default btn-sm ai-suggest-btn" data-val="${frappe.utils.escape_html(s.name)}" style="margin:4px;display:inline-flex;flex-direction:column;align-items:flex-start;">
                     <strong>${frappe.utils.escape_html(s.name)}</strong>
                     <span style="font-size:10px;color:var(--text-muted);">${frappe.utils.escape_html(s.item_group || '')}</span>
@@ -755,7 +755,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
             } else if (choice === "new") {
                 customer_name = $("#ai-new-name").val().trim();
                 customer_choice = "new";
-                
+
                 if (!customer_name) {
                     $("#ai-new-name").addClass("has-error").next('.ai-error-msg').show();
                     return;
@@ -769,7 +769,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
 
             // Item Validation
             const validation = this.validate_and_get_missing_items();
-            
+
             if (!validation.isValid) {
                 if (validation.missing.length > 0) {
                     // Show dialog for the first missing item
@@ -867,7 +867,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
 
         show_spinner(steps = ["Processing..."]) {
             const $main = $(this.wrapper).find(".layout-main-section");
-            
+
             // Cycle through steps if multiple are provided
             let stepHtml = '';
             steps.forEach((s, i) => {

@@ -26,7 +26,10 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # Match production exactly: the VPS container runs 3.14.0 and
+          # pyproject requires >=3.14. This pinned 3.11, i.e. CI was testing a
+          # runtime that will never ship.
+          python-version: "3.14"
 
       - name: Install test dependencies
         run: |
@@ -41,5 +44,8 @@ jobs:
 
       - name: Run unit tests
         run: |
-          python -m pytest narjes_custom/tests/test_business_logic.py -v
+          # The whole tests/ package, not one named file: test_endpoint_wiring.py
+          # is the suite that would have caught the 4 Sept storefront
+          # regression, and naming files one by one is how it gets left out.
+          python -m pytest narjes_custom/tests/ -v
           python -m pytest narjes_custom/ai_intake/tests/test_matching.py -v || echo "::warning::matching.py tests did not run (see install step above)"

@@ -298,24 +298,28 @@ doc_events = {
 
 # Scheduled Tasks
 # ---------------
-
-# scheduler_events = {
-# 	"all": [
-# 		"narjes_custom.tasks.all"
-# 	],
-# 	"daily": [
-# 		"narjes_custom.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"narjes_custom.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"narjes_custom.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"narjes_custom.tasks.monthly"
-# 	],
-# }
+#
+# This app had no scheduled work at all until 2026-09-08 — the scheduler
+# process ran for weeks with nothing of ours to do, which meant every report
+# the shop needed was written and none of them ever came to anyone. The Items
+# Balance report knew which rolls were nearly out; the intake queue collected
+# items needing review; the backup had silently not run in four days. All of it
+# sat there waiting to be visited.
+#
+# See narjes_custom/maintenance.py for what each check is for. Delivery is the
+# desk's Notification Log, not email: this site has no outgoing mail
+# configured, and adding it is a separate decision.
+scheduler_events = {
+	"daily": [
+		# backup_health first and most important: a backup that has silently
+		# stopped looks exactly like one that is working, right up until the
+		# day you need it.
+		"narjes_custom.maintenance.daily",
+	],
+	"weekly": [
+		"narjes_custom.maintenance.weekly",
+	],
+}
 
 # Testing
 # -------

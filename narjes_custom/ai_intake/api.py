@@ -16,13 +16,13 @@ import json
 import frappe
 from frappe.utils import today
 
+from narjes_custom.ai_intake import settings as ai_settings
 from narjes_custom.ai_intake.extraction import (
     ExtractionError,
     extract_order,
     get_item_catalog,
     is_complete_extraction,
 )
-from narjes_custom.ai_intake import settings as ai_settings
 from narjes_custom.ai_intake.matching import match_customer
 from narjes_custom.business_logic import is_discount_excessive
 from narjes_custom.setup import flower_placeholder
@@ -268,7 +268,7 @@ def process_intake(raw_text: str) -> dict:
         error_msg = str(e)
         status = "Failed"
     except Exception as e:
-        error_msg = f"Unexpected error during extraction: {str(e)}"
+        error_msg = f"Unexpected error during extraction: {e!s}"
         status = "Failed"
 
     # ── Deterministic Customer Matching (no AI) ────────────────────────────
@@ -282,7 +282,7 @@ def process_intake(raw_text: str) -> dict:
         except Exception as e:
             if extracted.get("extraction_notes") is None:
                 extracted["extraction_notes"] = []
-            extracted["extraction_notes"].append(f"Customer matching error: {str(e)}")
+            extracted["extraction_notes"].append(f"Customer matching error: {e!s}")
 
     # ── Save or Update AI Order Intake record ──────────────────────────────
     if existing and existing.status == "Failed":
@@ -457,7 +457,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 f"Item '{item_code}' does not exist in the item master. "
                 "Please correct the item code in the review screen."
             )
-            
+
         qty = float(item.get("qty") or 1)
         # Intake deliberately does not price anything: the AI leaves unit_price
         # at 0 and the reviewer only overrides when this order is genuinely
@@ -467,7 +467,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             rate = _default_selling_rate(item_code)
 
         is_flower = frappe.db.get_value("Item", item_code, "custom_is_flower")
-        
+
         if is_flower:
             flower_items.append({
                 # The Flower Item child doctype's Link field is `flower_item`,

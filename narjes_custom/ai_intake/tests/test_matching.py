@@ -5,14 +5,14 @@ These tests are pure Python — zero Frappe DB, zero AI dependency.
 Run with: python -m pytest apps/narjes_custom/narjes_custom/ai_intake/tests/test_matching.py -v
 """
 
-import sys
 import os
+import sys
 
 # Allow running without Frappe context
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from narjes_custom.ai_intake.matching import normalize_phone, normalize_stored_phone
 

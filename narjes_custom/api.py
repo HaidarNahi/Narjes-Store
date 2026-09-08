@@ -2,13 +2,14 @@ import colorsys
 
 # pyrefly: ignore [missing-import]
 import frappe
-# pyrefly: ignore [missing-import]
-from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
-# pyrefly: ignore [missing-import]
-from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
+# pyrefly: ignore [missing-import]
+from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
 from erpnext.selling.doctype.sales_order.sales_order import make_delivery_note
+
+# pyrefly: ignore [missing-import]
+from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
 
 from narjes_custom.business_logic import compute_canvas_cost, compute_delivery_fee, compute_sheet_cost
 
@@ -198,7 +199,9 @@ def automate_po_flow(doc, method):
             pr.submit()
             pi = make_purchase_invoice(pr.name)
         else:
-            from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_invoice as make_pi_from_po
+            from erpnext.buying.doctype.purchase_order.purchase_order import (
+                make_purchase_invoice as make_pi_from_po,
+            )
             pi = make_pi_from_po(doc.name)
 
         pi.insert(ignore_permissions=True)
@@ -258,7 +261,32 @@ def _append_flower_items(target_doc, flower_items, doc, default_income_account, 
         target_doc.append("items", row)
 
 
+SO_FLOW_SAVEPOINT = "narjes_so_flow"
+
+
 def automate_so_flow(doc, method):
+    """Generate the whole paper trail for a submitted order — all of it or none.
+
+    Six documents are created here: a Delivery Note, a Sales Invoice, a
+    fully-paid cash Payment Entry, and up to three cost Journal Entries. They
+    only make sense together. An order carrying an invoice and a payment but no
+    cost entries is not a partially-finished order, it is wrong books.
+
+    The savepoint is what makes "all or none" actually true. Without it, a
+    failure at step 5 left a submitted invoice and a recorded cash payment
+    attached to an order the operator had just been told failed to submit.
+
+    Worth recording why this had not yet caused damage: the failure that
+    actually happens in production is NegativeStockError at step 1, before
+    anything downstream exists, so Frappe's own rollback was sufficient by
+    luck of ordering rather than by design. Steps 2-6 simply had not failed
+    yet. This makes the guarantee explicit instead of incidental.
+
+    This rolls back only what this function did; the Sales Order's own
+    submission stays Frappe's transaction to manage, and re-raising leaves
+    that behaviour untouched.
+    """
+    frappe.db.savepoint(SO_FLOW_SAVEPOINT)
     try:
         # 1. Create and Submit Delivery Note (for physical items)
         dn = make_delivery_note(doc.name)
@@ -315,7 +343,7 @@ def automate_so_flow(doc, method):
 
         # 5. Book Painting Costs (Canvas + Sheet combined)
         total_painting_cost = doc.get("custom_total_painting_cost") or 0
-        
+
         if total_painting_cost > 0:
             # Build canvas items for the Painting Cost document
             painting_items = []
@@ -326,7 +354,7 @@ def automate_so_flow(doc, method):
                     "area_per_item": row.area_per_item,
                     "total_area": row.total_area
                 })
-            
+
             # A Painting Cost record describes canvas work: rate per cm, total
             # area, and the canvas rows that produced it. Sheet work carries a
             # cost too, but it has no area and lives in custom_sheet_items — so
@@ -352,8 +380,8 @@ def automate_so_flow(doc, method):
                 })
                 pc.insert(ignore_permissions=True)
                 pc.submit()
-            
-            je_painting = _book_cost_je(
+
+            _book_cost_je(
                 doc,
                 "Painting Costs",
                 total_painting_cost,
@@ -375,8 +403,30 @@ def automate_so_flow(doc, method):
         frappe.msgprint(
             f"Auto-generated Delivery Note, Sales Invoice, Payment Entry, and all expense JEs for {doc.name}")
 
-    except Exception:
+    except Exception as exc:
+        # Undo every document this function created before re-raising, so an
+        # order never ends up holding half its paperwork.
+        frappe.db.rollback(save_point=SO_FLOW_SAVEPOINT)
         frappe.log_error(title=f"Sales auto-creation failed for {doc.name}", message=frappe.get_traceback())
+
+        # What the operator sees, instead of a traceback. NegativeStockError is
+        # far and away the most common cause here — nine orders in three weeks,
+        # one retried eight times — and ERPNext's own wording ("13.0 units of
+        # Item A4 Matte Paper needed in Warehouse...") reads as a system fault
+        # rather than as "the shelf and the system disagree". Name the real
+        # problem, say plainly that nothing was saved, and give the fix.
+        if "NegativeStock" in type(exc).__name__ or "negative" in str(exc).lower():
+            frappe.throw(
+                "This order could not be completed because the system thinks the stock "
+                "is not there.<br><br>"
+                "<b>Nothing has been saved</b> — no invoice, no payment, no delivery note. "
+                "The order is still a draft and is safe to submit again.<br><br>"
+                "<b>To fix it:</b> receive the missing stock first — a Purchase Order if it "
+                "was bought, or a Stock Entry if it was never purchased through the system — "
+                "then submit this order again.<br><br>"
+                f"<small>Original message: {frappe.utils.escape_html(str(exc))}</small>",
+                title="Not enough stock to complete this order",
+            )
         raise
 
 
@@ -490,7 +540,7 @@ def sales_order_before_validate(doc, method):
     # printed on the sticker that goes on the box, so `delivery_fees` and
     # `total_with_delivery_fees` are carried on the order purely for that.
     _strip_delivery_charge(doc)
-    
+
     # --- Flower Items: calculate amounts ---
     if doc.doctype == "Sales Order":
         flower_total = 0
@@ -664,7 +714,7 @@ def sales_order_validate(doc, method):
             })
 
     doc.custom_sheet_painting_cost = sheet_cost
-    
+
     # --- Combined Total ---
     doc.custom_total_painting_cost = canvas_cost + sheet_cost
 
@@ -1001,21 +1051,21 @@ def cancel_sales_order_and_links(docname):
     for pe in pe_names:
         doc = frappe.get_doc("Payment Entry", pe)
         doc.cancel()
-        
+
     # 2. Cancel Linked Sales Invoices (where items reference the Sales Order)
     si_names = frappe.get_all("Sales Invoice Item", filters={"sales_order": docname, "docstatus": 1}, pluck="parent")
     si_names = list(set(si_names))
     for si in si_names:
         doc = frappe.get_doc("Sales Invoice", si)
         doc.cancel()
-        
+
     # 3. Cancel Linked Delivery Notes
     dn_names = frappe.get_all("Delivery Note Item", filters={"against_sales_order": docname, "docstatus": 1}, pluck="parent")
     dn_names = list(set(dn_names))
     for dn in dn_names:
         doc = frappe.get_doc("Delivery Note", dn)
         doc.cancel()
-        
+
     # 4. Cancel Linked Painting Costs
     # `Painting Cost` is submittable and holds a Link to Sales Order (created by
     # automate_so_flow step 5), so a submitted one makes frappe's

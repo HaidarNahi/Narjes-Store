@@ -1,5 +1,6 @@
 import frappe
 
+
 def create_new_page():
     page_name = "ai-intake"
     if not frappe.db.exists("Page", page_name):

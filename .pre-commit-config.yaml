@@ -27,41 +27,68 @@ repos:
       - id: ruff
         name: "Run ruff linter"
 
-      - id: ruff-format
-        name: "Run ruff formatter"
+      # ruff-format is deliberately disabled, not removed.
+      #
+      # It has never actually run on this repo — pre-commit was configured but
+      # the hook was never installed, so 57 lint findings had accumulated in
+      # committed code. Installing the hooks on 2026-09-08 and running this one
+      # reformatted 50 files in a single pass.
+      #
+      # That reformat may well be worth doing. It is not worth doing *by
+      # accident*, mixed into somebody's next bugfix commit, on a codebase
+      # whose money paths have no test coverage. Enable it deliberately, run it
+      # on its own branch, and land it as one reviewable "reformat everything"
+      # commit with nothing else in it.
+      # - id: ruff-format
+      #   name: "Run ruff formatter"
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.7.1
-    hooks:
-      - id: prettier
-        types_or: [javascript, vue, scss]
-        # Ignore any files that might contain jinja / bundles
-        exclude: |
-            (?x)^(
-                narjes_custom/public/dist/.*|
-                .*node_modules.*|
-                .*boilerplate.*|
-                narjes_custom/templates/includes/.*|
-                narjes_custom/public/js/lib/.*
-            )$
-
-
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.44.0
-    hooks:
-      - id: eslint
-        types_or: [javascript]
-        args: ['--quiet']
-        # Ignore any files that might contain jinja / bundles
-        exclude: |
-            (?x)^(
-                narjes_custom/public/dist/.*|
-                cypress/.*|
-                .*node_modules.*|
-                .*boilerplate.*|
-                narjes_custom/templates/includes/.*|
-                narjes_custom/public/js/lib/.*
-            )$
+# ---------------------------------------------------------------- node hooks
+#
+# prettier and eslint are disabled, for two reasons.
+#
+# 1. They cannot install on a current machine. Both pre-commit/mirrors-* repos
+#    were archived upstream in 2024 and install their tool from a `git+file://`
+#    URL. npm 11 refuses non-root git packages outright (EALLOWGIT), so
+#    `pre-commit install` succeeds and then *every* commit fails with a
+#    network-shaped error unrelated to the change being made. Blocking every
+#    commit is strictly worse than not running prettier.
+#
+# 2. Neither has ever actually run here, so the first successful run would
+#    reformat every .js and .scss file at once — the same trap as ruff-format.
+#
+# To bring them back: switch to maintained forks (rbubley/mirrors-prettier, and
+# a modern rev of mirrors-eslint), run them once on their own branch, and land
+# that as a reformat-only commit with nothing else in it.
+#
+#  - repo: https://github.com/pre-commit/mirrors-prettier
+#    rev: v2.7.1
+#    hooks:
+#      - id: prettier
+#        types_or: [javascript, vue, scss]
+#        exclude: |
+#            (?x)^(
+#                narjes_custom/public/dist/.*|
+#                .*node_modules.*|
+#                .*boilerplate.*|
+#                narjes_custom/templates/includes/.*|
+#                narjes_custom/public/js/lib/.*
+#            )$
+#
+#  - repo: https://github.com/pre-commit/mirrors-eslint
+#    rev: v8.44.0
+#    hooks:
+#      - id: eslint
+#        types_or: [javascript]
+#        args: ['--quiet']
+#        exclude: |
+#            (?x)^(
+#                narjes_custom/public/dist/.*|
+#                cypress/.*|
+#                .*node_modules.*|
+#                .*boilerplate.*|
+#                narjes_custom/templates/includes/.*|
+#                narjes_custom/public/js/lib/.*
+#            )$
 
 ci:
     autoupdate_schedule: weekly

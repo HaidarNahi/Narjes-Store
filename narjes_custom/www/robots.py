@@ -8,6 +8,7 @@ own noindex switch*, which a hand-typed field cannot be.
 """
 
 from frappe.utils import get_url
+
 from narjes_custom.storefront import core, seo
 
 no_cache = 1

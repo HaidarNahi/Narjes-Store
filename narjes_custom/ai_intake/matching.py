@@ -10,6 +10,7 @@ Normalization here handles this asymmetry.
 """
 
 import re
+
 import frappe
 from rapidfuzz import fuzz
 
@@ -75,7 +76,9 @@ def normalize_stored_phone(stored_int) -> str:
 # Customer matching
 # ---------------------------------------------------------------------------
 
-def match_customer(extracted_phones: list, extracted_name: str, threshold: float = None) -> dict:
+def match_customer(
+    extracted_phones: list, extracted_name: str, threshold: float | None = None
+) -> dict:
     """
     Find the best existing Customer match.
 

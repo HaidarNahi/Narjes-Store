@@ -57,6 +57,14 @@ ignore = [
     "UP032", # Use f-string instead of `format` call (translations)
     "UP037", # quoted annotations
     "UP040", # Use type aliases instead of type annotations
+    # This is a bilingual Arabic/English codebase. RUF001/002/003 flag Arabic
+    # letters as "ambiguous" lookalikes for Latin ones and would have us
+    # replace ا with l — i.e. corrupt real customer-facing content to satisfy a
+    # confusable-character check aimed at homograph attacks in identifiers.
+    # The same rule objects to × in "1200×630" and – in prose. Not applicable.
+    "RUF001", # ambiguous character in string
+    "RUF002", # ambiguous character in docstring
+    "RUF003", # ambiguous character in comment
 ]
 typing-modules = ["frappe.types.DF"]
 

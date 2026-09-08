@@ -27,7 +27,7 @@ window.has_redirected_to_narjes_home = false;
 frappe.router.on('change', function() {
     let route = frappe.get_route();
     if (!route) return;
-    
+
     let is_landing = (route[0] === 'workspace' || route[0] === 'home' || route.length === 0);
     let is_broken_sidebar = (route.includes('narjes-dashboard') || route.includes('Narjes Dashboard'));
 

@@ -1,9 +1,11 @@
-import frappe
 import traceback
+
+import frappe
+
 
 def run():
     customer = frappe.db.get_value("Customer", {"disabled": 0}, "name")
-    
+
     flower_item = frappe.db.get_value("Item", {"custom_is_flower": 1, "disabled": 0}, "name")
     if not flower_item:
         frappe.get_doc({
@@ -32,12 +34,12 @@ def run():
             }
         ]
     })
-    
+
     so.insert(ignore_permissions=True)
-    
+
     try:
         so.submit()
         print("Success")
-    except Exception as e:
+    except Exception:
         print("ERROR TRACEBACK:")
         traceback.print_exc()
