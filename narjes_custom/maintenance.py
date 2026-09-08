@@ -224,25 +224,56 @@ def accrued_expenses_watch():
 
 
 def daily_digest():
-    """Yesterday, in the four numbers the shop actually runs on."""
+    """Yesterday, in the numbers this shop actually runs on.
+
+    Orders *taken* and orders *submitted* are counted separately, and that
+    distinction is the whole point. This shop does not submit an order the day
+    it arrives: an order sits in draft through New → In Design → Execution →
+    In Delivery and is submitted when the work is finished, often several days
+    later. The first version of this digest reported only submissions and
+    announced "0 orders yesterday" on a day the shop had taken six — a number
+    that is true, useless, and actively misleading.
+
+    So: `taken` is the day's trade, `submitted` is the day's money, and the
+    two are not expected to match.
+    """
     company = finance.default_company()
     if not company:
         return
 
     day = add_days(today(), -1)
 
-    orders = frappe.db.count("Sales Order", {"transaction_date": day, "docstatus": 1})
+    taken = frappe.db.count("Sales Order", {"transaction_date": day})
+    submitted = frappe.db.count("Sales Order", {"docstatus": 1, "modified": (">=", day)})
     drafts = frappe.db.count("Sales Order", {"docstatus": 0})
     collected = finance.cash_collected(day, day, company)
     receivable = finance.outstanding_receivable(company)
 
+    # A draft that has stopped moving is the thing worth noticing. Anything
+    # still open after a week has either been forgotten or is stuck behind
+    # something — most often stock the system says is not there (see
+    # api.automate_so_flow).
+    stale_cutoff = add_days(today(), -7)
+    stale = frappe.db.count(
+        "Sales Order", {"docstatus": 0, "transaction_date": ("<", stale_cutoff)}
+    )
+
+    lines = [
+        f"• Orders taken: <b>{taken}</b>",
+        f"• Orders completed: {submitted}",
+        f"• Cash collected: <b>{flt(collected):,.0f} IQD</b>",
+        f"• Still owed to the shop: {flt(receivable):,.0f} IQD",
+        f"• Open orders in progress: {drafts}",
+    ]
+    if stale:
+        lines.append(
+            f"• <b>{stale} open longer than a week</b> — worth a look; an order "
+            f"that has stopped moving is usually stuck, not forgotten"
+        )
+
     _notify(
-        f"Yesterday: {orders} order(s), {flt(collected):,.0f} IQD collected",
-        f"<b>{day}</b><br><br>"
-        f"• Orders submitted: {orders}<br>"
-        f"• Cash collected: {flt(collected):,.0f} IQD<br>"
-        f"• Still owed to the shop: {flt(receivable):,.0f} IQD<br>"
-        f"• Orders sitting in draft: {drafts}<br>",
+        f"{day}: {taken} order(s) taken, {flt(collected):,.0f} IQD collected",
+        f"<b>{day}</b><br><br>" + "<br>".join(lines),
     )
 
 
