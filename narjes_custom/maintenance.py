@@ -262,9 +262,24 @@ def daily_digest():
         f"• Orders taken: <b>{taken}</b>",
         f"• Orders completed: {submitted}",
         f"• Cash collected: <b>{flt(collected):,.0f} IQD</b>",
-        f"• Still owed to the shop: {flt(receivable):,.0f} IQD",
         f"• Open orders in progress: {drafts}",
     ]
+
+    # A receivable can legitimately go negative, and "Still owed: -115,000"
+    # reads as a broken number rather than as what it means: more has been
+    # received against customers than was ever invoiced to them. On these books
+    # that was two customers carrying credit balances, which is a bookkeeping
+    # problem — a payment entered without its invoice, a duplicate, or an
+    # invoice cancelled while its payment stayed. Say so in words.
+    receivable = flt(receivable)
+    if receivable < 0:
+        lines.append(
+            f"• <b>Customers are {abs(receivable):,.0f} IQD in credit</b> — more has "
+            f"been received than invoiced. Usually a payment recorded without its "
+            f"invoice, or an invoice cancelled while its payment stayed."
+        )
+    else:
+        lines.append(f"• Still owed to the shop: {receivable:,.0f} IQD")
     if stale:
         lines.append(
             f"• <b>{stale} open longer than a week</b> — worth a look; an order "
