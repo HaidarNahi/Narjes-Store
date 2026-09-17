@@ -620,6 +620,59 @@ def _sync_flower_charge(doc, flower_total):
         "tax_amount": flower_total,
     })
 
+# A submitted order legitimately sits in Done (being submitted is what puts it
+# there), Returned, or Cancelled. Every other column on the board means "this
+# order is not finished yet", which is a false statement about an order ERPNext
+# has already committed, shipped and invoiced.
+PHASES_VALID_AFTER_SUBMIT = ("Done", "Returned", "Cancelled")
+
+
+def sales_order_before_update_after_submit(doc, method):
+    """Block a submitted order from being pushed back into a pre-Done phase.
+
+    This is the mirror of the draft-in-Done check in `sales_order_validate`,
+    and it has to live on its own hook rather than beside it. Frappe routes a
+    save whose previous docstatus was already 1 through `update_after_submit`,
+    and `run_before_save_methods()` runs *only* `before_update_after_submit`
+    for that action — `validate` never fires, so a check placed there cannot
+    see this case at all.
+
+    That is the gap SO-260917-002 fell through on 2026-09-17. A Sales Order
+    form opened while the order was still a draft in "Ready to Execution" was
+    saved half a second after the board had submitted it, and the form's stale
+    phase overwrote the "Done" that `submit_and_mark_done` had just written.
+    The order had a submitted Delivery Note and a paid Sales Invoice against it
+    and still sat on the board as though production had not started.
+
+    The drag handler (RULE 2 in sales_order_list.js) and `_move_one_phase`
+    already enforce "a submitted order can only move to Cancelled" for the
+    board and for bulk moves. This closes the third door — an ordinary form
+    save — which neither of them can see.
+    """
+    if doc.doctype != "Sales Order":
+        return
+
+    before = doc.get_doc_before_save()
+    if not before:
+        return
+
+    phase = doc.get("order_phase")
+
+    # Only an actual transition is blocked. An order that is already adrift
+    # (or a phase left untouched) must not stop an unrelated edit to another
+    # allow_on_submit field, such as the delivery id.
+    if phase == before.get("order_phase") or phase in PHASES_VALID_AFTER_SUBMIT:
+        return
+
+    frappe.throw(
+        f"This order has already been submitted, so it cannot go back to the "
+        f"{frappe.bold(phase)} phase — a submitted order can only move to "
+        f"Done, Returned or Cancelled. If this form has been open for a while, "
+        f"reload it before saving: your copy is older than the order, and "
+        f"saving it would undo the phase the submit set."
+    )
+
+
 def sales_order_validate(doc, method):
     if doc.doctype != "Sales Order":
         return

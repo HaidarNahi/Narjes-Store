@@ -274,6 +274,11 @@ doc_events = {
 	"Sales Order": {
 		"before_validate": "narjes_custom.api.sales_order_before_validate",
 		"validate": "narjes_custom.api.sales_order_validate",
+		# Frappe runs ONLY before_update_after_submit when a submitted document
+		# is saved again — `validate` never fires — so the mirror of the
+		# draft-in-Done guard needs its own entry here to catch a stale form
+		# writing a finished order back into a pre-Done phase.
+		"before_update_after_submit": "narjes_custom.api.sales_order_before_update_after_submit",
 		"on_submit": "narjes_custom.api.automate_so_flow",
 		# cancelling an order must take its cost entries with it, otherwise the
 		# expense stays on the P&L against an order that no longer exists
