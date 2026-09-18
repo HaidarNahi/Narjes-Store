@@ -3,6 +3,27 @@
 // built in public/js/sales_order_list.js).
 // The two !important rules the old file needed live in _shame.scss.
 
+// Phase palette. These are Frappe's own light-mode --text-on-* values — the
+// saturated mid-dark hues its indicator dots wear — pinned here rather than
+// referenced live, because neither Frappe variable survives both themes:
+// in Ink Mode four of the ten --text-on-* (purple, yellow, cyan, pink) resolve
+// to near-white, so a wash built on them came out grey; --bg-* swings the other
+// way, saturated for some hues and nearly black for others. Which phase gets
+// which name is still owned by COLUMN_COLORS in setup/kanban_board.py — this
+// only says what each name looks like.
+$so-phase-colors: (
+	"green": #16794c,
+	"cyan": #267a94,
+	"blue": #0070cc,
+	"orange": #bd3e0c,
+	"yellow": #ab6e05,
+	"gray": #525252,
+	"red": #b52a2a,
+	"pink": #9c2671,
+	"purple": #6e399d,
+	"light-blue": #007be0,
+);
+
 body.narjes-ledger {
 	.kanban {
 		gap: 14px;
@@ -21,6 +42,10 @@ body.narjes-ledger {
 
 		// columns: Micro-caps title + live count, phase underline
 		.kanban-column {
+			// Strength of the phase wash below. Lives in a custom property so
+			// Ink Mode can raise it in one place rather than restating ten rules.
+			--so-phase-tint: 18%;
+
 			background: var(--n-surface);
 			border: 1px solid var(--n-border);
 			border-radius: var(--n-radius-md);
@@ -105,12 +130,12 @@ body.narjes-ledger {
 		// --bg-*, which jumps between the 50 and 100 stops depending on hue and
 		// so came out uneven from one phase to the next. Mixing also means dark
 		// mode needs no second block: it tints whatever --n-surface is there.
-		@each $phase in (green, cyan, blue, orange, yellow, gray, red, pink, purple, light-blue) {
-			.kanban-column:has(.kanban-column-title .kanban-col-dot.indicator.#{"" + $phase}) {
-				background: color-mix(in srgb, var(--text-on-#{"" + $phase}) 9%, var(--n-surface));
+		@each $phase, $hue in $so-phase-colors {
+			.kanban-column:has(.kanban-column-title .kanban-col-dot.indicator.#{$phase}) {
+				background: color-mix(in srgb, #{$hue} var(--so-phase-tint), var(--n-surface));
 
 				.kanban-column-header {
-					border-block-end-color: var(--text-on-#{"" + $phase});
+					border-block-end-color: $hue;
 				}
 			}
 		}
@@ -1002,4 +1027,15 @@ body.narjes-embedded-form {
 		border-radius: var(--n-radius-3, 12px);
 		justify-content: space-between;
 	}
+}
+
+// Ink Mode needs a heavier hand. --n-surface (#1B211D) and --n-raised (#232A25)
+// sit a couple of points apart in luminance, so a light-mode wash would leave
+// column and card practically indistinguishable — measured 1.15:1 at 9%.
+//
+// 45% was picked by measuring all ten phases against --n-text: the worst of
+// them, yellow, still holds 7.94:1, far past the 4.5:1 AA floor, so the wash
+// can be this strong without costing legibility.
+[data-theme="dark"] body.narjes-ledger .kanban .kanban-column {
+	--so-phase-tint: 45%;
 }
