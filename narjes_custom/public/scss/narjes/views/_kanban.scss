@@ -1,7 +1,8 @@
 // P6.6 — Kanban "Order Phases", the flagship view. Board canvas + column
 // chrome here; the card itself is custom-rendered markup (.so-kanban-card,
 // built in public/js/sales_order_list.js).
-// The two !important rules the old file needed live in _shame.scss.
+// The two !important rules the old file needed live in _shame.scss; the
+// phase wash below carries a third, for the reason documented there.
 
 // Phase palette. These are Frappe's own light-mode --text-on-* values — the
 // saturated mid-dark hues its indicator dots wear — pinned here rather than
@@ -132,7 +133,14 @@ body.narjes-ledger {
 		// mode needs no second block: it tints whatever --n-surface is there.
 		@each $phase, $hue in $so-phase-colors {
 			.kanban-column:has(.kanban-column-title .kanban-col-dot.indicator.#{$phase}) {
-				background: color-mix(in srgb, #{$hue} var(--so-phase-tint), var(--n-surface));
+				// !important because Frappe's kanban JS writes
+				// `style="background-color: var(--kanban-column-bg)"` straight onto
+				// the column element, and an inline declaration outranks any
+				// stylesheet rule no matter how specific. The one column that
+				// escaped it — whichever renders without the attribute — was the
+				// only one that ever showed a tint, which is what made this look
+				// like a selector problem rather than a cascade one.
+				background: color-mix(in srgb, #{$hue} var(--so-phase-tint), var(--n-surface)) !important;
 
 				.kanban-column-header {
 					border-block-end-color: $hue;
