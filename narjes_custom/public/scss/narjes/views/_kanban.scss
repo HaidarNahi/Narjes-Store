@@ -74,39 +74,40 @@ body.narjes-ledger {
 				}
 			}
 
+			// The board is fed by AI intake and the Add button in the page header;
+			// a third entry point sitting between a column's header and its first
+			// ticket only added noise to every column.
 			.add-card {
-				margin: 0 10px 10px;
-				height: auto;
-				padding: 7px;
-				border: 1px dashed var(--n-border-strong);
-				border-radius: var(--n-radius-sm);
-				background: transparent;
-				color: var(--n-text-3);
-				font-size: calc(12.5px * var(--n-font-scale, 1));
-
-				&:hover {
-					border-color: var(--n-fern-400);
-					color: var(--n-primary);
-					background: transparent;
-					box-shadow: none;
-				}
+				display: none;
 			}
+		}
+
+		// Columns mirror the order_phase Select options and are provisioned by
+		// narjes_custom.setup.kanban_board — a column added by hand here would
+		// have no matching phase and just strand itself on the board.
+		.kanban-column.add-new-column {
+			display: none;
 		}
 
 		// ── Phase colour on the column ────────────────────────────────────
 		// A wash behind the cards, plus a matching rule under the header, so a
 		// column reads as its phase at a glance across a wide board.
 		//
-		// Keyed off the colour class Frappe already puts on the column's own
-		// indicator (`frappe.scrub(column.indicator, "-")`), so the palette
+		// Keyed off .kanban-col-dot, the swatch beside the column name, whose
+		// colour class Frappe derives as `frappe.scrub(column.indicator, "-")`.
+		// NOT .indicator-pill — every column carries one of those per colour in
+		// its hidden colour-picker dropdown, so matching on it tints every
+		// column the same. The palette
 		// stays owned by COLUMN_COLORS in narjes_custom/setup/kanban_board.py —
 		// recolour a phase there and this follows, with nothing duplicated here.
 		//
-		// --bg-* / --text-on-* are Frappe's own indicator pairs and already ship
-		// dark-mode values, so this needs no second block for dark.
+		// The wash is mixed into --n-surface rather than taken from Frappe's
+		// --bg-*, which jumps between the 50 and 100 stops depending on hue and
+		// so came out uneven from one phase to the next. Mixing also means dark
+		// mode needs no second block: it tints whatever --n-surface is there.
 		@each $phase in (green, cyan, blue, orange, yellow, gray, red, pink, purple, light-blue) {
-			.kanban-column:has(.kanban-column-title .indicator-pill.#{"" + $phase}) {
-				background: var(--bg-#{"" + $phase});
+			.kanban-column:has(.kanban-column-title .kanban-col-dot.indicator.#{"" + $phase}) {
+				background: color-mix(in srgb, var(--text-on-#{"" + $phase}) 9%, var(--n-surface));
 
 				.kanban-column-header {
 					border-block-end-color: var(--text-on-#{"" + $phase});
