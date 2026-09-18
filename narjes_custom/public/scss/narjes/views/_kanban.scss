@@ -93,6 +93,27 @@ body.narjes-ledger {
 			}
 		}
 
+		// ── Phase colour on the column ────────────────────────────────────
+		// A wash behind the cards, plus a matching rule under the header, so a
+		// column reads as its phase at a glance across a wide board.
+		//
+		// Keyed off the colour class Frappe already puts on the column's own
+		// indicator (`frappe.scrub(column.indicator, "-")`), so the palette
+		// stays owned by COLUMN_COLORS in narjes_custom/setup/kanban_board.py —
+		// recolour a phase there and this follows, with nothing duplicated here.
+		//
+		// --bg-* / --text-on-* are Frappe's own indicator pairs and already ship
+		// dark-mode values, so this needs no second block for dark.
+		@each $phase in (green, cyan, blue, orange, yellow, gray, red, pink, purple, light-blue) {
+			.kanban-column:has(.kanban-column-title .indicator-pill.#{"" + $phase}) {
+				background: var(--bg-#{"" + $phase});
+
+				.kanban-column-header {
+					border-block-end-color: var(--text-on-#{"" + $phase});
+				}
+			}
+		}
+
 		// ── The vertical scroller. This is half of the iPad fix (issue #1):
 		// the column body has to be a real scroll container that keeps the
 		// gesture to itself, and it must accept a vertical pan so a swipe
