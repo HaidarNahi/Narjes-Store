@@ -182,6 +182,10 @@ after_migrate = [
 	# report (see setup/accounts.py).
 	"narjes_custom.setup.accounts.run",
 	"narjes_custom.setup.custom_fields.run",
+	# Fills the indexed phone keys AI Order Intake matches customers on. It
+	# has to follow custom_fields: post_model_sync patches run before the
+	# custom fields exist, so this cannot be a patch. Idempotent.
+	"narjes_custom.customer_phones.backfill",
 	"narjes_custom.setup.naming.run",
 	# Must follow custom_fields: the board's columns mirror the order_phase
 	# Select options, and its `fields` list is what the Kanban actually
@@ -298,7 +302,12 @@ doc_events = {
 	},
 	"Item": {
 		"validate": "narjes_custom.api.item_validate"
-	}
+	},
+	# Keeps the phone keys AI Order Intake matches on up to date, and refuses a
+	# new or changed number that another customer already owns.
+	"Customer": {
+		"validate": "narjes_custom.customer_phones.on_customer_validate"
+	},
 }
 
 # Scheduled Tasks
