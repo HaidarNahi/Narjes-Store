@@ -12,7 +12,8 @@ import frappe
 from frappe.rate_limiter import rate_limit
 from frappe.utils import cint, flt, now_datetime
 
-from narjes_custom.ai_intake.matching import match_customer, normalize_phone
+from narjes_custom import customer_phones
+from narjes_custom.phones import canonical, national
 from narjes_custom.storefront import core
 
 MAX_LINES = 30
@@ -173,18 +174,29 @@ def quote(lines, governorate=None, lang=None):
 
 
 def _resolve_customer(name, phone, governorate, address):
-	"""Match an existing Customer by phone, else create one.
+	"""Find the Customer who owns this phone, else create one.
 
-	Reuses the AI-intake matcher so a customer who has ordered by WhatsApp
-	before is recognised as the same person here rather than duplicated.
+	By phone only, exactly like AI Order Intake: a customer who has ordered by
+	WhatsApp before is recognised by their number, and a guest is never put on
+	someone else's record because their names look alike. A number that two
+	customers share is not guessed between: the guest is asked to contact the
+	shop instead.
 	"""
-	normalized = normalize_phone(phone)
-	if not normalized:
+	key = canonical(phone)
+	if not key:
 		_fail(frappe._("A valid phone number is required."))
 
-	match = match_customer([normalized], name) or {}
-	existing = match.get("customer") or match.get("name")
-	if existing and frappe.db.exists("Customer", existing):
+	customer_phones.lock_phones([key])
+	resolution = customer_phones.resolve([key])
+	if resolution["status"] == "CONFLICT":
+		frappe.log_error(
+			title="Storefront: phone belongs to more than one customer",
+			message=f"A website order used a number owned by {', '.join(resolution['candidates'])}.",
+		)
+		_fail(frappe._("We couldn't confirm your phone number. Please contact us on WhatsApp."))
+
+	existing = resolution["customer"]
+	if existing:
 		customer = frappe.get_doc("Customer", existing)
 		dirty = False
 		# fill gaps only — never overwrite what staff have curated
@@ -200,10 +212,10 @@ def _resolve_customer(name, phone, governorate, address):
 		return customer.name
 
 	customer = frappe.new_doc("Customer")
-	customer.customer_name = name or normalized
+	customer.customer_name = name or national(key)
 	customer.customer_type = "Individual"
 	for field, value in (
-		("main_phone_number", normalized),
+		("main_phone_number", national(key)),
 		("governorate", governorate),
 		("full_address", address),
 		("channal", "Website"),
@@ -349,7 +361,7 @@ def submit_design_request(payload):
 def _create_design_request(data, name, phone, governorate):
 	doc = frappe.new_doc("Narjes Design Request")
 	doc.customer_name = name
-	doc.phone = normalize_phone(phone) or phone
+	doc.phone = national(canonical(phone)) if canonical(phone) else phone
 	for field, value in (
 		("governorate", governorate),
 		("occasion", _clean(data.get("occasion"), 60)),  # canonical English values; the form shows localised labels

@@ -13,7 +13,6 @@ class AIIntakeSettings(Document):
 	def validate(self):
 		self.normalize_numbers()
 		self.validate_api_params()
-		self.validate_matching()
 		self.validate_guardrails()
 		self.validate_catalog_filters()
 		self.validate_few_shot_examples()
@@ -30,7 +29,6 @@ class AIIntakeSettings(Document):
 			"request_timeout",
 			"max_retries",
 			"max_catalog_items",
-			"fuzzy_match_threshold",
 			"max_discount_percentage",
 		):
 			self.set(fieldname, cint(self.get(fieldname)))
@@ -40,7 +38,6 @@ class AIIntakeSettings(Document):
 			"append_catalog",
 			"catalog_include_item_name",
 			"append_examples",
-			"enable_fuzzy_name_match",
 			"allow_retry_failed_intake",
 		):
 			self.set(fieldname, cint(self.get(fieldname)))
@@ -66,22 +63,6 @@ class AIIntakeSettings(Document):
 
 		if not (0 <= self.max_retries <= 5):
 			frappe.throw("Max Retries must be between 0 and 5.")
-
-	# -- Customer matching --------------------------------------------------
-
-	def validate_matching(self):
-		if not (0 <= self.fuzzy_match_threshold <= 100):
-			frappe.throw("Fuzzy Match Threshold must be between 0 and 100.")
-
-		# A low floor makes every unfamiliar name look like an existing
-		# customer, which is worse than no suggestion at all
-		if self.enable_fuzzy_name_match and self.fuzzy_match_threshold < 60:
-			frappe.msgprint(
-				f"A Fuzzy Match Threshold of {self.fuzzy_match_threshold} is very low — "
-				"unrelated customers will be suggested as matches. 85 is the tested default.",
-				indicator="orange",
-				title="Low match threshold",
-			)
 
 	# -- Guardrails ---------------------------------------------------------
 

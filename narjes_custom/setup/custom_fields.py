@@ -106,6 +106,34 @@ CUSTOM_FIELDS = {
             "insert_after": "governorate",
             "allow_in_quick_entry": 1,
         },
+        # Machine keys for exact phone matching (narjes_custom.customer_phones):
+        # the two phone fields above in one canonical form (+9647701234567),
+        # refilled on every save and indexed so AI Order Intake can find a
+        # customer by phone without reading the whole table. Never typed in.
+        {
+            "fieldname": "custom_main_phone_e164",
+            "fieldtype": "Data",
+            "label": "Main Phone (E.164)",
+            "insert_after": "full_address",
+            "hidden": 1,
+            "read_only": 1,
+            "no_copy": 1,
+            "search_index": 1,
+            "print_hide": 1,
+            "report_hide": 1,
+        },
+        {
+            "fieldname": "custom_secondary_phone_e164",
+            "fieldtype": "Data",
+            "label": "Secondary Phone (E.164)",
+            "insert_after": "custom_main_phone_e164",
+            "hidden": 1,
+            "read_only": 1,
+            "no_copy": 1,
+            "search_index": 1,
+            "print_hide": 1,
+            "report_hide": 1,
+        },
     ],
     # The monthly piece-commission expense is posted by
     # narjes_custom.salaries.post_commission_expense(). This field is what

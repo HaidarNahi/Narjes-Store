@@ -3,29 +3,40 @@ narjes_custom.ai_intake.api
 =============================
 Whitelisted Frappe API endpoints for AI Order Intake.
 
-Three endpoints, cleanly separated responsibilities:
-  1. process_intake()      — extraction + matching, returns a record for review
-  2. confirm_intake()      — human-confirmed, writes Customer + Sales Order
-  3. get_item_catalog()    — returns available items for frontend autocomplete
-  4. get_customers_for_search() — live customer search
+  1. process_intake()   — reads the order form (no AI) for the phone, asks
+                          Gemini for the rest, resolves the customer by phone,
+                          and returns a record for review
+  2. lookup_phones()    — re-resolves when the reviewer changes the phones
+  3. confirm_intake()   — re-checks everything on the server and writes the
+                          Customer (if new) and the Sales Order
+  4. discard_intake()   — clears an intake nobody will confirm
+  5. get_item_catalog_endpoint() — items + prices for the review screen
+
+The customer is decided by phone number only. A Sales Order is never created
+for a customer who does not own, as a stored main or secondary phone, at least
+one of the phones the order is confirmed with.
 """
 
 import hashlib
 import json
 
 import frappe
-from frappe.utils import today
+from frappe.utils import cint, now_datetime, today
 
+from narjes_custom import customer_phones
 from narjes_custom.ai_intake import settings as ai_settings
+from narjes_custom.ai_intake import template
 from narjes_custom.ai_intake.extraction import (
     ExtractionError,
-    extract_order,
+    extract_order_with_meta,
     get_item_catalog,
-    is_complete_extraction,
 )
-from narjes_custom.ai_intake.matching import find_customer_by_phone, match_customer
 from narjes_custom.business_logic import is_discount_excessive
+from narjes_custom.phones import canonical, display, national
 from narjes_custom.setup import flower_placeholder
+
+# Longest order text accepted; real ones are ~500 characters.
+MAX_TEXT_LENGTH = 20000
 
 # Fallback for the discount guardrail, used only when AI Intake Settings
 # can't be read. A discount above this percentage of the order subtotal
@@ -104,7 +115,7 @@ def _get_default_so_items_params(settings=None):
 # write on the order line. The AI is constrained to the canonical values by
 # the response schema; this catches anything typed by hand on the review screen.
 _CHANNEL_ALIASES = {
-    "insta": "Instagram", "instagram": "Instagram", "انستا": "Instagram", "أنستا": "Instagram",
+    "insta": "Instagram", "instagram": "Instagram", "instgram": "Instagram", "انستا": "Instagram", "أنستا": "Instagram",
     "face": "Facebook", "facebook": "Facebook", "فيسبوك": "Facebook", "فيس": "Facebook",
     "whatsapp": "Whatsapp", "whats": "Whatsapp", "واتساب": "Whatsapp", "واتس": "Whatsapp",
     "telegram": "Telegram", "تلكرام": "Telegram", "تليجرام": "Telegram",
@@ -187,7 +198,7 @@ def _default_selling_rate(item_code: str) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Endpoint 1: process_intake
+# Shared pieces
 # ---------------------------------------------------------------------------
 
 def _require_intake_permission():
@@ -207,18 +218,116 @@ def _require_intake_permission():
 	frappe.has_permission("Sales Order", ptype="create", throw=True)
 
 
+def _normalize_governorate(gov) -> str:
+    """Map a governorate onto a valid Customer.governorate option, or ""."""
+    gov = (gov or "").strip()
+    if not gov:
+        return ""
+    try:
+        field = frappe.get_meta("Customer").get_field("governorate")
+        valid = [opt for opt in (field.options or "").split("\n") if opt.strip()] if field else []
+    except Exception:
+        return gov
+    if gov in valid:
+        return gov
+    bare = gov.replace("ال", "").strip()
+    return next((opt for opt in valid if opt.replace("ال", "").strip() == bare), "")
+
+
+def _phone_entries(keys, methods=None, owners=None) -> list:
+    methods = methods or {}
+    owners = owners or {}
+    return [
+        {"e164": key, "display": display(key), "method": methods.get(key, ""), "owners": owners.get(key, [])}
+        for key in keys
+    ]
+
+
+def _resolution_payload(resolution) -> dict:
+    """The resolution plus what the reviewer needs to see about each customer."""
+    payload = {
+        "status": resolution["status"],
+        "customer": resolution["customer"],
+        "candidates": [customer_phones.customer_summary(name) for name in resolution["candidates"]],
+        "disabled": resolution["disabled"],
+        "token": resolution["token"],
+    }
+    payload["customer_preview"] = (
+        customer_phones.customer_summary(resolution["customer"]) if resolution["customer"] else None
+    )
+    return payload
+
+
+def _load_json(value, default):
+    try:
+        return json.loads(value) if value else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _notes(form, extracted, problems) -> dict:
+    """Everything the reviewer should read before confirming, grouped."""
+    notes = {"phone": [], "diff": [], "ai": [], "template": list(form.notes)}
+    for raw in problems:
+        notes["phone"].append(f"Could not read '{raw}' as a phone number. Check the message and type the right number.")
+    if not form.phones and not problems:
+        notes["phone"].append("The order has no phone number. Type the customer's phone to continue.")
+    if form.phone_source == "free_text" and form.phones:
+        notes["phone"].append("The phone was not in the order form's 📞 field. Confirm it is the customer's before continuing.")
+
+    if extracted:
+        ai_keys = [k for k in (canonical(p) for p in (extracted.get("phone_numbers") or [])) if k]
+        for key in ai_keys:
+            if key not in form.phone_keys:
+                notes["diff"].append(f"The AI read {display(key)}, which is not in the 📞 field. It was ignored.")
+        for raw in extracted.get("phone_numbers") or []:
+            if raw and not canonical(raw):
+                notes["diff"].append(f"The AI produced '{raw}', which is not a valid phone number. It was ignored.")
+        notes["ai"] = [str(n) for n in (extracted.get("extraction_notes") or [])]
+    return notes
+
+
+def _prefill(form, extracted) -> dict:
+    """New-customer fields: the order form first, the AI's reading second."""
+    extracted = extracted or {}
+    return {
+        "customer_name": form.name or (extracted.get("customer_name") or "").strip(),
+        "username": form.username or (extracted.get("username") or "").strip().lstrip("@"),
+        "platform": _normalize_channel(form.platform) or _normalize_channel(extracted.get("platform")),
+        "governorate": _normalize_governorate(extracted.get("governorate")),
+        "full_address": form.address or (extracted.get("address") or "").strip(),
+    }
+
+
+def _form_snapshot(form) -> dict:
+    return {
+        "version": form.version,
+        "name": form.name,
+        "username": form.username,
+        "platform": form.platform,
+        "address": form.address,
+        "amounts": form.amounts,
+        "assumed_thousands": form.assumed_thousands,
+        "gift_hint": form.gift_hint,
+        "notes": form.notes,
+        "fields": form.fields,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Endpoint 1: process_intake
+# ---------------------------------------------------------------------------
+
 @frappe.whitelist()
-def process_intake(raw_text: str) -> dict:
+def process_intake(raw_text: str, force_new: int = 0) -> dict:
     """
-    Step 1 of the AI intake flow.
+    Step 1 of the AI intake flow. Never creates a Customer or a Sales Order.
 
-    - Checks idempotency (same text → same hash → returns existing record)
-    - Calls Gemini for extraction (AI layer)
-    - Runs deterministic customer matching (no AI)
-    - Creates and returns an AI Order Intake record
-
-    Returns a dict with the intake record data for the frontend review screen.
-    Never creates Customer or Sales Order — that only happens in confirm_intake().
+    - The same text again returns the record already made from it, unless
+      the reviewer asked to process it as a new order (`force_new`).
+    - The customer's phone is read from the order form without AI; Gemini
+      reads the rest. The AI's phones are only compared with the form's.
+    - The customer is resolved by phone (MATCHED / NEW / CONFLICT / NO_PHONE).
     """
     _require_intake_permission()
 
@@ -230,238 +339,254 @@ def process_intake(raw_text: str) -> dict:
 
     if not raw_text or not raw_text.strip():
         frappe.throw("Please paste the order text before processing.")
+    if len(raw_text) > MAX_TEXT_LENGTH:
+        frappe.throw(f"The order text is too long ({len(raw_text):,} characters). Paste one order at a time.")
 
-    input_hash = _hash_text(raw_text)
-
-    # ── Idempotency check ──────────────────────────────────────────────────
+    base_hash = _hash_text(raw_text)
+    input_hash = base_hash
+    reuse = None
     existing = frappe.db.get_value(
-        "AI Order Intake",
-        {"input_hash": input_hash},
-        ["name", "status", "created_sales_order", "extracted_json"],
-        as_dict=True,
+        "AI Order Intake", {"input_hash": base_hash}, ["name", "status", "created_sales_order"], as_dict=True
     )
-    if existing:
+    if cint(force_new):
+        input_hash = f"{base_hash}#{frappe.generate_hash(length=8)}"
+    elif existing:
         if existing.status == "Confirmed" or existing.created_sales_order:
             return {
                 "duplicate": True,
+                "can_force_new": True,
                 "intake_name": existing.name,
                 "created_sales_order": existing.created_sales_order,
                 "message": (
-                    f"This exact order text was already processed. "
+                    "This exact order text was already processed. "
                     f"Sales Order {existing.created_sales_order} was created from it."
                 ),
             }
-        elif existing.status in ["Draft", "Needs Review"]:
-            doc = frappe.get_doc("AI Order Intake", existing.name)
-            return _intake_to_response(doc)
-        # If it's Failed, we continue to retry processing!
+        if existing.status in ("Draft", "Needs Review"):
+            return _intake_to_response(frappe.get_doc("AI Order Intake", existing.name))
+        if existing.status == "Failed":
+            reuse = existing.name
+        else:  # Discarded: it stays discarded; this becomes a new record
+            input_hash = f"{base_hash}#{frappe.generate_hash(length=8)}"
 
-    # ── AI Extraction ──────────────────────────────────────────────────────
-    extracted = None
-    error_msg = None
-    status = "Draft"
+    # ── The order form, read without AI ────────────────────────────────────
+    form = template.parse(raw_text)
 
+    # ── Gemini for the rest ─────────────────────────────────────────────────
+    extracted, meta, error = None, {}, None
     try:
-        extracted = extract_order(raw_text)
-        status = "Needs Review"
+        extracted, meta = extract_order_with_meta(raw_text)
     except ExtractionError as e:
-        error_msg = str(e)
-        status = "Failed"
+        error = str(e)
     except Exception as e:
-        error_msg = f"Unexpected error during extraction: {e!s}"
-        status = "Failed"
+        error = f"Unexpected error during extraction: {e!s}"
+        frappe.log_error(title="AI intake: extraction crashed", message=frappe.get_traceback())
 
-    # ── Deterministic Customer Matching (no AI) ────────────────────────────
-    match_result = {"customer": None, "method": "None", "confidence": 0.0}
-    if extracted:
-        try:
-            match_result = match_customer(
-                extracted_phones=extracted.get("phone_numbers", []),
-                extracted_name=extracted.get("customer_name", ""),
-            )
-            hint = match_result.get("name_hint")
-            if hint:
-                extracted.setdefault("extraction_notes", []).append(
-                    f"Customer: the name looks like existing customer '{hint['customer']}' "
-                    f"({hint['confidence']:g}%), but the phone number is different, so a new "
-                    f"customer is suggested. If it is the same person on a new number, use "
-                    f"'Search for existing customer' to pick them."
-                )
-        except Exception as e:
-            if extracted.get("extraction_notes") is None:
-                extracted["extraction_notes"] = []
-            extracted["extraction_notes"].append(f"Customer matching error: {e!s}")
+    # ── Customer, by phone only ─────────────────────────────────────────────
+    resolution = customer_phones.resolve(form.phone_keys)
+    methods = {hit.e164: hit.method for hit in form.phones}
 
-    # ── Save or Update AI Order Intake record ──────────────────────────────
-    if existing and existing.status == "Failed":
-        intake = frappe.get_doc("AI Order Intake", existing.name)
-        intake.status = status
-        intake.extracted_json = json.dumps(extracted, ensure_ascii=False, indent=2) if extracted else None
-        intake.matched_customer = match_result.get("customer")
-        intake.match_confidence = match_result.get("confidence", 0.0)
-        intake.match_method = match_result.get("method", "None")
-        intake.error_message = error_msg
+    values = {
+        "raw_text": raw_text,
+        "input_hash": input_hash,
+        "status": "Needs Review" if extracted is not None else "Failed",
+        "error_message": error,
+        "extracted_json": json.dumps(extracted, ensure_ascii=False, indent=2) if extracted is not None else None,
+        "phone_source": form.phone_source,
+        "detected_phones": json.dumps(_phone_entries(form.phone_keys, methods), ensure_ascii=False),
+        "phone_problems": "\n".join(form.phone_problems),
+        "match_status": resolution["status"],
+        "matched_customer": resolution["customer"],
+        "match_method": "Phone" if resolution["status"] == "MATCHED" else "None",
+        "match_confidence": 100.0 if resolution["status"] == "MATCHED" else 0.0,
+        "match_candidates": json.dumps(resolution["candidates"], ensure_ascii=False),
+        "resolution_token": resolution["token"],
+        "template_version": form.version or "",
+        "template_fields": json.dumps(_form_snapshot(form), ensure_ascii=False, indent=2),
+        "ai_model": meta.get("model"),
+        "ai_latency_ms": meta.get("latency_ms"),
+        "ai_attempts": meta.get("attempts"),
+        "ai_finish_reason": meta.get("finish_reason"),
+        "ai_prompt_tokens": meta.get("prompt_tokens"),
+        "ai_cached_tokens": meta.get("cached_tokens"),
+        "ai_output_tokens": meta.get("output_tokens"),
+        "ai_thinking_tokens": meta.get("thinking_tokens"),
+    }
+
+    if reuse:
+        intake = frappe.get_doc("AI Order Intake", reuse)
+        intake.update(values)
         intake.save(ignore_permissions=True)
     else:
-        intake = frappe.get_doc({
-            "doctype": "AI Order Intake",
-            "raw_text": raw_text,
-            "input_hash": input_hash,
-            "status": status,
-            "extracted_json": json.dumps(extracted, ensure_ascii=False, indent=2) if extracted else None,
-            "matched_customer": match_result.get("customer"),
-            "match_confidence": match_result.get("confidence", 0.0),
-            "match_method": match_result.get("method", "None"),
-            "error_message": error_msg,
-        })
+        intake = frappe.get_doc({"doctype": "AI Order Intake", **values})
         intake.insert(ignore_permissions=True)
-
     frappe.db.commit()
 
-    if status == "Failed":
-        return {
-            "status": "Failed",
-            "intake_name": intake.name,
-            "error_message": error_msg,
-        }
-
-    return _intake_to_response(intake, extracted=extracted)
+    if extracted is None:
+        return {"status": "Failed", "intake_name": intake.name, "error_message": error}
+    return _intake_to_response(intake, form=form, extracted=extracted, resolution=resolution)
 
 
-def _intake_to_response(intake_doc, extracted=None) -> dict:
-    """Serialize an AI Order Intake doc for the frontend review screen."""
-    if extracted is None and intake_doc.extracted_json:
-        try:
-            extracted = json.loads(intake_doc.extracted_json)
-        except Exception:
-            extracted = {}
+def _intake_to_response(intake, form=None, extracted=None, resolution=None) -> dict:
+    """The review payload. The resolution is always current: a stored intake
+    is re-resolved, because customers may have changed since it was made."""
+    form = form or template.parse(intake.raw_text or "")
+    if extracted is None:
+        extracted = _load_json(intake.extracted_json, {})
+    detected = _load_json(intake.detected_phones, [])
+    keys = [p.get("e164") for p in detected if p.get("e164")]
+    if resolution is None:
+        resolution = customer_phones.resolve(keys)
+    methods = {p.get("e164"): p.get("method") for p in detected}
 
-    # Include the live item catalog so the frontend can do client-side
-    # validation and pre-fill each row's price from the shop's own price list
+    # Catalog with the shop's own prices, for the item rows
     catalog = get_catalog_with_prices()
 
     return {
         "duplicate": False,
-        "intake_name": intake_doc.name,
-        "status": intake_doc.status,
-        "error_message": intake_doc.error_message,
+        "intake_name": intake.name,
+        "status": intake.status,
+        "error_message": intake.error_message,
+        "phone_source": intake.phone_source or form.phone_source,
+        "phones": _phone_entries(keys, methods, resolution["owners"]),
+        "phone_problems": [p for p in (intake.phone_problems or "").split("\n") if p],
+        "phone_section": form.phone_section or "",
+        "resolution": _resolution_payload(resolution),
+        "prefill": _prefill(form, extracted),
         "extracted": extracted or {},
-        "match": {
-            "customer": intake_doc.matched_customer,
-            "confidence": intake_doc.match_confidence,
-            "method": intake_doc.match_method,
-        },
-        "created_customer": intake_doc.created_customer,
-        "created_sales_order": intake_doc.created_sales_order,
+        "amounts": {**form.amounts, "assumed_thousands": form.assumed_thousands},
+        "gift_hint": form.gift_hint,
+        "notes": _notes(form, extracted, form.phone_problems),
         "item_catalog": catalog,
+        "ai": {
+            "model": intake.ai_model,
+            "latency_ms": intake.ai_latency_ms,
+            "attempts": intake.ai_attempts,
+            "finish_reason": intake.ai_finish_reason,
+        },
     }
 
 
 # ---------------------------------------------------------------------------
-# Endpoint 2: confirm_intake
+# Endpoint 2: lookup_phones
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
-def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
-    """
-    Step 2 of the AI intake flow — called ONLY after human review.
-    """
+def lookup_phones(intake_name: str, phones: str) -> dict:
+    """Who owns these phones right now (the reviewer changed the phones). Read-only."""
     _require_intake_permission()
+    if not frappe.db.exists("AI Order Intake", intake_name):
+        frappe.throw(f"AI Order Intake {intake_name} not found.")
+    raw_list = _load_json(phones, []) if isinstance(phones, str) else (phones or [])
+    keys, invalid = [], []
+    for raw in raw_list:
+        key = canonical(raw)
+        if key:
+            if key not in keys:
+                keys.append(key)
+        elif str(raw or "").strip():
+            invalid.append(str(raw))
+    resolution = customer_phones.resolve(keys)
+    return {
+        "ok": not invalid,
+        "invalid": invalid,
+        "phones": _phone_entries(keys, owners=resolution["owners"]),
+        "resolution": _resolution_payload(resolution),
+    }
 
-    settings = ai_settings.get_settings()
 
-    intake = frappe.get_doc("AI Order Intake", intake_name)
-    if intake.status == "Confirmed":
-        frappe.throw(f"This intake ({intake_name}) is already confirmed.")
+# ---------------------------------------------------------------------------
+# Endpoint 3: confirm_intake
+# ---------------------------------------------------------------------------
 
-    # site_config still wins if set, so an existing deployment that relied on
-    # it keeps working; otherwise the AI Intake Settings checkbox decides.
-    allow_retry = frappe.conf.get("allow_retry_failed_intake") or ai_settings.get_bool(
-        "allow_retry_failed_intake", settings
-    )
-    if intake.status == "Failed" and not allow_retry:
+CUSTOMER_MODES = ("matched", "pick", "new", "add_phone_to_existing")
+
+
+def _identity_phones(intake, data) -> tuple:
+    """(keys, phone_source) the order is confirmed with, after the rules:
+
+    - phones from the message may be kept or dropped, never edited;
+    - a phone the message does not contain is accepted only when the message
+      had none, or with an explicit override reason;
+    - a phone found outside the order form must be confirmed by the reviewer.
+    """
+    detected = [p.get("e164") for p in _load_json(intake.detected_phones, []) if p.get("e164")]
+    keys = []
+    for raw in data.get("phones") or []:
+        key = canonical(raw)
+        if not key:
+            frappe.throw(f"'{raw}' is not a valid phone number.")
+        if key not in keys:
+            keys.append(key)
+    if not keys:
+        frappe.throw("A customer phone number is required to confirm the order.")
+
+    typed = [k for k in keys if k not in detected]
+    override = (data.get("override_reason") or "").strip()
+    if typed and detected and not override:
         frappe.throw(
-            "This intake failed during extraction. "
-            "Please start a new intake with the corrected text."
+            f"{display(typed[0])} is not in the order message. Use the message's phone, or say why it is wrong."
         )
+    if typed:
+        return keys, "reviewer"
+    if intake.phone_source == "free_text" and not data.get("phones_confirmed"):
+        frappe.throw("Confirm that the phone found in the message is the customer's.")
+    return keys, intake.phone_source or "template"
 
-    data = json.loads(reviewed_data) if isinstance(reviewed_data, str) else reviewed_data
 
-    items = data.get("order_items", [])
+def _add_phones(customer_name, keys) -> list:
+    """Put each phone into a free slot of the customer; the Customer hook re-checks ownership."""
+    if not keys:
+        return []
+    customer = frappe.get_doc("Customer", customer_name)
+    for key in keys:
+        if not customer.main_phone_number:
+            customer.main_phone_number = national(key)
+        elif not customer.secondary_phone_number:
+            customer.secondary_phone_number = national(key)
+        else:
+            frappe.throw(
+                f"{customer.customer_name} already has two phone numbers. Change one on the customer first."
+            )
+    customer.save(ignore_permissions=True)
+    return [display(k) for k in keys]
+
+
+def _create_customer(new_customer, keys) -> str:
+    name = (new_customer.get("customer_name") or "").strip()
+    if not name:
+        frappe.throw("Cannot create a new customer without a name.")
+    if len(keys) > 2:
+        frappe.throw("A customer can hold two phone numbers. Keep at most two for this order.")
+    customer = frappe.get_doc({
+        "doctype": "Customer",
+        "customer_name": name,
+        "customer_type": "Individual",
+        "main_phone_number": national(keys[0]),
+        "secondary_phone_number": national(keys[1]) if len(keys) > 1 else "",
+        "username": (new_customer.get("username") or "").strip().lstrip("@"),
+        "governorate": _normalize_governorate(new_customer.get("governorate")),
+        "full_address": (new_customer.get("full_address") or "").strip(),
+        # Where this customer came to us from — only ever set on a customer we
+        # create, never overwriting the channel on an existing record
+        "channal": _normalize_channel(new_customer.get("platform")),
+    })
+    customer.insert(ignore_permissions=True)
+    return customer.name
+
+
+def _build_sales_order(customer_name, order, settings):
+    """The Sales Order for a confirmed intake (not yet inserted)."""
+    items = order.get("order_items") or []
     if not items:
         frappe.throw("Cannot confirm: the order must have at least one item.")
 
-    created_customer_name = None
-    customer_docname = None
-
-    # ── Customer: create or use existing ──────────────────────────────────
-    if data.get("customer_choice") == "new":
-        customer_name_str = data.get("customer_name", "").strip()
-        if not customer_name_str:
-            frappe.throw("Cannot create a new customer without a name.")
-
-        # Only a phone number proves this is someone already on file. This
-        # used to link by name, which put a new "zainab" on the old zainab's
-        # record — her phone, her address, her order history. Two customers
-        # sharing a name is fine: ERPNext names the second one "zainab - 1".
-        existing_by_phone = find_customer_by_phone(
-            [data.get("main_phone_number"), data.get("secondary_phone_number")]
-        )
-        if existing_by_phone:
-            customer_docname = existing_by_phone
-            frappe.msgprint(
-                f"The phone number already belongs to customer '{existing_by_phone}', "
-                "so the order was linked to them instead of creating a duplicate."
-            )
-        else:
-            # Normalize governorate
-            gov = data.get("governorate") or ""
-            if gov:
-                try:
-                    meta = frappe.get_meta("Customer")
-                    gov_field = meta.get_field("governorate")
-                    if gov_field and gov_field.options:
-                        valid_options = [opt for opt in gov_field.options.split("\n") if opt.strip()]
-                        if gov not in valid_options:
-                            gov_normalized = gov.replace("ال", "").strip()
-                            for opt in valid_options:
-                                if opt.replace("ال", "").strip() == gov_normalized:
-                                    gov = opt
-                                    break
-                except Exception:
-                    pass
-
-            cust = frappe.get_doc({
-                "doctype": "Customer",
-                "customer_name": customer_name_str,
-                "customer_type": "Individual",
-                "main_phone_number": data.get("main_phone_number"),
-                "secondary_phone_number": data.get("secondary_phone_number"),
-                "username": data.get("username") or "",
-                "governorate": gov,
-                "full_address": data.get("full_address") or "",
-                # Where this customer came to us from, taken off the order's
-                # "منصة الطلب" line — only ever set on a customer we create,
-                # never overwriting the channel on an existing record
-                "channal": _normalize_channel(data.get("platform")),
-            })
-            cust.insert(ignore_permissions=True)
-            customer_docname = cust.name
-            created_customer_name = cust.name
-    else:
-        customer_docname = data.get("customer_name") or intake.matched_customer
-        if not customer_docname:
-            frappe.throw("No customer selected. Please choose an existing customer or create a new one.")
-        if not frappe.db.exists("Customer", customer_docname):
-            frappe.throw(f"Customer '{customer_docname}' not found.")
-
-    # ── Build Sales Order items ────────────────────────────────────────────
     default_warehouse, default_uom = _get_default_so_items_params(settings)
 
     so_items = []
     flower_items = []
     for item in items:
-        item_code = item.get("item_code", "").strip()
+        item_code = (item.get("item_code") or "").strip()
         if not item_code:
             frappe.throw(
                 f"Item code is required for all items. Missing for: {item.get('description')}"
@@ -492,7 +617,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
                 "qty": qty,
                 "rate": rate,
                 "amount": qty * rate,
-                "delivery_date": data.get("delivery_date") or today()
+                "delivery_date": order.get("delivery_date") or today()
             })
         else:
             so_items.append({
@@ -528,7 +653,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             "is_free_item": 1,
             "uom": default_uom,
             "warehouse": default_warehouse,
-            "delivery_date": data.get("delivery_date") or today(),
+            "delivery_date": order.get("delivery_date") or today(),
         })
 
     # ── Discount sanity check ───────────────────────────────────────────────
@@ -540,7 +665,7 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
     # replacement for review: it blocks the exceptional case rather than
     # trying to validate every number (see NARJES_STORE_SYSTEM.md §8.4).
     max_discount_percentage = ai_settings.get_float("max_discount_percentage", settings)
-    discount_amount = float(data.get("discount_amount") or 0)
+    discount_amount = float(order.get("discount_amount") or 0)
     order_subtotal = sum((item.get("qty") or 0) * (item.get("rate") or 0) for item in so_items)
     order_subtotal += sum((f.get("qty") or 0) * (f.get("rate") or 0) for f in flower_items)
     if is_discount_excessive(discount_amount, order_subtotal, max_discount_percentage):
@@ -550,65 +675,173 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
             f"if it's genuinely correct, create/adjust this Sales Order manually instead of through AI intake."
         )
 
-    # ── Create Sales Order ─────────────────────────────────────────────────
-    so = frappe.get_doc({
+    return frappe.get_doc({
         "doctype": "Sales Order",
-        "customer": customer_docname,
+        "customer": customer_name,
         "transaction_date": today(),
-        "delivery_date": data.get("delivery_date") or today(),
-        "currency": data.get("currency") or ai_settings.get_str("default_currency", settings),
-        "gift": 1 if data.get("gift") else 0,
-        "priority": data.get("priority") or "",
-        "custom_details": data.get("custom_details") or "",
-        "discount_amount": float(data.get("discount_amount") or 0),
+        "delivery_date": order.get("delivery_date") or today(),
+        "currency": order.get("currency") or ai_settings.get_str("default_currency", settings),
+        "gift": 1 if order.get("gift") else 0,
+        "priority": order.get("priority") or "",
+        "custom_details": order.get("custom_details") or "",
+        "discount_amount": discount_amount,
         "additional_discount_percentage": 0,
-        "governorate_of_delivery": data.get("governorate_of_delivery") or "",
+        "governorate_of_delivery": order.get("governorate_of_delivery") or "",
         "order_type": "Sales",
         "items": so_items,
         "custom_flower_items": flower_items,
     })
+
+
+@frappe.whitelist()
+def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
+    """
+    Step 2 — called only after a person reviewed the order.
+
+    Everything the review screen showed is re-checked here, under a lock per
+    phone number: the phones, who owns them (the resolution token must still
+    match), and that the chosen customer really owns one of them. Expected
+    outcomes (already confirmed, customers changed meanwhile) are returned;
+    invalid input is refused with a clear message.
+    """
+    _require_intake_permission()
+    settings = ai_settings.get_settings()
+    data = json.loads(reviewed_data) if isinstance(reviewed_data, str) else (reviewed_data or {})
+
+    # One confirm at a time per intake
+    frappe.db.sql("SELECT name FROM `tabAI Order Intake` WHERE name = %s FOR UPDATE", (intake_name,))
+    intake = frappe.get_doc("AI Order Intake", intake_name)
+    if intake.status == "Confirmed":
+        return {"ok": False, "reason": "already_confirmed", "sales_order": intake.created_sales_order}
+    if intake.status == "Discarded":
+        frappe.throw("This intake was discarded. Paste the order text again to process it.")
+    # site_config still wins if set, so an existing deployment that relied on
+    # it keeps working; otherwise the AI Intake Settings checkbox decides.
+    allow_retry = frappe.conf.get("allow_retry_failed_intake") or ai_settings.get_bool(
+        "allow_retry_failed_intake", settings
+    )
+    if intake.status == "Failed" and not allow_retry:
+        frappe.throw(
+            "This intake failed during extraction. "
+            "Please start a new intake with the corrected text."
+        )
+
+    mode = data.get("customer_mode")
+    if mode not in CUSTOMER_MODES:
+        frappe.throw("Choose how the customer is decided before confirming.")
+
+    keys, phone_source = _identity_phones(intake, data)
+    old_key = canonical(data.get("old_phone")) if mode == "add_phone_to_existing" else None
+    customer_phones.lock_phones(keys + ([old_key] if old_key else []))
+
+    resolution = customer_phones.resolve(keys)
+    if resolution["token"] != data.get("resolution_token"):
+        return {"ok": False, "reason": "resolution_changed", "resolution": _resolution_payload(resolution)}
+
+    chosen = (data.get("customer") or "").strip()
+    created_customer = None
+    added = []
+
+    if mode == "matched":
+        if resolution["status"] != "MATCHED" or chosen != resolution["customer"]:
+            frappe.throw("These phones don't belong to that customer.")
+        extra = [canonical(p) for p in (data.get("add_phones_to_customer") or [])]
+        extra = [k for k in extra if k in keys and not resolution["owners"].get(k)]
+        customer = chosen
+    elif mode == "pick":
+        if resolution["status"] != "CONFLICT" or chosen not in resolution["candidates"]:
+            frappe.throw("Pick one of the customers that own these phones.")
+        extra = []
+        customer = chosen
+    elif mode == "new":
+        if resolution["status"] != "NEW":
+            frappe.throw("One of these phones already belongs to a customer, so a new customer can't be created.")
+        customer = created_customer = _create_customer(data.get("new_customer") or {}, keys)
+        extra = []
+    else:  # add_phone_to_existing
+        if resolution["status"] != "NEW":
+            frappe.throw("These phones already belong to a customer.")
+        if not old_key:
+            frappe.throw("Enter the customer's old phone number.")
+        previous = customer_phones.resolve([old_key])
+        if previous["status"] != "MATCHED" or previous["customer"] != chosen:
+            frappe.throw(f"{display(old_key)} does not belong to that customer.")
+        customer = chosen
+        extra = keys
+
+    if customer in resolution["disabled"] or frappe.db.get_value("Customer", customer, "disabled"):
+        frappe.throw(f"Customer {customer} is disabled. Enable the customer first.")
+
+    added = _add_phones(customer, extra)
+
+    # The rule this whole flow exists for, checked once more before anything
+    # is ordered: the customer owns at least one of the order's phones.
+    owned = customer_phones.owners(keys)
+    if not any(customer in owned.get(k, []) for k in keys):
+        frappe.throw(
+            "Internal check failed: the chosen customer does not own any of the order's phone numbers. "
+            "Nothing was saved."
+        )
+
+    so = _build_sales_order(customer, data.get("order") or {}, settings)
     so.insert(ignore_permissions=True)
 
-    # ── Update AI Order Intake ─────────────────────────────────────────────
     frappe.db.set_value("AI Order Intake", intake_name, {
         "status": "Confirmed",
-        "created_customer": created_customer_name,
+        "matched_customer": customer,
+        "match_status": customer_phones.resolve(keys)["status"],
+        "match_method": "Phone",
+        "created_customer": created_customer,
         "created_sales_order": so.name,
+        "customer_mode": mode,
+        "final_phones": json.dumps([display(k) for k in keys], ensure_ascii=False),
+        "phone_source": phone_source,
+        "phone_override_reason": (data.get("override_reason") or "").strip() if phone_source == "reviewer" else None,
+        "confirmed_by": frappe.session.user,
+        "confirmed_at": now_datetime(),
     })
     frappe.db.commit()
 
     return {
-        "success": True,
+        "ok": True,
         "sales_order": so.name,
-        "customer": customer_docname,
-        "created_new_customer": created_customer_name is not None,
+        "customer": customer,
+        "created_new_customer": created_customer is not None,
+        "added_phones": added,
     }
 
 
 # ---------------------------------------------------------------------------
-# Endpoint 3: get_item_catalog
+# Endpoint 4: discard_intake
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def discard_intake(intake_name: str, reason: str) -> dict:
+    """Take an intake out of the review queue for good."""
+    _require_intake_permission()
+    reason = (reason or "").strip()
+    if not reason:
+        frappe.throw("Say why this intake is being discarded.")
+    # Same row lock as confirm_intake, so a confirm and a discard of one
+    # intake can't both win: whichever comes second sees the other's status.
+    row = frappe.db.sql(
+        "SELECT status FROM `tabAI Order Intake` WHERE name = %s FOR UPDATE", (intake_name,)
+    )
+    status = row[0][0] if row else None
+    if status not in ("Draft", "Needs Review", "Failed"):
+        frappe.throw(f"An intake that is {status or 'missing'} cannot be discarded.")
+    frappe.db.set_value("AI Order Intake", intake_name, {"status": "Discarded", "discard_reason": reason[:500]})
+    frappe.db.commit()
+    return {"ok": True, "intake_name": intake_name}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint 5: get_item_catalog
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
 def get_item_catalog_endpoint() -> list:
     """Return available items, with prices, for the frontend autocomplete."""
-    # Selling prices for the whole catalogue in one response — the same reason
-    # get_customers_for_search() checks before answering.
+    # Selling prices for the whole catalogue in one response.
     frappe.has_permission("Item", ptype="read", throw=True)
     return get_catalog_with_prices()
-
-
-# ---------------------------------------------------------------------------
-# Endpoint 4: get_customers_for_search
-# ---------------------------------------------------------------------------
-
-@frappe.whitelist()
-def get_customers_for_search(query: str) -> list:
-    """Live search for customers by name — used in the review screen."""
-    frappe.has_permission("Customer", ptype="read", throw=True)
-    return frappe.get_all(
-        "Customer",
-        filters=[["customer_name", "like", f"%{query}%"]],
-        fields=["name", "customer_name", "main_phone_number"],
-        limit=10,
-    )

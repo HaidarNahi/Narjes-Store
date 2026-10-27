@@ -11,39 +11,67 @@
   "input_hash",
   "status",
   "error_message",
+  "discard_reason",
   "section_break_match",
+  "phone_source",
+  "match_status",
+  "match_method",
   "matched_customer",
   "match_confidence",
-  "match_method",
+  "column_break_phone_1",
+  "detected_phones",
+  "phone_problems",
+  "match_candidates",
+  "resolution_token",
   "section_break_results",
   "created_customer",
   "created_sales_order",
+  "customer_mode",
+  "final_phones",
+  "phone_override_reason",
+  "column_break_results_1",
+  "confirmed_by",
+  "confirmed_at",
+  "section_break_template",
+  "template_version",
+  "template_fields",
   "section_break_ai",
-  "extracted_json"
+  "extracted_json",
+  "section_break_ai_call",
+  "ai_model",
+  "ai_latency_ms",
+  "ai_attempts",
+  "ai_finish_reason",
+  "column_break_ai_1",
+  "ai_prompt_tokens",
+  "ai_cached_tokens",
+  "ai_output_tokens",
+  "ai_thinking_tokens"
  ],
  "fields": [
   {
    "fieldname": "raw_text",
    "fieldtype": "Text",
-   "label": "Raw Order Text",
    "in_list_view": 0,
+   "label": "Raw Order Text",
    "reqd": 1
   },
   {
+   "description": "SHA-256 of normalized raw_text — used for idempotency",
    "fieldname": "input_hash",
    "fieldtype": "Data",
    "label": "Input Hash",
    "read_only": 1,
-   "unique": 1,
-   "description": "SHA-256 of normalized raw_text — used for idempotency"
+   "unique": 1
   },
   {
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Status",
-   "options": "Draft\nNeeds Review\nConfirmed\nFailed",
-   "default": "Draft",
-   "in_list_view": 1
+   "options": "Draft\nNeeds Review\nConfirmed\nFailed\nDiscarded"
   },
   {
    "fieldname": "error_message",
@@ -52,27 +80,84 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.status=='Discarded'",
+   "fieldname": "discard_reason",
+   "fieldtype": "Small Text",
+   "label": "Discard Reason",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_match",
    "fieldtype": "Section Break",
-   "label": "Customer Match"
+   "label": "Phone & Customer"
   },
   {
-   "fieldname": "matched_customer",
-   "fieldtype": "Link",
-   "label": "Matched Customer",
-   "options": "Customer",
-   "in_list_view": 1
+   "description": "template = the 📞 field of the order form · free_text = found elsewhere in the message (reviewer confirmed) · reviewer = typed by the reviewer · none = no phone",
+   "fieldname": "phone_source",
+   "fieldtype": "Select",
+   "label": "Phone Source",
+   "options": "\ntemplate\nfree_text\nreviewer\nnone",
+   "read_only": 1
   },
   {
-   "fieldname": "match_confidence",
-   "fieldtype": "Float",
-   "label": "Match Confidence (0–100)"
+   "fieldname": "match_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Match Status",
+   "options": "\nMATCHED\nNEW\nCONFLICT\nNO_PHONE",
+   "read_only": 1
   },
   {
    "fieldname": "match_method",
    "fieldtype": "Select",
    "label": "Match Method",
-   "options": "\nPhone\nFuzzy Name\nNone"
+   "options": "\nPhone\nFuzzy Name\nNone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "matched_customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Matched Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "match_confidence",
+   "fieldtype": "Float",
+   "label": "Match Confidence (0–100)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_phone_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "detected_phones",
+   "fieldtype": "Code",
+   "label": "Phones Found in the Message",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "phone_problems",
+   "fieldtype": "Small Text",
+   "label": "Numbers That Could Not Be Read",
+   "read_only": 1
+  },
+  {
+   "fieldname": "match_candidates",
+   "fieldtype": "Code",
+   "label": "Customers Owning These Phones",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolution_token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Resolution Token",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_results",
@@ -89,10 +174,66 @@
   {
    "fieldname": "created_sales_order",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Created Sales Order",
    "options": "Sales Order",
-   "read_only": 1,
-   "in_list_view": 1
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_mode",
+   "fieldtype": "Select",
+   "label": "How the Customer Was Chosen",
+   "options": "\nmatched\npick\nnew\nadd_phone_to_existing",
+   "read_only": 1
+  },
+  {
+   "fieldname": "final_phones",
+   "fieldtype": "Code",
+   "label": "Phones Used for the Order",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "phone_override_reason",
+   "fieldtype": "Small Text",
+   "label": "Phone Override Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_results_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "confirmed_by",
+   "fieldtype": "Link",
+   "label": "Confirmed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "confirmed_at",
+   "fieldtype": "Datetime",
+   "label": "Confirmed At",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_template",
+   "fieldtype": "Section Break",
+   "label": "Order Form"
+  },
+  {
+   "fieldname": "template_version",
+   "fieldtype": "Data",
+   "label": "Form Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "template_fields",
+   "fieldtype": "Code",
+   "label": "Form Fields",
+   "options": "JSON",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_ai",
@@ -105,11 +246,69 @@
    "label": "Extracted JSON",
    "options": "JSON",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_ai_call",
+   "fieldtype": "Section Break",
+   "label": "AI Call"
+  },
+  {
+   "fieldname": "ai_model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_latency_ms",
+   "fieldtype": "Int",
+   "label": "Latency (ms)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_attempts",
+   "fieldtype": "Int",
+   "label": "Attempts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_finish_reason",
+   "fieldtype": "Data",
+   "label": "Finish Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ai_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ai_prompt_tokens",
+   "fieldtype": "Int",
+   "label": "Prompt Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_cached_tokens",
+   "fieldtype": "Int",
+   "label": "Cached Prompt Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_output_tokens",
+   "fieldtype": "Int",
+   "label": "Output Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ai_thinking_tokens",
+   "fieldtype": "Int",
+   "label": "Thinking Tokens",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-07-01 08:00:00.000000",
+ "modified": "2026-10-27 23:45:32.966101",
  "modified_by": "Administrator",
  "module": "Narjes Custom",
  "name": "AI Order Intake",
