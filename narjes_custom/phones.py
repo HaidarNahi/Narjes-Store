@@ -6,9 +6,9 @@ One canonical form for every phone number in the app.
 Customer identity in AI Order Intake rests on phone numbers alone, so two
 spellings of the same number must compare equal and a number that cannot be
 read must never quietly turn into a different one. Real order messages write
-the same Iraqi mobile number as ٠٧٧٠١٢٣٤٥٦٧, 0770 123 4567, +964 770 123 4567
-or 7701234567, often wrapped in invisible right-to-left marks. Everything here
-reduces those to one E.164 key (+9647701234567) using Google's libphonenumber
+the same Iraqi mobile number as ٠٧٧٠٠٠٠٠١٠١, 0770 000 0101, +964 770 000 0101
+or 7700000101, often wrapped in invisible right-to-left marks. Everything here
+reduces those to one E.164 key (+9647700000101) using Google's libphonenumber
 (the `phonenumbers` package Frappe already depends on), and refuses anything
 libphonenumber does not consider a valid number.
 

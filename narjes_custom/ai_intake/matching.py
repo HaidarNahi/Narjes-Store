@@ -18,7 +18,7 @@ from narjes_custom.phones import canonical, national
 
 
 def normalize_phone(raw) -> str:
-    """The number as the shop stores it (07701234567), or "" if invalid."""
+    """The number as the shop stores it (07700000101), or "" if invalid."""
     key = canonical(raw)
     return national(key) if key else ""
 

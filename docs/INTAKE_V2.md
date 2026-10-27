@@ -35,9 +35,9 @@ is shown to the reviewer, and the AI's version is ignored.
 
 ## One canonical phone form
 
-`narjes_custom/phones.py` turns every spelling (`٠٧٧٠١٢٣٤٥٦٧`, `0770 123 4567`,
-`+964 770 123 4567`, `7701234567`, invisible right-to-left marks…) into one E.164
-key (`+9647701234567`) using libphonenumber, and refuses anything that isn't a
+`narjes_custom/phones.py` turns every spelling (`٠٧٧٠٠٠٠٠١٠١`, `0770 000 0101`,
+`+964 770 000 0101`, `7700000101`, invisible right-to-left marks…) into one E.164
+key (`+9647700000101`) using libphonenumber, and refuses anything that isn't a
 valid number. Digit runs that look like a phone but aren't one are reported,
 not dropped.
 
