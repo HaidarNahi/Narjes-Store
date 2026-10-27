@@ -48,7 +48,11 @@
   "column_break_sal_2",
   "commission_person_name",
   "column_break_sal_3",
-  "commission_user"
+  "commission_user",
+  "kanban_section",
+  "kanban_finished_phases",
+  "column_break_kanban_1",
+  "kanban_finished_days"
  ],
  "fields": [
   {
@@ -308,11 +312,37 @@
    "fieldtype": "Link",
    "label": "Their System User",
    "options": "User"
+  },
+  {
+   "collapsible": 1,
+   "description": "The Order Phases board shows every unfinished order, plus finished ones changed in the last few days. Older finished orders stay in the list view and reports, and the board's menu has \"Show all finished orders\".",
+   "fieldname": "kanban_section",
+   "fieldtype": "Section Break",
+   "label": "Order Board"
+  },
+  {
+   "default": "Done\nCancelled\nReturned",
+   "description": "One phase per line. Orders in these phases leave the board once they are older than the days below.",
+   "fieldname": "kanban_finished_phases",
+   "fieldtype": "Small Text",
+   "label": "Finished Phases"
+  },
+  {
+   "fieldname": "column_break_kanban_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "7",
+   "description": "How many days a finished order stays on the board after it was last changed.",
+   "fieldname": "kanban_finished_days",
+   "fieldtype": "Int",
+   "label": "Keep Finished Orders For (days)",
+   "non_negative": 1
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-04 15:44:01.559622",
+ "modified": "2026-10-27 22:01:47.666381",
  "modified_by": "Administrator",
  "module": "Narjes Custom",
  "name": "Narjes Settings",
