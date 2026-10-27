@@ -23,7 +23,7 @@ from narjes_custom.ai_intake.extraction import (
     get_item_catalog,
     is_complete_extraction,
 )
-from narjes_custom.ai_intake.matching import match_customer
+from narjes_custom.ai_intake.matching import find_customer_by_phone, match_customer
 from narjes_custom.business_logic import is_discount_excessive
 from narjes_custom.setup import flower_placeholder
 
@@ -279,6 +279,14 @@ def process_intake(raw_text: str) -> dict:
                 extracted_phones=extracted.get("phone_numbers", []),
                 extracted_name=extracted.get("customer_name", ""),
             )
+            hint = match_result.get("name_hint")
+            if hint:
+                extracted.setdefault("extraction_notes", []).append(
+                    f"Customer: the name looks like existing customer '{hint['customer']}' "
+                    f"({hint['confidence']:g}%), but the phone number is different, so a new "
+                    f"customer is suggested. If it is the same person on a new number, use "
+                    f"'Search for existing customer' to pick them."
+                )
         except Exception as e:
             if extracted.get("extraction_notes") is None:
                 extracted["extraction_notes"] = []
@@ -392,13 +400,19 @@ def confirm_intake(intake_name: str, reviewed_data: str) -> dict:
         if not customer_name_str:
             frappe.throw("Cannot create a new customer without a name.")
 
-        existing_by_name = frappe.db.get_value(
-            "Customer", {"customer_name": customer_name_str}, "name"
+        # Only a phone number proves this is someone already on file. This
+        # used to link by name, which put a new "zainab" on the old zainab's
+        # record — her phone, her address, her order history. Two customers
+        # sharing a name is fine: ERPNext names the second one "zainab - 1".
+        existing_by_phone = find_customer_by_phone(
+            [data.get("main_phone_number"), data.get("secondary_phone_number")]
         )
-        if existing_by_name:
-            # Automatically use the existing customer
-            customer_docname = existing_by_name
-            frappe.msgprint(f"Customer '{customer_name_str}' already exists. Automatically linking to the existing record instead of creating a new one.")
+        if existing_by_phone:
+            customer_docname = existing_by_phone
+            frappe.msgprint(
+                f"The phone number already belongs to customer '{existing_by_phone}', "
+                "so the order was linked to them instead of creating a duplicate."
+            )
         else:
             # Normalize governorate
             gov = data.get("governorate") or ""

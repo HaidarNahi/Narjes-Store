@@ -21,6 +21,11 @@ from narjes_custom.ai_intake import settings as ai_settings
 # doctype can't be read (see settings.DEFAULTS).
 FUZZY_THRESHOLD = 85
 
+# Names shorter than this are never fuzzy-matched, on either side. A customer
+# saved as "R" or "m" (an Instagram initial) otherwise "resembles" everyone:
+# one shared letter is a full partial match.
+MIN_FUZZY_NAME_LENGTH = 3
+
 
 # ---------------------------------------------------------------------------
 # Phone normalization
@@ -76,6 +81,58 @@ def normalize_stored_phone(stored_int) -> str:
 # Customer matching
 # ---------------------------------------------------------------------------
 
+def find_customer_by_phone(phones: list) -> str | None:
+    """The Customer whose main or secondary phone is one of `phones`, else None."""
+    wanted = {normalize_phone(p) for p in (phones or []) if p}
+    wanted.discard("")
+    if not wanted:
+        return None
+
+    customers = frappe.get_all(
+        "Customer",
+        fields=["name", "main_phone_number", "secondary_phone_number"],
+    )
+    for cust in customers:
+        stored = {
+            normalize_stored_phone(cust.get("main_phone_number")),
+            normalize_stored_phone(cust.get("secondary_phone_number")),
+        }
+        if wanted & stored:
+            return cust["name"]
+    return None
+
+
+def best_name_match(extracted_name: str, threshold: float) -> tuple[str | None, float]:
+    """The existing customer whose name is closest to `extracted_name`.
+
+    Returns (customer, score), or (None, 0.0) below `threshold`.
+
+    Scored with token_sort_ratio, not WRatio. WRatio falls back to partial
+    matching, which scores a lone shared letter at 90 — so a customer saved as
+    a single initial was proposed for every name containing that letter. Word order
+    still doesn't matter, and spelling variants ("zanab ali" / "zainab ali")
+    still score in the 90s.
+    """
+    name = (extracted_name or "").strip().lower()
+    if len(name) < MIN_FUZZY_NAME_LENGTH:
+        return None, 0.0
+
+    best_score = 0.0
+    best_customer = None
+    for cust in frappe.get_all("Customer", fields=["name", "customer_name"]):
+        candidate = (cust.get("customer_name") or "").strip().lower()
+        if len(candidate) < MIN_FUZZY_NAME_LENGTH:
+            continue
+        score = fuzz.token_sort_ratio(name, candidate)
+        if score > best_score:
+            best_score = score
+            best_customer = cust["name"]
+
+    if best_customer and best_score >= threshold:
+        return best_customer, round(best_score, 1)
+    return None, 0.0
+
+
 def match_customer(
     extracted_phones: list, extracted_name: str, threshold: float | None = None
 ) -> dict:
@@ -91,60 +148,34 @@ def match_customer(
         customer    (str | None)   — Customer.name (doc name)
         method      (str)          — "Phone" | "Fuzzy Name" | "None"
         confidence  (float)        — 0–100
+        name_hint   (dict | None)  — a similar-named customer that was NOT
+                                     matched because the phone differs
+                                     ({"customer", "confidence"})
     """
-    # ---- Step 1: Phone matching (exact, confidence = 100) ----
-    normalized_extracted = [normalize_phone(p) for p in (extracted_phones or []) if p]
-    normalized_extracted = [p for p in normalized_extracted if p]
+    no_match = {"customer": None, "method": "None", "confidence": 0.0, "name_hint": None}
 
-    if normalized_extracted:
-        customers = frappe.get_all(
-            "Customer",
-            fields=["name", "customer_name", "main_phone_number", "secondary_phone_number"],
-        )
-        for cust in customers:
-            stored_main = normalize_stored_phone(cust.get("main_phone_number"))
-            stored_sec  = normalize_stored_phone(cust.get("secondary_phone_number"))
-            for extracted_num in normalized_extracted:
-                if extracted_num and (
-                    (stored_main and extracted_num == stored_main) or
-                    (stored_sec  and extracted_num == stored_sec)
-                ):
-                    return {
-                        "customer": cust["name"],
-                        "method": "Phone",
-                        "confidence": 100.0,
-                    }
+    # ---- Step 1: Phone matching (exact, confidence = 100) ----
+    phones = [p for p in (normalize_phone(p) for p in (extracted_phones or []) if p) if p]
+    by_phone = find_customer_by_phone(phones)
+    if by_phone:
+        return {"customer": by_phone, "method": "Phone", "confidence": 100.0, "name_hint": None}
 
     # ---- Step 2: Fuzzy name matching ----
     settings = ai_settings.get_settings()
     if threshold is None:
         threshold = ai_settings.get_float("fuzzy_match_threshold", settings)
 
-    if extracted_name and ai_settings.get_bool("enable_fuzzy_name_match", settings):
-        customers = frappe.get_all("Customer", fields=["name", "customer_name"])
-        best_score = 0.0
-        best_customer = None
+    if not extracted_name or not ai_settings.get_bool("enable_fuzzy_name_match", settings):
+        return no_match
 
-        for cust in customers:
-            # Use WRatio: handles token reordering, partial matches, transliteration
-            score = fuzz.WRatio(
-                extracted_name.strip().lower(),
-                (cust.get("customer_name") or "").strip().lower(),
-            )
-            if score > best_score:
-                best_score = score
-                best_customer = cust["name"]
+    customer, score = best_name_match(extracted_name, threshold)
+    if not customer:
+        return no_match
 
-        if best_score >= threshold and best_customer:
-            return {
-                "customer": best_customer,
-                "method": "Fuzzy Name",
-                "confidence": round(best_score, 1),
-            }
+    # The message carries a phone number that belongs to no one, so this is
+    # most likely a new person who shares a common name. Pre-selecting the old record would send the order to the
+    # wrong phone and address; offer it as a hint for the reviewer instead.
+    if phones:
+        return {**no_match, "name_hint": {"customer": customer, "confidence": score}}
 
-    # ---- Step 3: No match ----
-    return {
-        "customer": None,
-        "method": "None",
-        "confidence": 0.0,
-    }
+    return {"customer": customer, "method": "Fuzzy Name", "confidence": score, "name_hint": None}
