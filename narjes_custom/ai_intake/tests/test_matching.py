@@ -190,6 +190,64 @@ class TestMatchCustomer(unittest.TestCase):
         self.assertEqual(result["customer"], "Ahmed")
         self.assertEqual(result["method"], "Phone")
 
+    # ── Regressions (patterns seen in production, Oct 2026) ─────────────────────────────
+    def _production_customers(self):
+        return [
+            {"name": "R", "customer_name": "R", "main_phone_number": "07700000101", "secondary_phone_number": None},
+            {"name": "Ra", "customer_name": "Ra", "main_phone_number": "07700000102", "secondary_phone_number": None},
+            {"name": "maryam", "customer_name": "maryam", "main_phone_number": "07700000103", "secondary_phone_number": None},
+            {"name": "zainab ali", "customer_name": "zainab ali", "main_phone_number": "07700000104", "secondary_phone_number": None},
+        ]
+
+    @patch("narjes_custom.ai_intake.matching.frappe")
+    def test_single_letter_customer_never_matches(self, mock_frappe):
+        """A customer saved as a single letter must not match every name containing it."""
+        mock_frappe.get_all.return_value = self._production_customers()
+
+        from narjes_custom.ai_intake.matching import match_customer
+        for name in ("sarah", "karima", "noura", "farah", "esraa"):
+            result = match_customer([], name)
+            self.assertIsNone(result["customer"], name)
+
+    @patch("narjes_custom.ai_intake.matching.frappe")
+    def test_longer_name_is_not_a_partial_match(self, mock_frappe):
+        """"maryam imran" is not "maryam" just because it contains it."""
+        mock_frappe.get_all.return_value = self._production_customers()
+
+        from narjes_custom.ai_intake.matching import match_customer
+        self.assertIsNone(match_customer([], "maryam imran")["customer"])
+
+    @patch("narjes_custom.ai_intake.matching.frappe")
+    def test_spelling_variant_still_matches(self, mock_frappe):
+        mock_frappe.get_all.return_value = self._production_customers()
+
+        from narjes_custom.ai_intake.matching import match_customer
+        result = match_customer([], "zanab ali")
+        self.assertEqual(result["customer"], "zainab ali")
+        self.assertEqual(result["method"], "Fuzzy Name")
+
+    @patch("narjes_custom.ai_intake.matching.frappe")
+    def test_unknown_phone_turns_name_match_into_hint(self, mock_frappe):
+        """Same name, different phone → most likely a different person."""
+        mock_frappe.get_all.return_value = self._production_customers()
+
+        from narjes_custom.ai_intake.matching import match_customer
+        result = match_customer(["07700000199"], "zainab ali")
+
+        self.assertIsNone(result["customer"])
+        self.assertEqual(result["method"], "None")
+        self.assertEqual(result["name_hint"]["customer"], "zainab ali")
+
+    @patch("narjes_custom.ai_intake.matching.frappe")
+    def test_find_customer_by_phone_handles_formatting(self, mock_frappe):
+        mock_frappe.get_all.return_value = self._production_customers()
+
+        from narjes_custom.ai_intake.matching import find_customer_by_phone
+        self.assertEqual(find_customer_by_phone(["+964 770 000 0101"]), "R")
+        self.assertEqual(find_customer_by_phone([None, "0770-000-0102"]), "Ra")
+        self.assertIsNone(find_customer_by_phone(["07700000000"]))
+        self.assertIsNone(find_customer_by_phone([None, ""]))
+
 
 if __name__ == "__main__":
     unittest.main()

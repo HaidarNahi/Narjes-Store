@@ -344,7 +344,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                                 <select id="ai-customer-choice">
                                     ${match.customer ? `<option value="existing">Use existing: ${match.customer}</option>` : ""}
                                     <option value="new" ${!match.customer ? "selected" : ""}>Create new customer</option>
-                                    ${match.customer ? `<option value="search">Search for different customer…</option>` : ""}
+                                    <option value="search">${match.customer ? "Search for different customer…" : "Search for existing customer…"}</option>
                                 </select>
                             </div>
                         </div>
