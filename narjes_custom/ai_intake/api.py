@@ -822,7 +822,12 @@ def discard_intake(intake_name: str, reason: str) -> dict:
     reason = (reason or "").strip()
     if not reason:
         frappe.throw("Say why this intake is being discarded.")
-    status = frappe.db.get_value("AI Order Intake", intake_name, "status")
+    # Same row lock as confirm_intake, so a confirm and a discard of one
+    # intake can't both win: whichever comes second sees the other's status.
+    row = frappe.db.sql(
+        "SELECT status FROM `tabAI Order Intake` WHERE name = %s FOR UPDATE", (intake_name,)
+    )
+    status = row[0][0] if row else None
     if status not in ("Draft", "Needs Review", "Failed"):
         frappe.throw(f"An intake that is {status or 'missing'} cannot be discarded.")
     frappe.db.set_value("AI Order Intake", intake_name, {"status": "Discarded", "discard_reason": reason[:500]})

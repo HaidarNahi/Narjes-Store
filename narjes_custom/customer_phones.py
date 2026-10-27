@@ -191,15 +191,19 @@ def on_customer_validate(doc, method=None):
     """Refill the phone keys and refuse a number another customer owns.
 
     Only numbers that are new or changed in this save are checked, so staff
-    can still edit customers whose old data breaks the rules.
+    can still edit customers whose old data breaks the rules. A number being
+    replaced or cleared is locked too, so an intake confirming against it
+    can't commit an order to this customer while the number is taken away.
     """
     before = doc.get_doc_before_save()
-    seen, changed = [], []
+    seen, changed, released = [], [], []
     for raw_field, key_field in PHONE_FIELDS:
         raw = str(doc.get(raw_field) or "").strip()
         was = str((before.get(raw_field) if before else "") or "").strip()
         is_changed = doc.is_new() or raw != was
         key = canonical(raw) if raw else None
+        if is_changed and was:
+            released.append(canonical(was))
 
         if raw and not key and is_changed:
             frappe.throw(
@@ -217,9 +221,11 @@ def on_customer_validate(doc, method=None):
             if is_changed:
                 changed.append(key)
 
+    if not changed and not any(released):
+        return
+    lock_phones(changed + released)
     if not changed:
         return
-    lock_phones(changed)
     for key, others in owners(changed, exclude=doc.name).items():
         if others:
             frappe.throw(

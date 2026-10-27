@@ -86,9 +86,15 @@ class TemplateResult:
 
 
 def _strip_leading_symbols(line: str) -> str:
-    """Drop emoji, symbols and punctuation in front of the label text."""
+    """Drop emoji, symbols, punctuation and digits in front of the label text.
+
+    Digits are skipped explicitly: Arabic-Indic digits sit inside the Arabic
+    block, so a phone typed right before "📞 رقم الهاتف" must not end the scan.
+    """
     i = 0
-    while i < len(line) and line[i] != "@" and not ("؀" <= line[i] <= "ۿ"):
+    while i < len(line) and line[i] != "@" and (
+        unicodedata.decimal(line[i], None) is not None or not ("؀" <= line[i] <= "ۿ")
+    ):
         i += 1
     return line[i:]
 

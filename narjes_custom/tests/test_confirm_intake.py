@@ -198,3 +198,26 @@ class TestConfirmIntake(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDiscardIntake(unittest.TestCase):
+    def discard(self, status_in_db):
+        h = Harness()
+        h.frappe.db.sql = mock.Mock(return_value=[(status_in_db,)] if status_in_db else [])
+        with ExitStack() as stack:
+            for p in h.patches:
+                stack.enter_context(p)
+            stack.enter_context(mock.patch.object(api, "_require_intake_permission"))
+            result = api.discard_intake("AI-INTAKE-1", "spam")
+        return h, result
+
+    def test_status_is_read_under_the_row_lock(self):
+        h, result = self.discard("Needs Review")
+        self.assertTrue(result["ok"])
+        self.assertIn("FOR UPDATE", h.frappe.db.sql.call_args[0][0])
+        h.frappe.db.set_value.assert_called_once()
+
+    def test_an_intake_confirmed_meanwhile_is_not_discarded(self):
+        for status in ("Confirmed", "Discarded", None):
+            with self.subTest(status=status), self.assertRaises(Refused):
+                self.discard(status)

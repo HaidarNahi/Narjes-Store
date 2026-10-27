@@ -213,6 +213,19 @@ class TestCustomerValidate(unittest.TestCase):
         with self.assertRaises(cp.DuplicatePhoneError):
             self.validate(doc)
 
+    def test_clearing_a_number_locks_it(self):
+        # an intake confirming against the old number must wait for this save
+        doc = FakeDoc("X", {"main_phone_number": ""}, before={"main_phone_number": "07700000101"})
+        fake = self.validate(doc)
+        self.assertIsNone(doc.values["custom_main_phone_e164"])
+        self.assertEqual([c[1][0] for c in fake.sql_calls], ["nphone:test.site:" + A])
+
+    def test_replacing_a_number_locks_old_and_new(self):
+        doc = FakeDoc("X", {"main_phone_number": "07800000102"}, before={"main_phone_number": "07700000101"})
+        fake = self.validate(doc)
+        locked = [c[1][0] for c in fake.sql_calls if c[0].startswith("SELECT GET_LOCK")]
+        self.assertEqual(locked, ["nphone:test.site:" + A, "nphone:test.site:" + B])
+
 
 class TestLocks(unittest.TestCase):
     def test_locks_sorted_short_and_released_once_registered(self):

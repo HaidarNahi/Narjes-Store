@@ -7,6 +7,7 @@ Arabic-Indic digits and the invisible marks real messages carry.
 
 import unittest
 
+from narjes_custom.ai_intake import template
 from narjes_custom.ai_intake.template import parse, parse_iqd
 
 A = "+9647700000101"
@@ -210,3 +211,11 @@ class TestParseIqd(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestLabelAfterDigits(unittest.TestCase):
+    def test_label_found_after_a_phone_typed_in_front_of_it(self):
+        # _label is normally given clean_text() output; it must not depend on that
+        for prefix in ("٠٧٧٠٠٠٠٠١٠١ ", "۰۷۷۰۰۰۰۰۱۰۱ ", "07700000101 "):
+            with self.subTest(prefix=prefix):
+                self.assertEqual(template._label(prefix + "📞 رقم الهاتف:")[0], "phone")
