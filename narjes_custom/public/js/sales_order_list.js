@@ -2,6 +2,44 @@
 // sales_order_list.js — Narjes Custom Kanban for Sales Orders
 // ============================================================
 
+// SECTION 0: Board refresh helpers
+// --------------------------------------------------------
+// Every outcome below used to end in location.reload(). On a link to the
+// server that costs 100+ ms per round trip, a full reload re-runs the whole
+// desk boot and every Kanban request — seconds of dead screen after each
+// move. Re-pulling the board's own data repaints it from the database at a
+// fraction of that, and a rejected move is already put back by Frappe's
+// store (update_order_for_single_card reverts on .fail()); the refresh just
+// makes sure the cards match the database afterwards.
+function narjes_board_refresh() {
+    const listview = window.cur_list;
+    if (!listview || typeof listview.refresh !== "function") {
+        location.reload();
+        return;
+    }
+    // ListView wraps its instance `refresh` in a 1 s throttle, and BaseList
+    // skips any refresh whose request matches one from the last 3 s
+    // (no_change). A move usually lands inside both windows, so the repaint
+    // was silently dropped and the card stayed in its old column. Forget the
+    // last request and call the un-throttled prototype method instead.
+    listview.last_args = null;
+    const refresh = Object.getPrototypeOf(listview).refresh || listview.refresh;
+    refresh.call(listview);
+}
+
+// The board already loaded each card's docstatus, so a drag doesn't need its
+// own round trip to the server to find out. Falls back to asking the server
+// for a card the board doesn't know (e.g. data loaded before a repaint).
+function narjes_card_docstatus(docname) {
+    const row = ((window.cur_list && window.cur_list.data) || []).find((d) => d.name === docname);
+    if (row && row.docstatus !== undefined && row.docstatus !== null) {
+        return Promise.resolve(row.docstatus);
+    }
+    return frappe.db
+        .get_value("Sales Order", docname, "docstatus")
+        .then((r) => (r.message ? r.message.docstatus : 0));
+}
+
 // SECTION 1: Drag-and-Drop Business Rules
 // --------------------------------------------------------
 // Intercept frappe.call globally to enforce rules when cards
@@ -23,15 +61,13 @@ if (!frappe._narjes_call_patched) {
             const new_status = options.args.to_colname;
             const deferred = $.Deferred();
 
-            frappe.db.get_value("Sales Order", docname, "docstatus").then((db_r) => {
-                const docstatus = db_r.message ? db_r.message.docstatus : 0;
-
+            narjes_card_docstatus(docname).then((docstatus) => {
                 // RULE 1: Cancelled orders can NEVER be moved
                 if (docstatus === 2) {
                     frappe.dom && frappe.dom.unfreeze && frappe.dom.unfreeze();
                     frappe.msgprint({ title: __("Not Allowed"), message: __("Cancelled orders cannot be moved."), indicator: "red" });
-                    setTimeout(() => location.reload(), 1500);
                     deferred.reject();
+                    narjes_board_refresh();
                     return;
                 }
 
@@ -39,8 +75,8 @@ if (!frappe._narjes_call_patched) {
                 if (docstatus === 1 && new_status !== "Cancelled") {
                     frappe.dom && frappe.dom.unfreeze && frappe.dom.unfreeze();
                     frappe.msgprint({ title: __("Not Allowed"), message: __("You cannot move a Submitted order back to a Draft phase."), indicator: "red" });
-                    setTimeout(() => location.reload(), 1500);
                     deferred.reject();
+                    narjes_board_refresh();
                     return;
                 }
 
@@ -56,7 +92,7 @@ if (!frappe._narjes_call_patched) {
                 // submitted, and no amount of retrying reconciled the two.
                 //
                 // Submitting first means a failure leaves the order exactly where
-                // it was, and the card snaps back on reload.
+                // it was, and the card snaps back when the board refreshes.
                 if (new_status === "Done") {
                     frappe.dom && frappe.dom.unfreeze && frappe.dom.unfreeze();
                     frappe.confirm("Are you sure you want to Submit this order? This action cannot be undone.", () => {
@@ -68,24 +104,24 @@ if (!frappe._narjes_call_patched) {
                                 frappe.dom && frappe.dom.unfreeze && frappe.dom.unfreeze();
                                 if (sr.exc) {
                                     // The server rolled the whole thing back, so the
-                                    // order is still a draft in its old phase. Reload
+                                    // order is still a draft in its old phase. Refresh
                                     // to put the card back where it belongs; the error
                                     // dialog frappe already raised stays on screen.
                                     deferred.reject();
-                                    setTimeout(() => location.reload(), 2500);
+                                    narjes_board_refresh();
                                     return;
                                 }
                                 frappe.show_alert({ message: "Order Submitted Successfully", indicator: "green" });
                                 deferred.resolve();
-                                location.reload();
+                                narjes_board_refresh();
                             },
                             error: () => {
                                 frappe.dom && frappe.dom.unfreeze && frappe.dom.unfreeze();
                                 deferred.reject();
-                                setTimeout(() => location.reload(), 2500);
+                                narjes_board_refresh();
                             }
                         });
-                    }, () => { location.reload(); deferred.reject(); });
+                    }, () => { deferred.reject(); narjes_board_refresh(); });
 
                     // RULE 4: Moving to "Cancelled" → confirm and cancel
                 } else if (new_status === "Cancelled") {
@@ -100,14 +136,14 @@ if (!frappe._narjes_call_patched) {
                                 frappe.call({
                                     method: "narjes_custom.api.discard_draft", args: { docname }, callback: (cr) => {
                                         frappe.show_alert({ message: "Draft Order Discarded", indicator: "red" });
-                                        location.reload();
+                                        narjes_board_refresh();
                                     }
                                 });
                             } else {
                                 frappe.call({
                                     method: "narjes_custom.api.cancel_sales_order_and_links", args: { docname }, callback: (cr) => {
                                         if (!cr.exc) frappe.show_alert({ message: "Order & Linked Documents Cancelled", indicator: "red" });
-                                        else location.reload();
+                                        narjes_board_refresh();
                                     }
                                 });
                             }
@@ -115,7 +151,7 @@ if (!frappe._narjes_call_patched) {
                         const req = _original_call.apply(frappe, args);
                         if (req && req.then) req.then(deferred.resolve).fail(deferred.reject);
                         else deferred.resolve();
-                    }, () => { location.reload(); deferred.reject(); });
+                    }, () => { deferred.reject(); narjes_board_refresh(); });
 
                     // RULE 5: Normal draft-to-draft move
                 } else {
@@ -985,6 +1021,9 @@ function narjes_kanban_boot() {
     const timer = setInterval(() => {
         if (document.querySelector(".kanban .kanban-column")) {
             narjes_watch_board();
+            // listview_settings.onload doesn't fire when the board is opened
+            // directly, so the menu item is added here, once the view exists.
+            narjes_add_finished_toggle(window.cur_list);
             clearInterval(timer);
         } else if (++tries > 40) {
             clearInterval(timer);
@@ -1041,6 +1080,9 @@ frappe.router.on("change", () => {
                     "customer", "username", "delivery_id", "delivery_date",
                     "gift", "has_flower", "has_stand", "priority", "owner",
                     "creation", "grand_total", "currency",
+                    // read by the drag rules (narjes_card_docstatus) so a
+                    // move doesn't need its own round trip to the server
+                    "docstatus",
                 ];
                 needed.forEach((f) => {
                     this._add_field(f);
@@ -1049,10 +1091,81 @@ frappe.router.on("change", () => {
         };
     }
 
+    if (frappe.views && frappe.views.KanbanView && !frappe.views.KanbanView._narjes_args_patched) {
+        frappe.views.KanbanView._narjes_args_patched = true;
+        const orig_get_args = frappe.views.KanbanView.prototype.get_args;
+        frappe.views.KanbanView.prototype.get_args = function () {
+            const args = orig_get_args.apply(this, arguments);
+            if (this.doctype === "Sales Order" && this.board_name === NARJES_BOARD && !narjes_show_all_finished()) {
+                args.or_filters = narjes_board_or_filters();
+            }
+            return args;
+        };
+    }
+
     if (frappe.get_route()[0] === "List" && frappe.get_route()[2] === "Kanban") {
         narjes_kanban_boot();
     }
 });
+
+// SECTION 8b: Keep finished orders off the board
+// --------------------------------------------------------
+// Frappe's Kanban loads EVERY matching document (KanbanView sets
+// page_length = 0) and, each time the board opens, sends the position of
+// every card back to the server, which reads each one and re-saves the
+// board. With every order since August on it — 380 of 404 cards were Done
+// or Cancelled — that work grew every day, and two people opening the board
+// at once collided ("Record has changed since last read").
+//
+// The board now asks for every unfinished order (whatever its age) OR any
+// order changed in the last few days, so recently finished work stays
+// visible. Phases and days come from Narjes Settings → Order Board. The
+// list view and reports are unaffected, and the board menu can show
+// everything for the rest of this browser session.
+const NARJES_BOARD = "Order Phases";
+const NARJES_SHOW_ALL_KEY = "narjes_kanban_show_all_finished";
+
+function narjes_show_all_finished() {
+    try {
+        return window.sessionStorage.getItem(NARJES_SHOW_ALL_KEY) === "1";
+    } catch (e) {
+        return false;
+    }
+}
+
+function narjes_set_show_all_finished(on) {
+    try {
+        if (on) window.sessionStorage.setItem(NARJES_SHOW_ALL_KEY, "1");
+        else window.sessionStorage.removeItem(NARJES_SHOW_ALL_KEY);
+    } catch (e) {
+        /* storage blocked: the default (hide old finished orders) applies */
+    }
+}
+
+function narjes_board_or_filters() {
+    const s = frappe.boot.narjes_settings || {};
+    const phases = s.kanban_finished_phases && s.kanban_finished_phases.length
+        ? s.kanban_finished_phases
+        : ["Done", "Cancelled", "Returned"];
+    const since = frappe.datetime.add_days(frappe.datetime.now_date(), -(s.kanban_finished_days || 7));
+    return [
+        ["Sales Order", "order_phase", "not in", phases],
+        ["Sales Order", "modified", ">=", since],
+    ];
+}
+
+function narjes_add_finished_toggle(listview) {
+    if (!listview || !listview.page || listview._narjes_finished_toggle) return;
+    listview._narjes_finished_toggle = true;
+    const label = () => (narjes_show_all_finished()
+        ? __("Hide old finished orders")
+        : __("Show all finished orders"));
+    const $item = listview.page.add_menu_item(label(), () => {
+        narjes_set_show_all_finished(!narjes_show_all_finished());
+        $item.find(".menu-item-label").text(label());
+        listview.refresh();
+    });
+}
 
 // SECTION 9: ListView Settings (redirect to Kanban)
 // --------------------------------------------------------
@@ -1061,6 +1174,7 @@ frappe.listview_settings["Sales Order"] = {
         if (frappe.get_route()[2] !== "Kanban") {
             frappe.set_route("List", "Sales Order", "Kanban", "Order Phases");
         } else {
+            narjes_add_finished_toggle(listview);
             narjes_kanban_boot();
         }
     },
@@ -1253,7 +1367,11 @@ function narjes_run_bulk_move(names, phase) {
                 });
             }
 
-            setTimeout(() => location.reload(), res.failed.length ? 3000 : 600);
+            // Repaint from the database; the result dialog above stays open.
+            // The full reload used to reset the selection bar too, so redraw
+            // it for the orders that moved (failed ones stay selected).
+            narjes_selection_changed();
+            narjes_board_refresh();
         },
         error: () => frappe.dom.unfreeze(),
     });

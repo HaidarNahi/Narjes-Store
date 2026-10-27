@@ -1427,6 +1427,16 @@ def extend_bootinfo(bootinfo):
         "painting_rate_per_cm": settings.painting_rate_per_cm or 0,
         "sheet_rate_per_item": settings.sheet_rate_per_item or 0,
         "default_packaging_cost": settings.default_packaging_cost or 0,
+        # Order Phases board: which phases count as finished, and how long a
+        # finished order stays on the board (sales_order_list.js). Narjes
+        # Settings is a Single, so fields added later read back empty on an
+        # existing site until someone saves the form — hence the fallbacks.
+        "kanban_finished_phases": [
+            p.strip()
+            for p in (settings.get("kanban_finished_phases") or "").splitlines()
+            if p.strip()
+        ] or ["Done", "Cancelled", "Returned"],
+        "kanban_finished_days": frappe.utils.cint(settings.get("kanban_finished_days")) or 7,
     }
 
 WORKSPACE_NAME = "Narjes Dashboard"
