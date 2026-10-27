@@ -24,9 +24,12 @@ DEFAULTS = {
 	# Gemini API
 	"model_name": "gemini-2.5-flash",
 	"temperature": 0.1,
-	"max_tokens": 4096,
+	"max_tokens": 8192,
 	"request_timeout": 60,
 	"max_retries": 2,
+	# Gemini 3 models can't switch thinking off; "low" is the lowest level
+	# gemini-3.8-flash accepts (its own default is "medium").
+	"thinking_level": "low",
 	# Prompt
 	"append_governorates": 1,
 	# Catalog
@@ -37,9 +40,6 @@ DEFAULTS = {
 	# Examples
 	"append_examples": 1,
 	"few_shot_examples": "",
-	# Matching
-	"enable_fuzzy_name_match": 1,
-	"fuzzy_match_threshold": 85,
 	# Order defaults and guardrails
 	"default_currency": "IQD",
 	"default_uom": "Nos",
