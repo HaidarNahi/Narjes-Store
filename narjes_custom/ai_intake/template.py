@@ -158,8 +158,9 @@ def parse(text: str) -> TemplateResult:
     current = None
     taken = 0
     known = []
+    above_phone = []  # non-label lines directly above the 📞 label
 
-    for raw in lines:
+    for index, raw in enumerate(lines):
         cleaned = clean_text(raw)
         labelled = _label(cleaned)
         if labelled:
@@ -174,6 +175,21 @@ def parse(text: str) -> TemplateResult:
             collected[key] = [value]
             known.append(key)
             current, taken = key, 0
+            if key == "phone":
+                # Staff sometimes type the answer before the label on the same
+                # line ("0770… 📞 رقم الهاتف:"): that text is part of the field.
+                prefix = cleaned[: len(cleaned) - len(_strip_leading_symbols(cleaned))]
+                if any(ch.isdigit() for ch in prefix):
+                    collected[key].insert(0, prefix)
+                # …or on the line above it. Kept aside; used only if the field
+                # itself holds no number (see below).
+                for previous in reversed(lines[max(0, index - 2):index]):
+                    previous = clean_text(previous)
+                    if not previous.strip():
+                        continue
+                    if _label(previous):
+                        break
+                    above_phone.insert(0, previous)
             if key == "name":
                 result.version = "v2" if re.search(r"اسم\s*الزبون", cleaned) else "v1"
             continue
@@ -196,6 +212,17 @@ def parse(text: str) -> TemplateResult:
         result.phones = find_phones(section)
         result.phone_problems = unreadable_groups(section)
         result.phone_source = "template" if result.phones else "none"
+        if not result.phones and above_phone:
+            above = "\n".join(above_phone)
+            result.phones = find_phones(above)
+            if result.phones:
+                # A number typed above the label could belong to the field
+                # above it, so the reviewer must confirm it like free text.
+                result.phone_source = "free_text"
+                result.phone_problems += unreadable_groups(above)
+                result.notes.append(
+                    "The 📞 field is empty; the number on the line above it was used. Confirm it is the customer's."
+                )
     else:
         searchable = "\n".join(
             clean_text(raw) for raw in lines

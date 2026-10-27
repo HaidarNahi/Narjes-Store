@@ -409,15 +409,105 @@ def _is_worth_retrying(exc: Exception) -> bool:
     return code == 429 or code >= 500
 
 
-def extract_order(raw_text: str) -> dict:
-    """
-    Extract structured order data from raw_text using the configured Gemini model.
+# The model's output budget when a reply comes back cut off is doubled once,
+# up to this ceiling.
+MAX_TOKENS_CEILING = 32768
 
-    Returns a dict matching the extraction schema.
-    Raises ExtractionError on API failure.
-    Never touches the Frappe database (except reading settings and the Item catalog).
+
+def _finish_reason(response) -> str:
+    """Why the model stopped ("STOP", "MAX_TOKENS", …), or "" if unknown."""
+    try:
+        reason = response.candidates[0].finish_reason
+    except (AttributeError, IndexError, TypeError):
+        return ""
+    return getattr(reason, "name", None) or str(reason or "")
+
+
+def _usage(response) -> dict:
+    usage = getattr(response, "usage_metadata", None)
+
+    def count(attr):
+        return int(getattr(usage, attr, 0) or 0) if usage is not None else 0
+
+    return {
+        "prompt_tokens": count("prompt_token_count"),
+        "output_tokens": count("candidates_token_count"),
+        "thinking_tokens": count("thoughts_token_count"),
+        "cached_tokens": count("cached_content_token_count"),
+    }
+
+
+def _rejects_thinking(exc) -> bool:
+    """The model refused the configured thinking level (HTTP 400)."""
+    return getattr(exc, "code", None) == 400 and "thinking" in str(exc).lower()
+
+
+def _stub_extraction(raw_text: str) -> dict:
+    """What a local production copy uses instead of calling Gemini.
+
+    Only ever active when both `narjes_ai_intake_stub` and
+    `narjes_is_prod_copy` are set in site_config — never on production —
+    so the review flow can be tested on a copy whose API key can't decrypt.
+    """
+    from narjes_custom.ai_intake.template import parse
+    from narjes_custom.phones import national
+
+    form = parse(raw_text)
+    return {
+        "customer_name": form.name,
+        "phone_numbers": [national(k) for k in form.phone_keys],
+        "username": form.username or None,
+        "address": form.address or None,
+        "governorate": None,
+        "delivery_date": None,
+        "gift": bool(form.gift_hint),
+        "priority": None,
+        "currency": "IQD",
+        "order_items": [],
+        "extraction_notes": ["Test stub: no AI model was called (narjes_ai_intake_stub on a production copy)."],
+    }
+
+
+def _generate(client, model_name, raw_text, config, max_retries, meta):
+    """One generate_content call with retries for transient failures.
+
+    Returns (response, last_error); response is None when every attempt failed.
+    """
+    last_error = None
+    for attempt in range(max_retries + 1):
+        meta["attempts"] += 1
+        try:
+            return client.models.generate_content(model=model_name, contents=[raw_text], config=config), None
+        except Exception as e:
+            last_error = e
+            if attempt == max_retries or not _is_worth_retrying(e):
+                break
+            # Back off a little between attempts so a rate limit has a
+            # chance to clear instead of being hammered
+            time.sleep(2 ** attempt)
+    return None, last_error
+
+
+def extract_order_with_meta(raw_text: str) -> tuple[dict, dict]:
+    """
+    Extract structured order data from raw_text with the configured Gemini model.
+
+    Returns (extracted, meta): the dict matching the extraction schema, and
+    how the call went — model, latency_ms, attempts, finish_reason and token
+    counts — which AI Order Intake stores on every record.
+
+    Gemini 3 counts its thinking tokens against max_output_tokens, so a reply
+    can stop half-way through the JSON. When it does, the call is repeated once
+    with twice the budget. A thinking level the model rejects is dropped once.
+    Raises ExtractionError when the model can't produce usable JSON.
     """
     settings = ai_settings.get_settings()
+    model_name = ai_settings.get_str("model_name", settings)
+    meta = {"model": model_name, "latency_ms": 0, "attempts": 0, "finish_reason": "", **_usage(None)}
+
+    if frappe.conf.get("narjes_ai_intake_stub") and frappe.conf.get("narjes_is_prod_copy"):
+        meta.update(model="stub", finish_reason="STUB")
+        return _stub_extraction(raw_text), meta
 
     api_key = resolve_api_key(settings)
     if not api_key:
@@ -426,13 +516,12 @@ def extract_order(raw_text: str) -> dict:
             "Set it in 'AI Intake Settings' or run: bench --site narjes.local set-config gemini_api_key YOUR_KEY"
         )
 
-    catalog = get_prompt_catalog(settings)
-
-    model_name = ai_settings.get_str("model_name", settings)
+    system_prompt = _build_system_prompt(get_prompt_catalog(settings), settings)
     temperature = ai_settings.get_float("temperature", settings)
-    max_tokens = ai_settings.get_int("max_tokens", settings)
+    tokens = ai_settings.get_int("max_tokens", settings)
     timeout_seconds = ai_settings.get_int("request_timeout", settings)
     max_retries = max(0, ai_settings.get_int("max_retries", settings))
+    thinking_level = ai_settings.get_str("thinking_level", settings).strip() or None
 
     client = genai.Client(
         api_key=api_key,
@@ -440,51 +529,61 @@ def extract_order(raw_text: str) -> dict:
         http_options=types.HttpOptions(timeout=timeout_seconds * 1000),
     )
 
-    config = types.GenerateContentConfig(
-        system_instruction=_build_system_prompt(catalog, settings),
-        response_mime_type="application/json",
-        response_schema=EXTRACTION_SCHEMA,
-        temperature=temperature,
-        max_output_tokens=max_tokens,
-    )
+    def config_for(max_output_tokens, thinking):
+        options = {
+            "system_instruction": system_prompt,
+            "response_mime_type": "application/json",
+            "response_schema": EXTRACTION_SCHEMA,
+            "temperature": temperature,
+            "max_output_tokens": max_output_tokens,
+        }
+        if thinking:
+            options["thinking_config"] = types.ThinkingConfig(thinking_level=thinking)
+        return types.GenerateContentConfig(**options)
 
-    response = None
-    last_error = None
-    attempts_made = 0
-    for attempt in range(max_retries + 1):
-        attempts_made = attempt + 1
+    started = time.monotonic()
+    budget_doubled = False
+    while True:
+        response, error = _generate(client, model_name, raw_text, config_for(tokens, thinking_level), max_retries, meta)
+        if response is None:
+            if thinking_level and _rejects_thinking(error):
+                frappe.log_error(
+                    title="AI intake: thinking level not supported",
+                    message=f"{model_name} rejected thinking_level={thinking_level!r}: {error!s}",
+                )
+                thinking_level = None
+                continue
+            meta["latency_ms"] = int((time.monotonic() - started) * 1000)
+            attempts = "1 attempt" if meta["attempts"] == 1 else f"{meta['attempts']} attempts"
+            raise ExtractionError(f"Gemini API call failed after {attempts}: {error!s}")
+
+        meta.update(finish_reason=_finish_reason(response), **_usage(response))
         try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=[raw_text],
-                config=config,
-            )
+            extracted = json.loads(response.text)
             break
         except Exception as e:
-            last_error = e
-            if attempt == max_retries or not _is_worth_retrying(e):
-                break
-            # Back off a little between attempts so a rate limit has a
-            # chance to clear instead of being hammered
-            time.sleep(2 ** attempt)
+            if not budget_doubled and tokens < MAX_TOKENS_CEILING:
+                # Almost always a reply cut off at max_output_tokens.
+                budget_doubled = True
+                tokens = min(tokens * 2, MAX_TOKENS_CEILING)
+                continue
+            meta["latency_ms"] = int((time.monotonic() - started) * 1000)
+            raise ExtractionError(
+                f"The AI reply could not be read as JSON (finish reason: {meta['finish_reason'] or 'unknown'}, "
+                f"{tokens} output tokens allowed): {e!s}"
+            )
 
-    if response is None:
-        attempts = "1 attempt" if attempts_made == 1 else f"{attempts_made} attempts"
-        raise ExtractionError(f"Gemini API call failed after {attempts}: {last_error!s}")
+    meta["latency_ms"] = int((time.monotonic() - started) * 1000)
+    if not isinstance(extracted, dict):
+        raise ExtractionError("The AI reply was not a JSON object.")
+    return extracted, meta
 
-    # Parse the structured response
-    try:
-        extracted = json.loads(response.text)
-    except Exception as e:
-        raise ExtractionError(
-            f"Failed to parse Gemini response as JSON: {e!s}\n"
-            f"Raw: {getattr(response, 'text', 'N/A')}"
-        )
 
-    # Sanity-check required fields
+def extract_order(raw_text: str) -> dict:
+    """The extraction alone (AI Intake Settings' Test Connection uses this)."""
+    extracted, _meta = extract_order_with_meta(raw_text)
     if not extracted.get("customer_name") and not extracted.get("phone_numbers"):
         raise ExtractionError("Extraction returned no customer identifier (no name, no phone).")
-
     return extracted
 
 

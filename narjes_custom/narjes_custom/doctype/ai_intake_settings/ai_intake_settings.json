@@ -125,8 +125,7 @@
    "label": "Max Retries"
   },
   {
-   "default": "low",
-   "description": "How much the model reasons before answering. Lower is faster and cheaper; extraction from the order form needs little. Empty = the model's default (medium on gemini-3.8-flash). If the model rejects a level, intake retries once without it.",
+   "description": "How much the model reasons before answering. Empty = the model's own default (medium on gemini-3.8-flash), which is what the shop has used so far. Lower is faster and cheaper but may read the order less carefully, so change it only after checking a few orders. If the model rejects a level, intake retries once without it.",
    "fieldname": "thinking_level",
    "fieldtype": "Select",
    "label": "Thinking Level",

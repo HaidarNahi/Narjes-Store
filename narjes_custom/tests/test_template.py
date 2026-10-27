@@ -132,6 +132,25 @@ class TestPhoneSectionShapes(unittest.TestCase):
         self.assertEqual(r.phone_source, "none")
         self.assertEqual(r.phone_problems, [])
 
+    def test_answer_typed_before_the_label_on_the_same_line(self):
+        text = v2("").replace("📞 رقم الهاتف:", "٠٧٧٠٠٠٠٠١٠١ 📞 رقم الهاتف:")
+        r = parse(text)
+        self.assertEqual(r.phone_source, "template")
+        self.assertEqual(r.phone_keys, [A])
+
+    def test_answer_typed_above_an_empty_phone_label_needs_confirmation(self):
+        text = v2("").replace("📞 رقم الهاتف:", "٠٧٨٠٠٠٠٠١٠٢\n📞 رقم الهاتف:")
+        r = parse(text)
+        self.assertEqual(r.phone_keys, [B])
+        self.assertEqual(r.phone_source, "free_text")
+        self.assertTrue(any("line above" in n for n in r.notes))
+
+    def test_number_above_the_label_is_ignored_when_the_field_has_one(self):
+        text = v2().replace("📞 رقم الهاتف:", "٠٧٨٠٠٠٠٠١٠٢\n📞 رقم الهاتف:")
+        r = parse(text)
+        self.assertEqual(r.phone_keys, [A])
+        self.assertEqual(r.phone_source, "template")
+
     def test_an_unknown_field_ends_the_phone_section(self):
         # A newer form adds a discount line right under the phone field.
         text = v2("").replace("💰 مبلغ الطلب", "💸 قيمة الخصم: ٥ الاف\n💰 مبلغ الطلب")

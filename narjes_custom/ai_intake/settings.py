@@ -27,9 +27,10 @@ DEFAULTS = {
 	"max_tokens": 8192,
 	"request_timeout": 60,
 	"max_retries": 2,
+	# Empty = the model's own thinking level (medium on gemini-3.8-flash).
 	# Gemini 3 models can't switch thinking off; "low" is the lowest level
-	# gemini-3.8-flash accepts (its own default is "medium").
-	"thinking_level": "low",
+	# gemini-3.8-flash accepts. Lowering it is a deliberate choice for the shop.
+	"thinking_level": "",
 	# Prompt
 	"append_governorates": 1,
 	# Catalog
