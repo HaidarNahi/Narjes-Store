@@ -3,14 +3,17 @@ name: Tests
 # Runs the app's pure-Python unit test suite on every push/PR.
 #
 # This deliberately does NOT spin up a full bench (MariaDB, Redis, a site)
-# — the tests that exist today (narjes_custom/tests/test_business_logic.py,
-# narjes_custom/ai_intake/tests/test_matching.py) are all pure-Python
-# calculation/matching logic with no live-site dependency, by design (see
-# their own module docstrings). A full-bench CI job is worth adding once
-# there's DB-backed test coverage to justify the extra time/complexity —
-# see NARJES_STORE_SYSTEM.md §14.9/§15: "even just running the existing
-# pytest suite on push would catch a meaningful fraction of what's
-# currently only caught by an SSH session into production."
+# — the tests are pure-Python calculation/matching/wiring checks with no
+# live-site dependency, by design (see their own module docstrings). A
+# full-bench CI job is worth adding once there's DB-backed test coverage to
+# justify the extra time/complexity — see NARJES_STORE_SYSTEM.md §14.9/§15.
+#
+# The tests still import the real framework: narjes_custom.api pulls in
+# ERPNext at module level, and the wiring suite inspects Frappe's whitelist
+# registry. So both are installed from GitHub at the exact tags production
+# runs. `pip install frappe` from PyPI is NOT the framework — that name
+# belongs to an unrelated package — which is why this job was red on every
+# push from September 2026 until this was fixed.
 
 on:
   push:
@@ -26,26 +29,28 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          # Match production exactly: the VPS container runs 3.14.0 and
-          # pyproject requires >=3.14. This pinned 3.11, i.e. CI was testing a
-          # runtime that will never ship.
+          # Match production exactly: the VPS container runs 3.14 and
+          # pyproject requires >=3.14.
           python-version: "3.14"
+          cache: pip
 
-      - name: Install test dependencies
+      # mysqlclient (a Frappe dependency) has no Linux wheel and is built
+      # from source, which needs the MySQL client headers.
+      - name: System libraries for Frappe's dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev build-essential
+
+      - name: Install Frappe and ERPNext (production tags) and test deps
         run: |
           python -m pip install --upgrade pip
-          pip install pytest rapidfuzz
-          # narjes_custom.ai_intake.matching imports `frappe` at module
-          # level (never actually connects to a site in these tests — see
-          # test_matching.py). If this install ever breaks because a given
-          # Frappe release stops publishing to PyPI, switch this job to a
-          # full `bench init`-based setup instead.
-          pip install frappe || echo "::warning::pip install frappe failed — matching.py tests will be skipped, business_logic tests still run"
+          pip install "frappe @ git+https://github.com/frappe/frappe@v16.34.0"
+          pip install "erpnext @ git+https://github.com/frappe/erpnext@v16.35.0"
+          pip install pytest google-genai
 
       - name: Run unit tests
-        run: |
-          # The whole tests/ package, not one named file: test_endpoint_wiring.py
-          # is the suite that would have caught the 4 Sept storefront
-          # regression, and naming files one by one is how it gets left out.
-          python -m pytest narjes_custom/tests/ -v
-          python -m pytest narjes_custom/ai_intake/tests/test_matching.py -v || echo "::warning::matching.py tests did not run (see install step above)"
+        # The whole test packages, not named files: test_endpoint_wiring.py is
+        # the suite that would have caught the 4 Sept storefront regression,
+        # and naming files one by one is how it gets left out. No `|| echo`
+        # fallbacks — a test that cannot run is a failure.
+        run: python -m pytest narjes_custom/tests/ narjes_custom/ai_intake/tests/ -v
