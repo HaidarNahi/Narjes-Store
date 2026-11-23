@@ -74,7 +74,9 @@ class _Base(unittest.TestCase):
 			self.addCleanup(p.stop)
 
 	def _resolve(self, ai_setting=None, stock_setting=None):
-		with mock.patch.object(api.frappe, "db", _FakeDB(single_value=stock_setting)):
+		# stock_setting is ERPNext's own default (Company in v16, Stock
+		# Settings before), as _erpnext_default_warehouse returns it.
+		with mock.patch.object(api, "_erpnext_default_warehouse", lambda: stock_setting):
 			with mock.patch.object(api.ai_settings, "get_setting", lambda *a, **k: ai_setting):
 				return api._get_default_so_items_params()[0]
 
@@ -119,6 +121,45 @@ class TestResolutionOrder(_Base):
 	def test_last_resort_is_deterministic(self):
 		"""Ordered by name, so it cannot drift when a warehouse is edited."""
 		self.assertEqual({self._resolve() for _ in range(5)}, {"Finished Goods - NS"})
+
+
+class _Meta:
+	def __init__(self, fields):
+		self.fields = fields
+
+	def has_field(self, name):
+		return name in self.fields
+
+
+class TestErpnextDefault(unittest.TestCase):
+	"""ERPNext v16 dropped Stock Settings.default_warehouse; reading it threw
+	"Field default_warehouse does not exist on Stock Settings" on confirm."""
+
+	def _run(self, metas, company_wh=None, stock_wh=None):
+		db = mock.Mock()
+		db.get_single_value.side_effect = lambda doctype, field: {
+			("Global Defaults", "default_company"): "Narjes Store",
+			("Stock Settings", "default_warehouse"): stock_wh,
+		}[(doctype, field)]
+		with mock.patch.object(api.frappe, "db", db), \
+			mock.patch.object(api.frappe, "defaults", mock.Mock(get_user_default=lambda k: None)), \
+			mock.patch.object(api.frappe, "get_meta", lambda dt: _Meta(metas.get(dt, ()))), \
+			mock.patch.object(api.frappe, "get_cached_value", lambda *a: company_wh):
+			return api._erpnext_default_warehouse(), db
+
+	def test_v16_reads_company_and_never_stock_settings(self):
+		wh, db = self._run({"Company": ("default_warehouse",)}, company_wh="Stores - NS")
+		self.assertEqual(wh, "Stores - NS")
+		self.assertNotIn(("Stock Settings", "default_warehouse"), [c.args for c in db.get_single_value.call_args_list])
+
+	def test_v16_without_company_default_is_none(self):
+		wh, db = self._run({"Company": ("default_warehouse",)})
+		self.assertIsNone(wh)
+		self.assertNotIn(("Stock Settings", "default_warehouse"), [c.args for c in db.get_single_value.call_args_list])
+
+	def test_older_erpnext_still_reads_stock_settings(self):
+		wh, _db = self._run({"Stock Settings": ("default_warehouse",)}, stock_wh="Stores - NS")
+		self.assertEqual(wh, "Stores - NS")
 
 
 if __name__ == "__main__":

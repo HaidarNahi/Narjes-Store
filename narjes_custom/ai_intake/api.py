@@ -24,12 +24,13 @@ import frappe
 from frappe.utils import cint, now_datetime, today
 
 from narjes_custom import customer_phones
+from narjes_custom.ai_intake import order_type, template
 from narjes_custom.ai_intake import settings as ai_settings
-from narjes_custom.ai_intake import template
 from narjes_custom.ai_intake.extraction import (
     ExtractionError,
     extract_order_with_meta,
     get_item_catalog,
+    order_type_options,
 )
 from narjes_custom.business_logic import is_discount_excessive
 from narjes_custom.phones import canonical, display, national
@@ -72,6 +73,28 @@ def _usable_warehouse(name):
     return bool(row) and not row.is_group and not row.disabled and row.warehouse_type != "Transit"
 
 
+def _erpnext_default_warehouse():
+    """The default warehouse ERPNext itself would use, or None.
+
+    ERPNext v16 moved this setting from Stock Settings to the Company
+    (patch v16_0.move_warehouse_defaults_to_company) and dropped the Stock
+    Settings field. Reading the old field on an upgraded site raises "Field
+    default_warehouse does not exist on Stock Settings", which killed every
+    intake confirm. So: the default company's warehouse first, and Stock
+    Settings only on a site that still has the field.
+    """
+    company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value(
+        "Global Defaults", "default_company"
+    )
+    if company and frappe.get_meta("Company").has_field("default_warehouse"):
+        warehouse = frappe.get_cached_value("Company", company, "default_warehouse")
+        if warehouse:
+            return warehouse
+    if frappe.get_meta("Stock Settings").has_field("default_warehouse"):
+        return frappe.db.get_single_value("Stock Settings", "default_warehouse")
+    return None
+
+
 def _get_default_so_items_params(settings=None):
     """
     Warehouse and UOM for Sales Order lines built from an intake.
@@ -80,7 +103,7 @@ def _get_default_so_items_params(settings=None):
     candidate is checked with `_usable_warehouse` before it is accepted:
 
         1. AI Intake Settings.default_warehouse — the explicit choice.
-        2. Stock Settings.default_warehouse — what the rest of ERPNext uses.
+        2. ERPNext's own default warehouse (see `_erpnext_default_warehouse`).
         3. The alphabetically first non-group, non-transit warehouse.
 
     Step 3 used to be `get_all(..., limit=1)` with no `order_by`, which meant
@@ -95,7 +118,7 @@ def _get_default_so_items_params(settings=None):
     default_warehouse = ai_settings.get_setting("default_warehouse", settings)
 
     if not _usable_warehouse(default_warehouse):
-        default_warehouse = frappe.db.get_single_value("Stock Settings", "default_warehouse")
+        default_warehouse = _erpnext_default_warehouse()
 
     if not _usable_warehouse(default_warehouse):
         candidates = frappe.get_all(
@@ -442,6 +465,15 @@ def _intake_to_response(intake, form=None, extracted=None, resolution=None) -> d
     # Catalog with the shop's own prices, for the item rows
     catalog = get_catalog_with_prices()
 
+    # The occasion: the AI's answer if it is a real option, else read from
+    # the message itself. Done here rather than at extraction so intakes
+    # stored before Order Type existed get it on reopening too.
+    order_types = order_type_options()
+    prefill = _prefill(form, extracted)
+    prefill["order_type"] = order_type.resolve(
+        (extracted or {}).get("order_type"), intake.raw_text or "", order_types
+    )
+
     return {
         "duplicate": False,
         "intake_name": intake.name,
@@ -452,7 +484,8 @@ def _intake_to_response(intake, form=None, extracted=None, resolution=None) -> d
         "phone_problems": [p for p in (intake.phone_problems or "").split("\n") if p],
         "phone_section": form.phone_section or "",
         "resolution": _resolution_payload(resolution),
-        "prefill": _prefill(form, extracted),
+        "prefill": prefill,
+        "order_type_options": order_types,
         "extracted": extracted or {},
         "amounts": {**form.amounts, "assumed_thousands": form.assumed_thousands},
         "gift_hint": form.gift_hint,
@@ -687,6 +720,9 @@ def _build_sales_order(customer_name, order, settings):
         "discount_amount": discount_amount,
         "additional_discount_percentage": 0,
         "governorate_of_delivery": order.get("governorate_of_delivery") or "",
+        # Narjes' "Order Type" (the occasion) is the custom design_type field;
+        # ERPNext's own order_type below is Sales/Maintenance/Shopping Cart.
+        "design_type": order_type.normalize(order.get("design_type"), order_type_options()),
         "order_type": "Sales",
         "items": so_items,
         "custom_flower_items": flower_items,
