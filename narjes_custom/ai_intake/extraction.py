@@ -19,6 +19,7 @@ import frappe
 from google import genai
 from google.genai import types
 
+from narjes_custom.ai_intake import order_type
 from narjes_custom.ai_intake import settings as ai_settings
 
 # ---------------------------------------------------------------------------
@@ -247,6 +248,30 @@ EXTRACTION_SCHEMA = {
 }
 
 
+def order_type_options() -> list[str]:
+    """Sales Order.design_type ("Order Type") options, read live so an
+    occasion added to the field reaches the model without a code change."""
+    try:
+        field = frappe.get_meta("Sales Order").get_field("design_type")
+    except Exception:
+        return []
+    return order_type.options_from(field.options if field else "")
+
+
+def extraction_schema(order_types=None) -> dict:
+    """EXTRACTION_SCHEMA plus `order_type`, held to the field's real options.
+
+    The enum is what makes the answer usable: Sales Order.design_type is a
+    Select, so "عمرة" or "زواج" would be refused where "عمره" / "اعراس" are
+    accepted. With no options known the property is left open; the API
+    normalises it afterwards either way.
+    """
+    prop = {"type": "STRING", "nullable": True}
+    if order_types:
+        prop["enum"] = list(order_types)
+    return {**EXTRACTION_SCHEMA, "properties": {**EXTRACTION_SCHEMA["properties"], "order_type": prop}}
+
+
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
@@ -355,6 +380,17 @@ def _build_system_prompt(catalog: list[dict], settings) -> str:
         prompt += f"\n\nFEW-SHOT EXAMPLES:{few_shot_text}"
 
     prompt += "\n\nDISCOUNT RULE: Extract any explicitly mentioned discount amount from the text and place it in the 'discount_amount' field as a number (e.g. 5000 for 5000 IQD discount, or 10000). If no discount is mentioned, use null."
+    order_types = order_type_options()
+    if order_types:
+        prompt += (
+            "\n\nORDER TYPE RULE: Put the occasion the order is for in 'order_type', using EXACTLY one of: "
+            f"{', '.join(order_types)}. "
+            "حج = Hajj (حاج، حجاج، حجية). عمره = Umrah (عمرة، معتمر). تخرج = graduation (خريج، خريجة، حفلة تخرج). "
+            "اعراس = weddings and engagements (عرس، زواج، زفاف، عروس، عريس، خطوبة، ملكة). "
+            "اطفال = children and newborns (طفل، طفلة، مولود، مواليد، بيبي). "
+            "Read it from the order details, the item names and any card or print text. Note that 'عمره' can also "
+            "mean 'his age' (طفل عمره سنتين is اطفال, not عمره). If the occasion is not clear, use null — never guess."
+        )
     prompt += "\n\nCUSTOM DETAILS RULE: Extract any additional details, special instructions, custom notes, or unmapped text into the 'custom_details' field as text. If no extra details are mentioned, use null."
 
     extra = ai_settings.get_str("extra_instructions", settings).strip()
@@ -462,6 +498,7 @@ def _stub_extraction(raw_text: str) -> dict:
         "delivery_date": None,
         "gift": bool(form.gift_hint),
         "priority": None,
+        "order_type": order_type.detect(raw_text, order_type_options()) or None,
         "currency": "IQD",
         "order_items": [],
         "extraction_notes": ["Test stub: no AI model was called (narjes_ai_intake_stub on a production copy)."],
@@ -517,6 +554,7 @@ def extract_order_with_meta(raw_text: str) -> tuple[dict, dict]:
         )
 
     system_prompt = _build_system_prompt(get_prompt_catalog(settings), settings)
+    schema = extraction_schema(order_type_options())
     temperature = ai_settings.get_float("temperature", settings)
     tokens = ai_settings.get_int("max_tokens", settings)
     timeout_seconds = ai_settings.get_int("request_timeout", settings)
@@ -533,7 +571,7 @@ def extract_order_with_meta(raw_text: str) -> tuple[dict, dict]:
         options = {
             "system_instruction": system_prompt,
             "response_mime_type": "application/json",
-            "response_schema": EXTRACTION_SCHEMA,
+            "response_schema": schema,
             "temperature": temperature,
             "max_output_tokens": max_output_tokens,
         }

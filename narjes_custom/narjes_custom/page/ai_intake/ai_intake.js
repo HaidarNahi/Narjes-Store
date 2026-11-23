@@ -207,6 +207,16 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
         return html;
     }
 
+    // Sales Order.design_type ("Order Type") options come from the server
+    // (read from the field), so a new occasion needs no change here.
+    function order_type_options_html(options, selected) {
+        let html = `<option value="" ${!selected ? "selected" : ""}>— None —</option>`;
+        (options || []).forEach((opt) => {
+            html += `<option value="${esc(opt)}" ${selected === opt ? "selected" : ""}>${esc(opt)}</option>`;
+        });
+        return html;
+    }
+
     // Must stay in sync with the Customer.channal Select options.
     const CUSTOMER_CHANNELS = ["Instagram", "Facebook", "Whatsapp", "Telegram", "TikTok", "Website"];
 
@@ -450,11 +460,8 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                         </div>
                         <div class="ai-field-row">
                             <div class="ai-field-group">
-                                <label>Priority</label>
-                                <select id="ai-priority">
-                                    <option value="">— None —</option>
-                                    ${["High", "Medium", "Low"].map((p) => `<option value="${p}" ${ex.priority === p ? "selected" : ""}>${p}</option>`).join("")}
-                                </select>
+                                <label>Order Type</label>
+                                <select id="ai-order-type" dir="auto">${order_type_options_html(data.order_type_options, data.prefill.order_type)}</select>
                             </div>
                             <div class="ai-field-group">
                                 <label>Governorate of Delivery</label>
@@ -463,10 +470,19 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                         </div>
                         <div class="ai-field-row">
                             <div class="ai-field-group">
+                                <label>Priority</label>
+                                <select id="ai-priority">
+                                    <option value="">— None —</option>
+                                    ${["High", "Medium", "Low"].map((p) => `<option value="${p}" ${ex.priority === p ? "selected" : ""}>${p}</option>`).join("")}
+                                </select>
+                            </div>
+                            <div class="ai-field-group">
                                 <label>Discount Amount</label>
                                 <input type="number" id="ai-discount-amount" value="${esc(ex.discount_amount || data.amounts.discount || 0)}" min="0"/>
                             </div>
-                            <div class="ai-field-group">
+                        </div>
+                        <div class="ai-field-row">
+                            <div class="ai-field-group" style="grid-column: 1 / -1;">
                                 <label>Custom Details</label>
                                 <input type="text" id="ai-custom-details" value="${esc(ex.custom_details || "")}" dir="auto" placeholder="Any extra unstructured details..."/>
                             </div>
@@ -1001,6 +1017,7 @@ frappe.pages["ai-intake"].on_page_load = function (wrapper) {
                     gift: $("#ai-gift").is(":checked"),
                     priority: $("#ai-priority").val() || null,
                     governorate_of_delivery: $("#ai-gov-delivery").val() || "",
+                    design_type: $("#ai-order-type").val() || "",
                     discount_amount: parseFloat($("#ai-discount-amount").val()) || 0,
                     custom_details: ($("#ai-custom-details").val() || "").trim(),
                     order_items,
