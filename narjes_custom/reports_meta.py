@@ -134,6 +134,31 @@ EXPLAINERS = {
 		),
 		"how": "{0} " + TIMES + " pieces sold",
 	},
+	# --------------------------------------------------- Customer Orders
+	"Orders": {
+		"what": "Live orders placed in this period — drafts still in progress included, cancelled and returned ones left out.",
+		"how": "count of orders",
+	},
+	"Sales (without delivery)": {
+		"what": "What the orders themselves are worth, after discounts, without the courier's delivery fee.",
+		"how": f"customers pay {MINUS} delivery fees",
+	},
+	"Customers pay (with delivery)": {
+		"what": "The total written on the box stickers — what customers hand to the courier.",
+		"how": "sum of price with delivery",
+	},
+	"Delivery fees": {
+		"what": "The delivery part of what customers pay. It goes to the courier, not the shop.",
+		"how": "sum of delivery fees",
+	},
+	"Average order": {
+		"what": "The size of a typical order, without delivery.",
+		"how": f"sales {DIVIDE} orders",
+	},
+	"Outside Baghdad": {
+		"what": "Share of orders shipped to other governorates, which carry the higher delivery fee.",
+		"how": "orders outside Baghdad ÷ orders",
+	},
 	# ------------------------------------------------------------- Debts
 	"Owed to us": {
 		"what": "What customers and others still owe you. Only debts not yet settled are counted.",

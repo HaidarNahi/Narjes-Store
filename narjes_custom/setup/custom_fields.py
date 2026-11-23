@@ -248,8 +248,8 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "design_type",
             "fieldtype": "Select",
-            "label": "Design Type",
-            "options": "\nحج\nتخرج\nاعراس",
+            "label": "Order Type",
+            "options": "\nحج\nعمره\nتخرج\nاعراس\nاطفال",
             "insert_after": "governorate_of_delivery",
         },
         {

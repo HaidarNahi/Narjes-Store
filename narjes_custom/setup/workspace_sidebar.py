@@ -36,6 +36,7 @@ ITEMS = [
 	{"type": "Link", "label": "Money In", "link_type": "Report", "link_to": "Money In", "icon": "currency-circle-dollar"},
 	{"type": "Link", "label": "Money Out", "link_type": "Report", "link_to": "Money Out", "icon": "trend-down"},
 	{"type": "Link", "label": "Revenue", "link_type": "Report", "link_to": "Revenue", "icon": "chart-line-up"},
+	{"type": "Link", "label": "Customer Orders", "link_type": "Report", "link_to": "Customer Orders", "icon": "receipt"},
 	{"type": "Link", "label": "Revenue & Salaries", "link_type": "Page", "link_to": "narjes-salaries", "icon": "users-three"},
 	{"type": "Link", "label": "AI Order Intake", "link_type": "Page", "link_to": "ai-intake", "icon": "sparkle"},
 ]
